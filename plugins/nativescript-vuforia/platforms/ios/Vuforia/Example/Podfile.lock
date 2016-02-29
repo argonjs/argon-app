@@ -1,0 +1,14 @@
+PODS:
+  - Vuforia (0.1.0)
+
+DEPENDENCIES:
+  - Vuforia (from `../`)
+
+EXTERNAL SOURCES:
+  Vuforia:
+    :path: ../
+
+SPEC CHECKSUMS:
+  Vuforia: 961a6f5e8a13a55e0ad75a742490934bdd50ae88
+
+COCOAPODS: 0.39.0

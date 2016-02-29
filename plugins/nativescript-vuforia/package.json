@@ -1,0 +1,15 @@
+{
+    "name": "nativescript-vuforia",
+    "version": "1.0.0",
+    "description": "",
+    "main": "vuforia.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "nativescript": {
+        "platforms": {
+            "ios": "1.0.0",
+            "android": "1.1.0"
+        }
+    }
+}

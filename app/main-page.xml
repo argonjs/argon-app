@@ -1,0 +1,21 @@
+<Page xmlns="http://schemas.nativescript.org/tns.xsd" loaded="pageLoaded" backgroundColor="#00000000">
+  <Page.actionBar>
+    <ActionBar title="Title">
+      <ActionBar.titleView>
+        <SearchBar loaded="searchBarLoaded" hint="Enter a URL"/>
+      </ActionBar.titleView>
+        <ActionBar.actionItems>
+          <ActionItem text="∆" ios.position="right"/>
+          <ActionItem text="…" ios.position="right" tap="menuButtonClicked"/>
+        </ActionBar.actionItems>
+    </ActionBar>
+  </Page.actionBar>
+  <Placeholder creatingView="createChannelView"/>
+  <AbsoluteLayout id="menu" horizontalAlignment="right" visibility="collapsed">
+    <StackLayout orientation="vertical" paddingLeft="5" paddingRight="25" style.backgroundColor="white">
+      <Label text="Bookmarks" tap="bookmarksClicked"/>
+      <Label text="History" tap="historyClicked"/>
+      <Label text="Debug mode" tap="debugClicked"/>
+    </StackLayout>
+  </AbsoluteLayout>
+</Page>
