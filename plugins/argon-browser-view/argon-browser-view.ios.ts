@@ -7,6 +7,8 @@ import vuforia = require('nativescript-vuforia')
 
 export class BrowserView implements def.BrowserView {
     
+    public log:string = "";
+    
     public vuforiaRealityViewController;
     
     constructor(public page:page.Page, public manager:Argon.ArgonSystem) {
@@ -87,9 +89,16 @@ export class ChannelViewController extends UIViewController implements WKScriptM
 		this.webview = WKWebView.alloc().initWithFrameConfiguration(frame, configuration);
         this.webview.configuration.userContentController = WKUserContentController.alloc().init();
         this.webview.configuration.userContentController.addScriptMessageHandlerName(this, "argon");
+        this.webview.configuration.userContentController.addScriptMessageHandlerName(this, "log");
         this.webview.navigationDelegate = this;
 	    this.webview.allowsBackForwardNavigationGestures = true;
 		this.webview['customUserAgent'] = userAgent;
+        
+        this.webview.configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly(`
+            console.log = function(message) {
+                webkit.messageHandlers.log.postMessage(message);
+            }
+        `, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
 
         this.webview.scrollView.layer.masksToBounds = false;
         this.webview.layer.masksToBounds = false;
@@ -141,21 +150,28 @@ export class ChannelViewController extends UIViewController implements WKScriptM
     }
 
     userContentControllerDidReceiveScriptMessage(userContentController:WKUserContentController, message:WKScriptMessage) {
-        if (typeof this.session == 'undefined') {
-            const messageChannel = this.browser.manager.reality.messageChannelFactory.create();
-            this.session = this.browser.manager.context.addSession();
-            this.session.open(messageChannel.port1, this.browser.manager.configuration);
-            this.sessionPort = messageChannel.port2;
-            this.sessionPort.onmessage = (msg:Argon.MessageEventLike) => {
-                const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
-                this.webview.evaluateJavaScriptCompletionHandler(injectedMessage, undefined);
+        if (message.name === 'argon') {
+            if (typeof this.session == 'undefined') {
+                const messageChannel = this.browser.manager.reality.messageChannelFactory.create();
+                this.session = this.browser.manager.context.addSession();
+                this.session.open(messageChannel.port1, this.browser.manager.configuration);
+                this.sessionPort = messageChannel.port2;
+                this.sessionPort.onmessage = (msg:Argon.MessageEventLike) => {
+                    const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
+                    this.webview.evaluateJavaScriptCompletionHandler(injectedMessage, undefined);
+                }
+                if (this === this.browser.channels[0]) {
+                    this.session.focus();
+                }
+                this.webview.evaluateJavaScriptCompletionHandler(`
+                `, undefined);
             }
-            if (this === this.browser.channels[0]) {
-                this.session.focus();
-            }
+            console.log(message.body);
+            this.sessionPort.postMessage(JSON.parse(message.body));
+        } else if (message.name === 'log') {
+            console.log('LOG: ' + message.body); 
+            this.browser.log += message.body + '\n';
         }
-        this.sessionPort.postMessage(JSON.parse(message.body));
-        console.log(message.body);
     }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];

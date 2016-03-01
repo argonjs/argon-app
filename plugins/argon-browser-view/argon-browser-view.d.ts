@@ -10,5 +10,6 @@ declare module "argon-browser-view" {
         getURL() : string;        
         getProgress() : number;
         onNavigationStateChange() : void;
+        log : string;
     }
 }
