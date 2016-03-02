@@ -15,23 +15,32 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>1.0</string>
+    <key>CFBundleVersion</key>
+	<string>1.0.0.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
-	<key>UIRequiredDeviceCapabilities</key>
+	<key>UIRequiresPersistentWiFi</key>
+	<true/>
+    <key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
+        <string>accelerometer</string>
+        <string>location-services</string>
+        <string>gyroscope</string>
+        <string>magnetometer</string>
+        <string>video-camera</string>
+        <string>wifi</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
@@ -44,7 +53,7 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Your location is used by location-based augmented reality web applications</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Your camera is used to provide a video-seethrough augmented reality experience</string>
+	<string>Your camera is used to provide an augmented reality experience</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used by location-based augmented reality web applications</string>
 	<key>NSAppTransportSecurity</key>
