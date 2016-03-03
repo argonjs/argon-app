@@ -66,6 +66,13 @@ export function searchBarLoaded(args) {
 	}
 }
 
+// initialize some properties of the menu so that animations will render correctly
+export function menuLoaded(args) {
+    let menu = args.object;
+    menu.originY = 0;
+    menu.scaleY = 0;
+}
+
 class IOSSearchBarController {
 	
 	private uiSearchBar:UISearchBar;
@@ -136,11 +143,28 @@ class IOSSearchBarController {
 
 export function menuButtonClicked(args) {
     let menu = views.getViewById(frames.topmost().currentPage, "menu");
-    menu.visibility = (menu.visibility == "visible") ? "collapsed" : "visible";
-	if (menu.ios) {
-		const menuView:UIView = menu.ios;
-		menuView.superview.bringSubviewToFront(menuView);
-	}
+        
+    if (menu.visibility == "visible") {
+        menu.animate({
+            scale: { x: 1, y: 0 },
+            duration: 200 
+        }).then(() => { menu.visibility = "collapsed"; });
+    } else {
+        //make sure the menu view is rendered above any other views
+        const parent = menu.parent;
+        parent._removeView(menu);
+        parent._addView(menu, 0);
+        
+        menu.visibility = "visible";
+        menu.animate({
+            scale: { x: 1, y: 1 },
+            duration: 200 
+        });
+    }
+}
+
+export function newChannelClicked(args) {
+    //code to open a new channel goes here
 }
 
 export function bookmarksClicked(args) {

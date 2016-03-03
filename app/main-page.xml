@@ -11,8 +11,9 @@
     </ActionBar>
   </Page.actionBar>
   <Placeholder creatingView="createChannelView"/>
-  <AbsoluteLayout id="menu" horizontalAlignment="right" visibility="collapsed">
-    <StackLayout orientation="vertical" paddingLeft="5" paddingRight="25" style.backgroundColor="white">
+  <AbsoluteLayout id="menu" loaded="menuLoaded" horizontalAlignment="right" visibility="collapsed">
+    <StackLayout orientation="vertical" verticalAlignment="top" paddingLeft="5" paddingRight="25" style.backgroundColor="white">
+      <Label text="New channel" tap="newChannelClicked"/>
       <Label text="Bookmarks" tap="bookmarksClicked"/>
       <Label text="History" tap="historyClicked"/>
       <Label text="Debug mode" tap="debugClicked"/>
