@@ -20,7 +20,7 @@ export let iosSystemBootDate = Argon.Cesium.JulianDate.now();
 
 if (vuforia.ios) {
     iosSystemBootDate = Argon.Cesium.JulianDate.fromDate(new Date(vuforia.ios.boottime().sec*1000));
-} else { // less accurate way to determine bootdate
+} else if (application.ios) { // less accurate way to determine bootdate
     const uptime = NSProcessInfo.processInfo().systemUptime;
     JulianDate.addSeconds(iosSystemBootDate, -uptime, iosSystemBootDate);   
 }
