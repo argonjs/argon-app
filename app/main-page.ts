@@ -148,7 +148,7 @@ export function bookmarksClicked(args) {
 }
 
 export function historyClicked(args) {
-    //code to open the history view goes here
+    frames.topmost().navigate("history-view");
 }
 
 export function debugClicked(args) {
