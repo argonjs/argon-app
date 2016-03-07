@@ -670,7 +670,8 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     };
 
     [[[NSURLSession sharedSession] downloadTaskWithURL:datURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-        if (error == nil) {
+        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
+        if (error == nil && statusCode == 200) {
             // rename the temp file to the original filename (to make vuforia happy)
             NSString *fileName = [[[datURL URLByDeletingPathExtension] URLByAppendingPathExtension:@"dat"] lastPathComponent];
             NSURL *newDatLocation = [directoryURL URLByAppendingPathComponent:fileName];
@@ -685,7 +686,8 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     }] resume];
     
     [[[NSURLSession sharedSession] downloadTaskWithURL:xmlURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-        if (error == nil) {
+        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
+        if (error == nil && statusCode == 200) {
             // rename the temp file to the original filename (to make vuforia happy)
             NSString *fileName = [xmlURL lastPathComponent];
             NSURL *newXMLLocation = [directoryURL URLByAppendingPathComponent:fileName];
