@@ -1,4 +1,5 @@
 import frames = require('ui/frame');
+import history = require('./shared/history');
 
 export function exitButtonClicked(args) {
     frames.topmost().navigate("main-page");
@@ -6,7 +7,7 @@ export function exitButtonClicked(args) {
 
 export function historyViewLoaded(args) {
     const historyView = args.object;
-    historyView.items = ["www.google.com", "www.gatech.edu", "www.github.com"];
+    historyView.items = history.getList();
 }
 
 export function historyClicked(args) {

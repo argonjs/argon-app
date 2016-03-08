@@ -15,6 +15,8 @@ import Argon = require('argon');
 import {NativeScriptDeviceService} from './argon-device-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
+import history = require('./shared/history');
+
 export let manager:Argon.ArgonSystem;
 export let browserView:argonBrowserView.BrowserView;
 let actionBar:actionbar.ActionBar;
@@ -59,6 +61,7 @@ export function searchBarLoaded(args) {
 		url = url.toLowerCase();
 		console.log("Load url: " + url);
 		browserView.load(url);
+        history.addPage(url);
 	});
 
     if (application.ios) {
