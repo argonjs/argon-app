@@ -79,9 +79,6 @@ export class NativeScriptVuforiaServiceDelegate implements Argon.VuforiaServiceD
         
         if (vuforia.ios) {
             
-            const controller = <UIViewController>application.ios.rootController;
-            UIApplication.sharedApplication().statusBarOrientation
-            
             // TODO: wrap some of this ios-specific stuff up in nativescript-vuforia plugin
             
             const vuforiaCameraPose = {
