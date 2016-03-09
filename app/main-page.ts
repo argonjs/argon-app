@@ -41,6 +41,11 @@ export function pageLoaded(args) {
 			iosSearchBarController.setText(url);
 		}
 	}
+	
+	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
+	setTimeout(()=>{
+		page.requestLayout();
+	}, 0)
 }
 
 export function actionBarLoaded(args) {
@@ -68,8 +73,10 @@ export function searchBarLoaded(args) {
 
 // initialize some properties of the menu so that animations will render correctly
 export function menuLoaded(args) {
-    let menu = args.object;
+    let menu:views.View = args.object;
+	menu.originX = 1;
     menu.originY = 0;
+	menu.scaleX = 0;
     menu.scaleY = 0;
 }
 
@@ -146,8 +153,8 @@ export function menuButtonClicked(args) {
         
     if (menu.visibility == "visible") {
         menu.animate({
-            scale: { x: 1, y: 0 },
-            duration: 200 
+            scale: { x: 0, y: 0 },
+            duration: 150 
         }).then(() => { menu.visibility = "collapsed"; });
     } else {
         //make sure the menu view is rendered above any other views
@@ -158,7 +165,7 @@ export function menuButtonClicked(args) {
         menu.visibility = "visible";
         menu.animate({
             scale: { x: 1, y: 1 },
-            duration: 200 
+            duration: 150 
         });
     }
 }
@@ -175,6 +182,6 @@ export function historyClicked(args) {
     //code to open the history view goes here
 }
 
-export function debugClicked(args) {
-    //code to open the debug view goes here
+export function settingsClicked(args) {
+    //code to open the settings view goes here
 }

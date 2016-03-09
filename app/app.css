@@ -1,26 +1,7 @@
-﻿.title {
-    font-size: 30;
-    horizontal-align: center;
-    margin: 20;
+﻿.menuItem {
+    padding: 15px 40px 15px 15px;
 }
 
-button {
-    font-size: 42;
-    horizontal-align: center;
-}
-
-.message {
-    font-size: 20;
-    color: #284848;
-    horizontal-align: center;
-}
-
-
-.transparentBackground {
-    background-color: #00000000;
-}
-
-.header {
-    height: "66";
-    /*background-color: #55FFFFFF;*/
+#menuContainer {
+    background-color: #AAFFFFFF;
 }
