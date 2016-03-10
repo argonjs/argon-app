@@ -27,9 +27,14 @@ function pageLoaded(args) {
         }
     };
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
-    setTimeout(function () {
-        page.requestLayout();
-    }, 0);
+    if (page.ios) {
+        setTimeout(function () {
+            page.requestLayout();
+        }, 0);
+        application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, function () {
+            page.requestLayout();
+        });
+    }
 }
 exports.pageLoaded = pageLoaded;
 function actionBarLoaded(args) {
