@@ -290,7 +290,7 @@ typedef void (^StateUpdateCallback)(VuforiaState *);
 
 // initialize the AR library
 - (void) initAR:(NSString*)licenseKey done:(void (^)(NSError *error))done;
-- (void) deinitAR;
+- (BOOL) deinitAR;
 
 - (BOOL) startCamera:(VuforiaCameraDeviceCamera)camera;
 - (BOOL) stopCamera;

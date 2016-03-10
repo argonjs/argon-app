@@ -71,6 +71,8 @@ namespace {
 
     // NSerror domain
     NSString * APPLICATION_ERROR_DOMAIN = @"Vuforia";
+    
+    bool mInStateUpdate = false;
 }
 
 @interface VuforiaObjectTarget ()
@@ -411,7 +413,12 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
 // Initialize the Vuforia SDK
 - (void) initAR:(NSString*)licenseKey done:(void (^)(NSError *error))done{
     
-    [self deinitAR];
+    if (![self deinitAR]) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [self initAR:licenseKey done:done];
+        });
+        return;
+    }
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     
@@ -425,7 +432,7 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
         } while (0 <= initSuccess && 100 > initSuccess);
 
         if (100 == initSuccess) {
-            [self initTrackers];
+            [self _initTrackers];
         
             QCAR::registerCallback(&qcarUpdate);
             
@@ -519,7 +526,11 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
 }
 
 // Deinitialize the Vuforia SDK
-- (void)deinitAR {
+- (BOOL)deinitAR {
+    if (mInStateUpdate) {
+        return NO;
+    }
+    
     if (self.sessionUUID == nil) return;
     self.sessionUUID = nil;
 
@@ -533,13 +544,13 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     self.cameraIsStarted = NO;
 
     // stop the trackers
-    [self stopTrackers];
+    [self _stopTrackers];
 
     // unload the data associated to the trackers
 //    [self unloadTrackerData];
 
     // deinit the trackers
-    [self deinitTrackers];
+    [self _deinitTrackers];
 
     // Pause and deinitialise QCAR
 //    QCAR::onPause();
@@ -592,12 +603,14 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
 }
 
 - (void) QCAR_onUpdate:(QCAR::State *) state {
-    if (self.stateUpdateCallback != nil) {
-        self.stateUpdateCallback([[VuforiaState alloc] initWithCpp:state]);
-    }
+    mInStateUpdate = true;
+        if (self.stateUpdateCallback != nil) {
+            self.stateUpdateCallback([[VuforiaState alloc] initWithCpp:state]);
+        }
+    mInStateUpdate = false;
 }
 
-- (void) initTrackers {
+- (void) _initTrackers {
     QCAR::TrackerManager& trackerManager = QCAR::TrackerManager::getInstance();
     trackerManager.initTracker(QCAR::ObjectTracker::getClassType());
     trackerManager.initTracker(QCAR::MarkerTracker::getClassType());
@@ -605,7 +618,7 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     trackerManager.initTracker(QCAR::TextTracker::getClassType());
 }
 
-- (void) stopTrackers {
+- (void) _stopTrackers {
     QCAR::TrackerManager& trackerManager = QCAR::TrackerManager::getInstance();
     trackerManager.getTracker(QCAR::ObjectTracker::getClassType())->stop();
     trackerManager.getTracker(QCAR::MarkerTracker::getClassType())->stop();
@@ -613,7 +626,7 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     trackerManager.getTracker(QCAR::TextTracker::getClassType())->stop();
 }
 
-- (void) deinitTrackers {
+- (void) _deinitTrackers {
     QCAR::TrackerManager& trackerManager = QCAR::TrackerManager::getInstance();
     trackerManager.deinitTracker(QCAR::ObjectTracker::getClassType());
     trackerManager.deinitTracker(QCAR::MarkerTracker::getClassType());
