@@ -414,7 +414,7 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
 - (void) initAR:(NSString*)licenseKey done:(void (^)(NSError *error))done{
     
     if (![self deinitAR]) {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
             [self initAR:licenseKey done:done];
         });
         return;
