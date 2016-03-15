@@ -19,18 +19,15 @@ const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO)
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI)
 const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI)
 
-export class NativeScriptVuforiaServiceDelegate implements Argon.VuforiaServiceDelegate {
+export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
 	
 	private scratchMatrix4 = new Argon.Cesium.Matrix4();
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
     
     private iosTrackableRotation = new Quaternion;
-    
-	updateEvent = new Argon.Event<Argon.FrameState>();
-	errorEvent = new Argon.Event<Argon.VuforiaErrorMessage>();
-	dataSetLoadEvent = new Argon.Event<Argon.VuforiaDataSetLoadMessage>();
 	
 	constructor() {
+        super();
         
         vuforia.events.on(vuforia.initErrorEvent, (event:vuforia.EventData) => {
             this.errorEvent.raiseEvent({
@@ -129,7 +126,7 @@ export class NativeScriptVuforiaServiceDelegate implements Argon.VuforiaServiceD
                     }
                 }
                 
-                const frameState:Argon.FrameState = {
+                const frameState:Argon.MinimalFrameState = {
                     time,
                     frameNumber,
                     entities

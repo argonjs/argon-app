@@ -123,7 +123,7 @@ export class ChannelViewController extends UIViewController implements WKScriptM
         this.webview.configuration.userContentController.removeScriptMessageHandlerForName("argon");
     }
 
-    public session:Argon.Session = undefined;
+    public session:Argon.SessionPort = undefined;
     private sessionPort:Argon.MessagePortLike = undefined;
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
@@ -152,19 +152,18 @@ export class ChannelViewController extends UIViewController implements WKScriptM
     userContentControllerDidReceiveScriptMessage(userContentController:WKUserContentController, message:WKScriptMessage) {
         if (message.name === 'argon') {
             if (typeof this.session == 'undefined') {
-                const messageChannel = this.browser.manager.reality.messageChannelFactory.create();
-                this.session = this.browser.manager.context.addSession();
-                this.session.open(messageChannel.port1, this.browser.manager.configuration);
+                console.log('Connecting to argon.js application at ' + this.webview.URL.absoluteURL);
+                const messageChannel = this.browser.manager.session.createMessageChannel();
+                this.session = this.browser.manager.session.addManagedSessionPort();
+                this.session.open(messageChannel.port1, this.browser.manager.session.configuration);
                 this.sessionPort = messageChannel.port2;
                 this.sessionPort.onmessage = (msg:Argon.MessageEventLike) => {
                     const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
                     this.webview.evaluateJavaScriptCompletionHandler(injectedMessage, undefined);
                 }
                 if (this === this.browser.channels[0]) {
-                    this.session.focus();
+                    this.browser.manager.focus.setSession(this.session);
                 }
-                this.webview.evaluateJavaScriptCompletionHandler(`
-                `, undefined);
             }
             console.log(message.body);
             this.sessionPort.postMessage(JSON.parse(message.body));

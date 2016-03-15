@@ -531,7 +531,7 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
         return NO;
     }
     
-    if (self.sessionUUID == nil) return;
+    if (self.sessionUUID == nil) return YES;
     self.sessionUUID = nil;
 
     // Stop the camera
@@ -555,6 +555,8 @@ dispatch_queue_t qcarQueue = dispatch_queue_create( "Vuforia", DISPATCH_QUEUE_SE
     // Pause and deinitialise QCAR
 //    QCAR::onPause();
     QCAR::deinit();
+    
+    return YES;
 }
 
 // Resume

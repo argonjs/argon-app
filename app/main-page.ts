@@ -12,7 +12,9 @@ import vuforia = require('nativescript-vuforia');
 import argonBrowserView = require('argon-browser-view');
 
 import Argon = require('argon');
-import {NativeScriptDeviceService} from './argon-device-service';
+import './argon-camera-service';
+import './argon-device-service';
+import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 export let manager:Argon.ArgonSystem;
@@ -25,9 +27,11 @@ let iosSearchBarController:IOSSearchBarController;
 export function pageLoaded(args) {
 	
 	const container = new Argon.Container;
-	container.registerSingleton(Argon.DeviceService, NativeScriptDeviceService);
 	container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
-	manager = Argon.init({container});
+	manager = Argon.init({container, config: {
+		role: Argon.Role.MANAGER,
+		defaultReality: {type: 'vuforia'}
+	}});
 
     const page:pages.Page = args.object;
     page.backgroundColor = new color.Color("black");
