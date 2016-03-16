@@ -2,21 +2,32 @@
   <Page.actionBar>
     <ActionBar title="Title">
       <ActionBar.titleView>
-        <SearchBar loaded="searchBarLoaded" hint="Enter a URL"/>
+        <GridLayout columns="*, auto" rows="*">
+          <SearchBar col="0" row="0" loaded="searchBarLoaded" hint="Enter a URL"/>
+          <Button col="1" row="0" text="&#xE5D2; MENU" class="material-icon" tap="menuButtonClicked"/>
+        </GridLayout>
       </ActionBar.titleView>
-        <ActionBar.actionItems>
-          <ActionItem text="∆" ios.position="right"/>
-          <ActionItem text="…" ios.position="right" tap="menuButtonClicked"/>
-        </ActionBar.actionItems>
     </ActionBar>
   </Page.actionBar>
   <Placeholder creatingView="createChannelView"/>
   <AbsoluteLayout id="menu" loaded="menuLoaded" horizontalAlignment="right" visibility="collapsed">
     <StackLayout id="menuContainer" orientation="vertical" verticalAlignment="top">
-      <Label class="menuItem" text="New Channel" tap="newChannelClicked"/>
-      <Label class="menuItem" text="Bookmarks" tap="bookmarksClicked"/>
-      <Label class="menuItem" text="History" tap="historyClicked"/>
-      <Label class="menuItem" text="Settings" tap="settingsClicked"/>
+      <StackLayout orientation="horizontal" tap="newChannelClicked">
+        <Label text="&#xE145;" class="material-icon"/>
+        <Label text="New Channel"/>
+      </StackLayout>
+      <StackLayout orientation="horizontal" tap="bookmarksClicked">
+        <Label text="&#xE866;" class="material-icon"/>
+        <Label text="Bookmarks"/>
+      </StackLayout>
+      <StackLayout orientation="horizontal" tap="historyClicked">
+        <Label text="&#xE889;" class="material-icon"/>
+        <Label text="History"/>
+      </StackLayout>
+      <StackLayout orientation="horizontal" tap="settingsClicked">
+        <Label text="&#xE8B8;" class="material-icon"/>
+        <Label text="Settings"/>
+      </StackLayout>
     </StackLayout>
   </AbsoluteLayout>
 </Page>
