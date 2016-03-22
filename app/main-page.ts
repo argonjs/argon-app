@@ -106,27 +106,30 @@ class IOSSearchBarController {
 		this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
 		
 		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
-		
-    	const notificationCenter = NSNotificationCenter.defaultCenter();
 
     	const textFieldEditHandler = () => {
     		if (this.uiSearchBar.isFirstResponder()) {
-				this.uiSearchBar.setShowsCancelButtonAnimated(true, false);
+				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
+				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
+				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
+				
 				const items = actionBar.actionItems.getItems();
 				for (const item of items) {
 					item.visibility = 'collapse'
 				}
 				setTimeout(()=>{
-					this.uiSearchBar.text = browserView.getURL();
-					this.setPlaceholderText(null);
-					this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
+					if (this.uiSearchBar.text === "") {
+						this.uiSearchBar.text = browserView.getURL();
+						this.setPlaceholderText(null);
+						this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
+					}
 				}, 500)
 			} else {
 				this.setPlaceholderText(this.uiSearchBar.text);
 				this.uiSearchBar.text = "";
 				Promise.resolve().then(()=>{
 					this.setPlaceholderText(browserView.getURL());
-					this.uiSearchBar.setShowsCancelButtonAnimated(false, false);
+					this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
 					const items = actionBar.actionItems.getItems();
 					for (const item of items) {
 						item.visibility = 'visible'

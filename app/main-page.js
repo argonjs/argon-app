@@ -84,19 +84,22 @@ var IOSSearchBarController = (function () {
         this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
         this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal);
         this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
-        var notificationCenter = NSNotificationCenter.defaultCenter();
         var textFieldEditHandler = function () {
             if (_this.uiSearchBar.isFirstResponder()) {
-                _this.uiSearchBar.setShowsCancelButtonAnimated(true, false);
+                _this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
+                var cancelButton = _this.uiSearchBar.valueForKey("cancelButton");
+                cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
                 var items = actionBar.actionItems.getItems();
                 for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
                     var item = items_1[_i];
                     item.visibility = 'collapse';
                 }
                 setTimeout(function () {
-                    _this.uiSearchBar.text = exports.browserView.getURL();
-                    _this.setPlaceholderText(null);
-                    _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
+                    if (_this.uiSearchBar.text === "") {
+                        _this.uiSearchBar.text = exports.browserView.getURL();
+                        _this.setPlaceholderText(null);
+                        _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
+                    }
                 }, 500);
             }
             else {
@@ -104,7 +107,7 @@ var IOSSearchBarController = (function () {
                 _this.uiSearchBar.text = "";
                 Promise.resolve().then(function () {
                     _this.setPlaceholderText(exports.browserView.getURL());
-                    _this.uiSearchBar.setShowsCancelButtonAnimated(false, false);
+                    _this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
                     var items = actionBar.actionItems.getItems();
                     for (var _i = 0, items_2 = items; _i < items_2.length; _i++) {
                         var item = items_2[_i];

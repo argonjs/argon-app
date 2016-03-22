@@ -1,10 +1,12 @@
 <Page xmlns="http://schemas.nativescript.org/tns.xsd" loaded="pageLoaded" backgroundColor="#00000000">
   <Page.actionBar>
-    <ActionBar title="Title">
-      <ActionBar.titleView>
-        <GridLayout columns="*, auto" rows="*">
-          <SearchBar col="0" row="0" loaded="searchBarLoaded" hint="Enter a URL"/>
-          <Button col="1" row="0" text="&#xE5D2; MENU" class="material-icon" tap="menuButtonClicked"/>
+    <ActionBar>
+      <ActionBar.titleView  margin="0px" padding="0px" >
+        <GridLayout id="header" columns="*, auto, auto, auto" rows="auto" horizontalAlignment="stretch">
+            <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" />
+            <Button col="1" text="layers" class="material-icon" width="10%" style="font-size:22px; color:#545454;" margin="0px 0px 0px 10px" />
+            <Button col="2" text="more_vert" class="material-icon" width="8%" style="font-size:22px; color:#545454;" tap="menuButtonClicked" />
+            <Label col="3" text=" " width="5%"/>
         </GridLayout>
       </ActionBar.titleView>
     </ActionBar>
@@ -12,22 +14,10 @@
   <Placeholder creatingView="createChannelView"/>
   <AbsoluteLayout id="menu" loaded="menuLoaded" horizontalAlignment="right" visibility="collapsed">
     <StackLayout id="menuContainer" orientation="vertical" verticalAlignment="top">
-      <StackLayout orientation="horizontal" tap="newChannelClicked">
-        <Label text="&#xE145;" class="material-icon"/>
-        <Label text="New Channel"/>
-      </StackLayout>
-      <StackLayout orientation="horizontal" tap="bookmarksClicked">
-        <Label text="&#xE866;" class="material-icon"/>
-        <Label text="Bookmarks"/>
-      </StackLayout>
-      <StackLayout orientation="horizontal" tap="historyClicked">
-        <Label text="&#xE889;" class="material-icon"/>
-        <Label text="History"/>
-      </StackLayout>
-      <StackLayout orientation="horizontal" tap="settingsClicked">
-        <Label text="&#xE8B8;" class="material-icon"/>
-        <Label text="Settings"/>
-      </StackLayout>
-    </StackLayout>
+      <Label class="menuItem" text="New Channel" tap="newChannelClicked"/>
+      <Label class="menuItem" text="Bookmarks" tap="bookmarksClicked"/>
+      <Label class="menuItem" text="History" tap="historyClicked"/>
+      <Label class="menuItem" text="Settings" tap="settingsClicked"/>
+    </StackLayout> 
   </AbsoluteLayout>
 </Page>
