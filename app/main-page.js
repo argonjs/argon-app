@@ -4,7 +4,6 @@ var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
-var argonBrowserView = require('argon-browser-view');
 var Argon = require('argon');
 require('./argon-camera-service');
 require('./argon-device-service');
@@ -13,23 +12,16 @@ var argon_vuforia_service_1 = require('./argon-vuforia-service');
 var actionBar;
 var searchBar;
 var iosSearchBarController;
+var container = new Argon.Container;
+container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
+exports.manager = Argon.init({ container: container, config: {
+        role: Argon.Role.MANAGER,
+        defaultReality: { type: 'vuforia' }
+    } });
 function pageLoaded(args) {
-    var container = new Argon.Container;
-    container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
-    exports.manager = Argon.init({ container: container, config: {
-            role: Argon.Role.MANAGER,
-            defaultReality: { type: 'vuforia' }
-        } });
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
-    exports.browserView = new argonBrowserView.BrowserView(page, exports.manager);
-    exports.browserView.onNavigationStateChange = function () {
-        var url = exports.browserView.getURL();
-        if (iosSearchBarController) {
-            iosSearchBarController.setText(url);
-        }
-    };
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(function () {
@@ -55,13 +47,28 @@ function searchBarLoaded(args) {
         }
         url = url.toLowerCase();
         console.log("Load url: " + url);
-        exports.browserView.load(url);
+        exports.browserView.focussedLayer.src = url;
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
     }
 }
 exports.searchBarLoaded = searchBarLoaded;
+function browserViewLoaded(args) {
+    exports.browserView = args.object;
+    exports.browserView.on('propertyChange', function (eventData) {
+        if (eventData.propertyName === 'url') {
+            var url = eventData.value;
+            if (iosSearchBarController) {
+                iosSearchBarController.setText(url);
+            }
+            else {
+                searchBar.text = url;
+            }
+        }
+    });
+}
+exports.browserViewLoaded = browserViewLoaded;
 // initialize some properties of the menu so that animations will render correctly
 function menuLoaded(args) {
     var menu = args.object;
@@ -69,6 +76,7 @@ function menuLoaded(args) {
     menu.originY = 0;
     menu.scaleX = 0;
     menu.scaleY = 0;
+    menu.opacity = 0;
 }
 exports.menuLoaded = menuLoaded;
 var IOSSearchBarController = (function () {
@@ -96,7 +104,7 @@ var IOSSearchBarController = (function () {
                 }
                 setTimeout(function () {
                     if (_this.uiSearchBar.text === "") {
-                        _this.uiSearchBar.text = exports.browserView.getURL();
+                        _this.uiSearchBar.text = exports.browserView.url;
                         _this.setPlaceholderText(null);
                         _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
                     }
@@ -106,7 +114,7 @@ var IOSSearchBarController = (function () {
                 _this.setPlaceholderText(_this.uiSearchBar.text);
                 _this.uiSearchBar.text = "";
                 Promise.resolve().then(function () {
-                    _this.setPlaceholderText(exports.browserView.getURL());
+                    _this.setPlaceholderText(exports.browserView.url);
                     _this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
                     var items = actionBar.actionItems.getItems();
                     for (var _i = 0, items_2 = items; _i < items_2.length; _i++) {
@@ -141,22 +149,28 @@ function menuButtonClicked(args) {
     if (menu.visibility == "visible") {
         menu.animate({
             scale: { x: 0, y: 0 },
-            duration: 150
+            duration: 150,
+            opacity: 0
         }).then(function () { menu.visibility = "collapsed"; });
     }
     else {
         //make sure the menu view is rendered above any other views
-        var parent_1 = menu.parent;
-        parent_1._removeView(menu);
-        parent_1._addView(menu, 0);
+        // const parent = menu.parent;
+        // parent._removeView(menu);
+        // parent._addView(menu, 0);
         menu.visibility = "visible";
         menu.animate({
             scale: { x: 1, y: 1 },
-            duration: 150
+            duration: 150,
+            opacity: 1
         });
     }
 }
 exports.menuButtonClicked = menuButtonClicked;
+function onTap() {
+    console.log('tapped');
+}
+exports.onTap = onTap;
 function newChannelClicked(args) {
     //code to open a new channel goes here
 }

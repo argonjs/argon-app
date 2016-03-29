@@ -1,8 +1,8 @@
 {
-    "name": "argon-browser-view",
+    "name": "argon-web-view",
     "version": "1.0.0",
     "description": "",
-    "main": "argon-browser-view.js",
+    "main": "argon-web-view.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },

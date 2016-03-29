@@ -1,50 +1,45 @@
 
-import application = require('application');
-import pages = require('ui/page');
-import views = require('ui/core/view');
-import frames = require('ui/frame');
-import searchbar = require('ui/search-bar');
-import actionbar = require('ui/action-bar');
-import color = require('color');
-import platform = require('platform');
+import * as application from 'application';
+import * as pages from 'ui/page';
+import * as views from 'ui/core/view';
+import * as frames from 'ui/frame';
+import * as searchbar from 'ui/search-bar';
+import * as actionbar from 'ui/action-bar';
+import {CreateViewEventData} from 'ui/placeholder';
+import * as color from 'color';
+import * as platform from 'platform';
 
-import vuforia = require('nativescript-vuforia');
-import argonBrowserView = require('argon-browser-view');
+import * as vuforia from 'nativescript-vuforia';
 
-import Argon = require('argon');
+import {BrowserView} from './browser-view'
+import {PropertyChangeData} from 'data/observable'
+
+import * as Argon from 'argon';
 import './argon-camera-service';
 import './argon-device-service';
 import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 export let manager:Argon.ArgonSystem;
-export let browserView:argonBrowserView.BrowserView;
+export let browserView:BrowserView;
 let actionBar:actionbar.ActionBar;
 let searchBar:searchbar.SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
+const container = new Argon.Container;
+container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+manager = Argon.init({container, config: {
+	role: Argon.Role.MANAGER,
+	defaultReality: {type: 'vuforia'}
+}});
+
 export function pageLoaded(args) {
-	
-	const container = new Argon.Container;
-	container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
-	manager = Argon.init({container, config: {
-		role: Argon.Role.MANAGER,
-		defaultReality: {type: 'vuforia'}
-	}});
 
     const page:pages.Page = args.object;
     page.backgroundColor = new color.Color("black");
 	
 	actionBar = page.actionBar;
-	browserView = new argonBrowserView.BrowserView(page, manager);
-	
-	browserView.onNavigationStateChange = () => {
-		const url = browserView.getURL();
-		if (iosSearchBarController) {
-			iosSearchBarController.setText(url);
-		}
-	}
 	
 	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
 	if (page.ios) {
@@ -72,12 +67,26 @@ export function searchBarLoaded(args) {
 		}
 		url = url.toLowerCase();
 		console.log("Load url: " + url);
-		browserView.load(url);
+		browserView.focussedLayer.src = url;
 	});
 
     if (application.ios) {
 		iosSearchBarController = new IOSSearchBarController(searchBar);
 	}
+}
+
+export function browserViewLoaded(args) {
+	browserView = args.object;
+	browserView.on('propertyChange', (eventData:PropertyChangeData) => {
+		if (eventData.propertyName === 'url') {
+			const url = eventData.value;
+			if (iosSearchBarController) {
+				iosSearchBarController.setText(url);
+			} else {
+				searchBar.text = url;
+			}
+		}
+	});
 }
 
 // initialize some properties of the menu so that animations will render correctly
@@ -87,6 +96,7 @@ export function menuLoaded(args) {
     menu.originY = 0;
 	menu.scaleX = 0;
     menu.scaleY = 0;
+	menu.opacity = 0;
 }
 
 class IOSSearchBarController {
@@ -119,7 +129,7 @@ class IOSSearchBarController {
 				}
 				setTimeout(()=>{
 					if (this.uiSearchBar.text === "") {
-						this.uiSearchBar.text = browserView.getURL();
+						this.uiSearchBar.text = browserView.url;
 						this.setPlaceholderText(null);
 						this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
 					}
@@ -128,7 +138,7 @@ class IOSSearchBarController {
 				this.setPlaceholderText(this.uiSearchBar.text);
 				this.uiSearchBar.text = "";
 				Promise.resolve().then(()=>{
-					this.setPlaceholderText(browserView.getURL());
+					this.setPlaceholderText(browserView.url);
 					this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
 					const items = actionBar.actionItems.getItems();
 					for (const item of items) {
@@ -166,20 +176,26 @@ export function menuButtonClicked(args) {
     if (menu.visibility == "visible") {
         menu.animate({
             scale: { x: 0, y: 0 },
-            duration: 150 
+            duration: 150,
+			opacity: 0
         }).then(() => { menu.visibility = "collapsed"; });
     } else {
         //make sure the menu view is rendered above any other views
-        const parent = menu.parent;
-        parent._removeView(menu);
-        parent._addView(menu, 0);
+        // const parent = menu.parent;
+        // parent._removeView(menu);
+        // parent._addView(menu, 0);
         
         menu.visibility = "visible";
         menu.animate({
             scale: { x: 1, y: 1 },
-            duration: 150 
+            duration: 150,
+			opacity: 1
         });
     }
+}
+
+export function onTap() {
+	console.log('tapped')
 }
 
 export function newChannelClicked(args) {
