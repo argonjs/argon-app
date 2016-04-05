@@ -9,6 +9,7 @@ require('./argon-camera-service');
 require('./argon-device-service');
 require('./argon-viewport-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
+var history = require('./shared/history');
 var actionBar;
 var searchBar;
 var iosSearchBarController;
@@ -65,6 +66,13 @@ function browserViewLoaded(args) {
             else {
                 searchBar.text = url;
             }
+        }
+    });
+    exports.browserView.focussedLayer.on("loadFinished", function (eventData) {
+        console.log("finished loading webpage");
+        if (!eventData.error) {
+            console.log("adding URL to history: ", eventData.url);
+            history.addPage(eventData.url);
         }
     });
 }

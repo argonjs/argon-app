@@ -6,6 +6,7 @@ import * as frames from 'ui/frame';
 import * as searchbar from 'ui/search-bar';
 import * as actionbar from 'ui/action-bar';
 import {CreateViewEventData} from 'ui/placeholder';
+import {LoadEventData} from 'ui/web-view';
 import * as color from 'color';
 import * as platform from 'platform';
 
@@ -20,7 +21,7 @@ import './argon-device-service';
 import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
-import history = require('./shared/history');
+import * as history from './shared/history';
 
 export let manager:Argon.ArgonSystem;
 export let browserView:BrowserView;
@@ -89,6 +90,15 @@ export function browserViewLoaded(args) {
 			}
 		}
 	});
+    
+    browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
+        console.log("finished loading webpage")
+        
+        if (!eventData.error) {
+            console.log("adding URL to history: ", eventData.url);
+            history.addPage(eventData.url);
+        }
+    });
 }
 
 // initialize some properties of the menu so that animations will render correctly
