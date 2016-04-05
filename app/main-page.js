@@ -180,8 +180,7 @@ function bookmarksClicked(args) {
 }
 exports.bookmarksClicked = bookmarksClicked;
 function historyClicked(args) {
-    //frames.topmost().navigate("history-view");
-    frames.topmost().currentPage.showModal("history-view", null, function () { }, false);
+    frames.topmost().currentPage.showModal("history-view", null, function () { }, true);
 }
 exports.historyClicked = historyClicked;
 function settingsClicked(args) {

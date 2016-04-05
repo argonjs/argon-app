@@ -1,12 +1,8 @@
 "use strict";
 var frames = require('ui/frame');
 var history = require('./shared/history');
-function onShownModally(args) {
-    console.log("showing modally!");
-}
-exports.onShownModally = onShownModally;
 function exitButtonClicked(args) {
-    frames.topmost().navigate("main-page");
+    frames.topmost().currentPage.modal.closeModal();
 }
 exports.exitButtonClicked = exitButtonClicked;
 function historyViewLoaded(args) {

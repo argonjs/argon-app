@@ -209,8 +209,7 @@ export function bookmarksClicked(args) {
 }
 
 export function historyClicked(args) {
-    //frames.topmost().navigate("history-view");
-    frames.topmost().currentPage.showModal("history-view", null, () => {}, false);
+    frames.topmost().currentPage.showModal("history-view", null, () => {}, true);
 }
 
 export function settingsClicked(args) {

@@ -1,12 +1,8 @@
-import frames = require('ui/frame');
-import history = require('./shared/history');
-
-export function onShownModally(args) {
-    console.log("showing modally!")
-}
+import * as frames from 'ui/frame';
+import * as history from './shared/history';
 
 export function exitButtonClicked(args) {
-    frames.topmost().navigate("main-page");
+    frames.topmost().currentPage.modal.closeModal();
 }
 
 export function historyViewLoaded(args) {
