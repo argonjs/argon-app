@@ -1,11 +1,10 @@
 import applicationSettings = require('application-settings');
 
-let history: string[] = initHistory();
+let history: string[] = loadHistory();
 
-function initHistory(): string[] {
+function loadHistory(): string[] {
     if (applicationSettings.hasKey("history")) {
-        const historyLog = applicationSettings.getString("history");
-        return historyLog.split(" ");
+        return JSON.parse(applicationSettings.getString("history"));
     } else {
         return [];
     }
@@ -17,9 +16,7 @@ export function getList(): string[] {
 
 export function addPage(url: string) {
     history.push(url);
-    let newHistoryLog = applicationSettings.getString("history", "");
-    newHistoryLog += (history.length == 1) ? url : " " + url;
-    applicationSettings.setString("history", newHistoryLog);
+    applicationSettings.setString("history", JSON.stringify(history));
 }
 
 /*

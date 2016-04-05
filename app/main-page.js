@@ -70,11 +70,7 @@ function browserViewLoaded(args) {
         }
     });
     exports.browserView.focussedLayer.on("loadFinished", function (eventData) {
-        console.log("finished loading webpage");
-        console.log(eventData.error);
-        console.log(eventData.navigationType);
         if (!eventData.error) {
-            console.log("adding URL to history: ", eventData.url);
             history.addPage(eventData.url);
         }
     });
@@ -194,7 +190,6 @@ function historyClicked(args) {
     frames.topmost().currentPage.showModal("history-view", null, function () {
         var url = historyView.getTappedUrl();
         if (url) {
-            console.log("load from history: ", url);
             exports.browserView.focussedLayer.src = url;
         }
     }, true);

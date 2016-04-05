@@ -19,7 +19,6 @@ export function historyViewLoaded(args) {
 export function historyClicked(args) {
     const historyView = args.object;
     tapUrl = historyView.items[args.index];
-    console.log("Tapped ", tapUrl);
     frames.topmost().currentPage.modal.closeModal();
 }
 

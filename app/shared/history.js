@@ -1,11 +1,9 @@
 "use strict";
 var applicationSettings = require('application-settings');
-var history = initHistory();
-function initHistory() {
-    console.log("Loading previous history");
+var history = loadHistory();
+function loadHistory() {
     if (applicationSettings.hasKey("history")) {
-        var historyLog = applicationSettings.getString("history");
-        return historyLog.split(" ");
+        return JSON.parse(applicationSettings.getString("history"));
     }
     else {
         return [];
@@ -17,11 +15,7 @@ function getList() {
 exports.getList = getList;
 function addPage(url) {
     history.push(url);
-    console.log("Old History: " + applicationSettings.getString("history", ""));
-    var newHistoryLog = applicationSettings.getString("history", "");
-    newHistoryLog += (history.length == 1) ? url : " " + url;
-    applicationSettings.setString("history", newHistoryLog);
-    console.log("New history: " + applicationSettings.getString("history"));
+    applicationSettings.setString("history", JSON.stringify(history));
 }
 exports.addPage = addPage;
 /*

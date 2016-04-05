@@ -18,7 +18,6 @@ exports.historyViewLoaded = historyViewLoaded;
 function historyClicked(args) {
     var historyView = args.object;
     tapUrl = historyView.items[args.index];
-    console.log("Tapped ", tapUrl);
     frames.topmost().currentPage.modal.closeModal();
 }
 exports.historyClicked = historyClicked;
