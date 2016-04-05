@@ -1,6 +1,10 @@
 import frames = require('ui/frame');
 import history = require('./shared/history');
 
+export function onShownModally(args) {
+    console.log("showing modally!")
+}
+
 export function exitButtonClicked(args) {
     frames.topmost().navigate("main-page");
 }

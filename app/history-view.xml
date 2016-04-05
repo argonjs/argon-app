@@ -1,10 +1,11 @@
-<Page>
-    <Page.actionBar>
-        <ActionBar title="History">
+<Page shownModally="onShownModally">
+    <StackLayout>
+        <!--ActionBar title="History">
             <ActionBar.actionItems>
                 <ActionItem text="X" ios.position="right" tap="exitButtonClicked"/>
             </ActionBar.actionItems>
-        </ActionBar>
-    </Page.actionBar>
-    <ListView items="{{ history }}" loaded="historyViewLoaded" itemTap="historyClicked"/>
+        </ActionBar-->
+        <Label text="History"/>
+        <ListView items="{{ history }}" loaded="historyViewLoaded" itemTap="historyClicked"/>
+    </StackLayout>
 </Page>

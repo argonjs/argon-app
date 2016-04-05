@@ -4,29 +4,33 @@ var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
-var argonBrowserView = require('argon-browser-view');
 var Argon = require('argon');
-var argon_device_service_1 = require('./argon-device-service');
+require('./argon-camera-service');
+require('./argon-device-service');
+require('./argon-viewport-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
-var history = require('./shared/history');
 var actionBar;
 var searchBar;
 var iosSearchBarController;
+var container = new Argon.Container;
+container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
+exports.manager = Argon.init({ container: container, config: {
+        role: Argon.Role.MANAGER,
+        defaultReality: { type: 'vuforia' }
+    } });
 function pageLoaded(args) {
-    var container = new Argon.Container;
-    container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativeScriptDeviceService);
-    container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
-    exports.manager = Argon.init({ container: container });
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
-    exports.browserView = new argonBrowserView.BrowserView(page, exports.manager);
-    exports.browserView.onNavigationStateChange = function () {
-        var url = exports.browserView.getURL();
-        if (iosSearchBarController) {
-            iosSearchBarController.setText(url);
-        }
-    };
+    // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
+    if (page.ios) {
+        setTimeout(function () {
+            page.requestLayout();
+        }, 0);
+        application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, function () {
+            page.requestLayout();
+        });
+    }
 }
 exports.pageLoaded = pageLoaded;
 function actionBarLoaded(args) {
@@ -43,14 +47,38 @@ function searchBarLoaded(args) {
         }
         url = url.toLowerCase();
         console.log("Load url: " + url);
-        exports.browserView.load(url);
-        history.addPage(url);
+        exports.browserView.focussedLayer.src = url;
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
     }
 }
 exports.searchBarLoaded = searchBarLoaded;
+function browserViewLoaded(args) {
+    exports.browserView = args.object;
+    exports.browserView.on('propertyChange', function (eventData) {
+        if (eventData.propertyName === 'url') {
+            var url = eventData.value;
+            if (iosSearchBarController) {
+                iosSearchBarController.setText(url);
+            }
+            else {
+                searchBar.text = url;
+            }
+        }
+    });
+}
+exports.browserViewLoaded = browserViewLoaded;
+// initialize some properties of the menu so that animations will render correctly
+function menuLoaded(args) {
+    var menu = args.object;
+    menu.originX = 1;
+    menu.originY = 0;
+    menu.scaleX = 0;
+    menu.scaleY = 0;
+    menu.opacity = 0;
+}
+exports.menuLoaded = menuLoaded;
 var IOSSearchBarController = (function () {
     function IOSSearchBarController(searchBar) {
         var _this = this;
@@ -64,27 +92,30 @@ var IOSSearchBarController = (function () {
         this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
         this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal);
         this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
-        var notificationCenter = NSNotificationCenter.defaultCenter();
         var textFieldEditHandler = function () {
             if (_this.uiSearchBar.isFirstResponder()) {
-                _this.uiSearchBar.setShowsCancelButtonAnimated(true, false);
+                _this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
+                var cancelButton = _this.uiSearchBar.valueForKey("cancelButton");
+                cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
                 var items = actionBar.actionItems.getItems();
                 for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
                     var item = items_1[_i];
                     item.visibility = 'collapse';
                 }
                 setTimeout(function () {
-                    _this.uiSearchBar.text = exports.browserView.getURL();
-                    _this.setPlaceholderText(null);
-                    _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
+                    if (_this.uiSearchBar.text === "") {
+                        _this.uiSearchBar.text = exports.browserView.url;
+                        _this.setPlaceholderText(null);
+                        _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
+                    }
                 }, 500);
             }
             else {
                 _this.setPlaceholderText(_this.uiSearchBar.text);
                 _this.uiSearchBar.text = "";
                 Promise.resolve().then(function () {
-                    _this.setPlaceholderText(exports.browserView.getURL());
-                    _this.uiSearchBar.setShowsCancelButtonAnimated(false, false);
+                    _this.setPlaceholderText(exports.browserView.url);
+                    _this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
                     var items = actionBar.actionItems.getItems();
                     for (var _i = 0, items_2 = items; _i < items_2.length; _i++) {
                         var item = items_2[_i];
@@ -115,23 +146,46 @@ var IOSSearchBarController = (function () {
 }());
 function menuButtonClicked(args) {
     var menu = views.getViewById(frames.topmost().currentPage, "menu");
-    menu.visibility = (menu.visibility == "visible") ? "collapsed" : "visible";
-    if (menu.ios) {
-        var menuView = menu.ios;
-        menuView.superview.bringSubviewToFront(menuView);
+    if (menu.visibility == "visible") {
+        menu.animate({
+            scale: { x: 0, y: 0 },
+            duration: 150,
+            opacity: 0
+        }).then(function () { menu.visibility = "collapsed"; });
+    }
+    else {
+        //make sure the menu view is rendered above any other views
+        // const parent = menu.parent;
+        // parent._removeView(menu);
+        // parent._addView(menu, 0);
+        menu.visibility = "visible";
+        menu.animate({
+            scale: { x: 1, y: 1 },
+            duration: 150,
+            opacity: 1
+        });
     }
 }
 exports.menuButtonClicked = menuButtonClicked;
+function onTap() {
+    console.log('tapped');
+}
+exports.onTap = onTap;
+function newChannelClicked(args) {
+    //code to open a new channel goes here
+}
+exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
     //code to open the bookmarks view goes here
 }
 exports.bookmarksClicked = bookmarksClicked;
 function historyClicked(args) {
-    frames.topmost().navigate("history-view");
+    //frames.topmost().navigate("history-view");
+    frames.topmost().currentPage.showModal("history-view", null, function () { }, false);
 }
 exports.historyClicked = historyClicked;
-function debugClicked(args) {
-    //code to open the debug view goes here
+function settingsClicked(args) {
+    //code to open the settings view goes here
 }
-exports.debugClicked = debugClicked;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibWFpbi1wYWdlLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsibWFpbi1wYWdlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFDQSxJQUFPLFdBQVcsV0FBVyxhQUFhLENBQUMsQ0FBQztBQUU1QyxJQUFPLEtBQUssV0FBVyxjQUFjLENBQUMsQ0FBQztBQUN2QyxJQUFPLE1BQU0sV0FBVyxVQUFVLENBQUMsQ0FBQztBQUNwQyxJQUFPLFNBQVMsV0FBVyxlQUFlLENBQUMsQ0FBQztBQUU1QyxJQUFPLEtBQUssV0FBVyxPQUFPLENBQUMsQ0FBQztBQUloQyxJQUFPLGdCQUFnQixXQUFXLG9CQUFvQixDQUFDLENBQUM7QUFFeEQsSUFBTyxLQUFLLFdBQVcsT0FBTyxDQUFDLENBQUM7QUFDaEMscUNBQXdDLHdCQUF3QixDQUFDLENBQUE7QUFDakUsc0NBQWlELHlCQUF5QixDQUFDLENBQUE7QUFFM0UsSUFBTyxPQUFPLFdBQVcsa0JBQWtCLENBQUMsQ0FBQztBQUk3QyxJQUFJLFNBQTZCLENBQUM7QUFDbEMsSUFBSSxTQUE2QixDQUFDO0FBRWxDLElBQUksc0JBQTZDLENBQUM7QUFFbEQsb0JBQTJCLElBQUk7SUFFOUIsSUFBTSxTQUFTLEdBQUcsSUFBSSxLQUFLLENBQUMsU0FBUyxDQUFDO0lBQ3RDLFNBQVMsQ0FBQyxpQkFBaUIsQ0FBQyxLQUFLLENBQUMsYUFBYSxFQUFFLGdEQUF5QixDQUFDLENBQUM7SUFDNUUsU0FBUyxDQUFDLGlCQUFpQixDQUFDLEtBQUssQ0FBQyxzQkFBc0IsRUFBRSwwREFBa0MsQ0FBQyxDQUFDO0lBQzlGLGVBQU8sR0FBRyxLQUFLLENBQUMsSUFBSSxDQUFDLEVBQUMsV0FBQSxTQUFTLEVBQUMsQ0FBQyxDQUFDO0lBRS9CLElBQU0sSUFBSSxHQUFjLElBQUksQ0FBQyxNQUFNLENBQUM7SUFDcEMsSUFBSSxDQUFDLGVBQWUsR0FBRyxJQUFJLEtBQUssQ0FBQyxLQUFLLENBQUMsT0FBTyxDQUFDLENBQUM7SUFFbkQsU0FB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
+exports.settingsClicked = settingsClicked;
+//# sourceMappingURL=main-page.js.map

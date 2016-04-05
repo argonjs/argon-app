@@ -1,47 +1,56 @@
 
-import application = require('application');
-import pages = require('ui/page');
-import views = require('ui/core/view');
-import frames = require('ui/frame');
-import searchbar = require('ui/search-bar');
-import actionbar = require('ui/action-bar');
-import color = require('color');
-import platform = require('platform');
+import * as application from 'application';
+import * as pages from 'ui/page';
+import * as views from 'ui/core/view';
+import * as frames from 'ui/frame';
+import * as searchbar from 'ui/search-bar';
+import * as actionbar from 'ui/action-bar';
+import {CreateViewEventData} from 'ui/placeholder';
+import * as color from 'color';
+import * as platform from 'platform';
 
-import vuforia = require('nativescript-vuforia');
-import argonBrowserView = require('argon-browser-view');
+import * as vuforia from 'nativescript-vuforia';
 
-import Argon = require('argon');
-import {NativeScriptDeviceService} from './argon-device-service';
+import {BrowserView} from './browser-view'
+import {PropertyChangeData} from 'data/observable'
+
+import * as Argon from 'argon';
+import './argon-camera-service';
+import './argon-device-service';
+import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 import history = require('./shared/history');
 
 export let manager:Argon.ArgonSystem;
-export let browserView:argonBrowserView.BrowserView;
+export let browserView:BrowserView;
 let actionBar:actionbar.ActionBar;
 let searchBar:searchbar.SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
+const container = new Argon.Container;
+container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+manager = Argon.init({container, config: {
+	role: Argon.Role.MANAGER,
+	defaultReality: {type: 'vuforia'}
+}});
+
 export function pageLoaded(args) {
-	
-	const container = new Argon.Container;
-	container.registerSingleton(Argon.DeviceService, NativeScriptDeviceService);
-	container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
-	manager = Argon.init({container});
 
     const page:pages.Page = args.object;
     page.backgroundColor = new color.Color("black");
 	
 	actionBar = page.actionBar;
-	browserView = new argonBrowserView.BrowserView(page, manager);
 	
-	browserView.onNavigationStateChange = () => {
-		const url = browserView.getURL();
-		if (iosSearchBarController) {
-			iosSearchBarController.setText(url);
-		}
+	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
+	if (page.ios) {
+		setTimeout(()=>{
+			page.requestLayout();
+		}, 0)
+		application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, () => {
+			page.requestLayout();
+		});
 	}
 }
 
@@ -60,13 +69,36 @@ export function searchBarLoaded(args) {
 		}
 		url = url.toLowerCase();
 		console.log("Load url: " + url);
-		browserView.load(url);
-        history.addPage(url);
+		browserView.focussedLayer.src = url;
 	});
 
     if (application.ios) {
 		iosSearchBarController = new IOSSearchBarController(searchBar);
 	}
+}
+
+export function browserViewLoaded(args) {
+	browserView = args.object;
+	browserView.on('propertyChange', (eventData:PropertyChangeData) => {
+		if (eventData.propertyName === 'url') {
+			const url = eventData.value;
+			if (iosSearchBarController) {
+				iosSearchBarController.setText(url);
+			} else {
+				searchBar.text = url;
+			}
+		}
+	});
+}
+
+// initialize some properties of the menu so that animations will render correctly
+export function menuLoaded(args) {
+    let menu:views.View = args.object;
+	menu.originX = 1;
+    menu.originY = 0;
+	menu.scaleX = 0;
+    menu.scaleY = 0;
+	menu.opacity = 0;
 }
 
 class IOSSearchBarController {
@@ -86,27 +118,30 @@ class IOSSearchBarController {
 		this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
 		
 		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
-		
-    	const notificationCenter = NSNotificationCenter.defaultCenter();
 
     	const textFieldEditHandler = () => {
     		if (this.uiSearchBar.isFirstResponder()) {
-				this.uiSearchBar.setShowsCancelButtonAnimated(true, false);
+				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
+				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
+				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
+				
 				const items = actionBar.actionItems.getItems();
 				for (const item of items) {
 					item.visibility = 'collapse'
 				}
 				setTimeout(()=>{
-					this.uiSearchBar.text = browserView.getURL();
-					this.setPlaceholderText(null);
-					this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
+					if (this.uiSearchBar.text === "") {
+						this.uiSearchBar.text = browserView.url;
+						this.setPlaceholderText(null);
+						this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
+					}
 				}, 500)
 			} else {
 				this.setPlaceholderText(this.uiSearchBar.text);
 				this.uiSearchBar.text = "";
 				Promise.resolve().then(()=>{
-					this.setPlaceholderText(browserView.getURL());
-					this.uiSearchBar.setShowsCancelButtonAnimated(false, false);
+					this.setPlaceholderText(browserView.url);
+					this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
 					const items = actionBar.actionItems.getItems();
 					for (const item of items) {
 						item.visibility = 'visible'
@@ -139,11 +174,34 @@ class IOSSearchBarController {
 
 export function menuButtonClicked(args) {
     let menu = views.getViewById(frames.topmost().currentPage, "menu");
-    menu.visibility = (menu.visibility == "visible") ? "collapsed" : "visible";
-	if (menu.ios) {
-		const menuView:UIView = menu.ios;
-		menuView.superview.bringSubviewToFront(menuView);
-	}
+        
+    if (menu.visibility == "visible") {
+        menu.animate({
+            scale: { x: 0, y: 0 },
+            duration: 150,
+			opacity: 0
+        }).then(() => { menu.visibility = "collapsed"; });
+    } else {
+        //make sure the menu view is rendered above any other views
+        // const parent = menu.parent;
+        // parent._removeView(menu);
+        // parent._addView(menu, 0);
+        
+        menu.visibility = "visible";
+        menu.animate({
+            scale: { x: 1, y: 1 },
+            duration: 150,
+			opacity: 1
+        });
+    }
+}
+
+export function onTap() {
+	console.log('tapped')
+}
+
+export function newChannelClicked(args) {
+    //code to open a new channel goes here
 }
 
 export function bookmarksClicked(args) {
@@ -151,9 +209,10 @@ export function bookmarksClicked(args) {
 }
 
 export function historyClicked(args) {
-    frames.topmost().navigate("history-view");
+    //frames.topmost().navigate("history-view");
+    frames.topmost().currentPage.showModal("history-view", null, () => {}, false);
 }
 
-export function debugClicked(args) {
-    //code to open the debug view goes here
+export function settingsClicked(args) {
+    //code to open the settings view goes here
 }
