@@ -3,8 +3,6 @@ import applicationSettings = require('application-settings');
 let history: string[] = initHistory();
 
 function initHistory(): string[] {
-    console.log("Loading previous history");
-    
     if (applicationSettings.hasKey("history")) {
         const historyLog = applicationSettings.getString("history");
         return historyLog.split(" ");
@@ -19,14 +17,9 @@ export function getList(): string[] {
 
 export function addPage(url: string) {
     history.push(url);
-    
-    console.log("Old History: " + applicationSettings.getString("history", ""));
-    
     let newHistoryLog = applicationSettings.getString("history", "");
     newHistoryLog += (history.length == 1) ? url : " " + url;
     applicationSettings.setString("history", newHistoryLog);
-    
-    console.log("New history: " + applicationSettings.getString("history"));
 }
 
 /*

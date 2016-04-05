@@ -21,6 +21,7 @@ import './argon-device-service';
 import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
+import * as historyView from './history-view';
 import * as history from './shared/history';
 
 export let manager:Argon.ArgonSystem;
@@ -92,7 +93,9 @@ export function browserViewLoaded(args) {
 	});
     
     browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
-        console.log("finished loading webpage")
+        console.log("finished loading webpage");
+        console.log(eventData.error);
+        console.log(eventData.navigationType);
         
         if (!eventData.error) {
             console.log("adding URL to history: ", eventData.url);
@@ -219,7 +222,13 @@ export function bookmarksClicked(args) {
 }
 
 export function historyClicked(args) {
-    frames.topmost().currentPage.showModal("history-view", null, () => {}, true);
+    frames.topmost().currentPage.showModal("history-view", null, () => {
+        const url = historyView.getTappedUrl();
+        if (url) {
+            console.log("load from history: ", url);
+            browserView.focussedLayer.src = url;
+        }
+    }, true);
 }
 
 export function settingsClicked(args) {

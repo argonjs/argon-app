@@ -1,6 +1,12 @@
 import * as frames from 'ui/frame';
 import * as history from './shared/history';
 
+let tapUrl: string;
+
+export function onShownModally(args) {
+    tapUrl = undefined;
+}
+
 export function exitButtonClicked(args) {
     frames.topmost().currentPage.modal.closeModal();
 }
@@ -12,6 +18,11 @@ export function historyViewLoaded(args) {
 
 export function historyClicked(args) {
     const historyView = args.object;
-    const item = historyView.items[args.index];
-    console.log("Tapped item #", item);
+    tapUrl = historyView.items[args.index];
+    console.log("Tapped ", tapUrl);
+    frames.topmost().currentPage.modal.closeModal();
+}
+
+export function getTappedUrl(): string {
+    return tapUrl;
 }

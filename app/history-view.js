@@ -1,6 +1,11 @@
 "use strict";
 var frames = require('ui/frame');
 var history = require('./shared/history');
+var tapUrl;
+function onShownModally(args) {
+    tapUrl = undefined;
+}
+exports.onShownModally = onShownModally;
 function exitButtonClicked(args) {
     frames.topmost().currentPage.modal.closeModal();
 }
@@ -12,8 +17,13 @@ function historyViewLoaded(args) {
 exports.historyViewLoaded = historyViewLoaded;
 function historyClicked(args) {
     var historyView = args.object;
-    var item = historyView.items[args.index];
-    console.log("Tapped item #", item);
+    tapUrl = historyView.items[args.index];
+    console.log("Tapped ", tapUrl);
+    frames.topmost().currentPage.modal.closeModal();
 }
 exports.historyClicked = historyClicked;
+function getTappedUrl() {
+    return tapUrl;
+}
+exports.getTappedUrl = getTappedUrl;
 //# sourceMappingURL=history-view.js.map
