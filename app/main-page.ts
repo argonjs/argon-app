@@ -8,6 +8,7 @@ import * as actionbar from 'ui/action-bar';
 import {CreateViewEventData} from 'ui/placeholder';
 import * as color from 'color';
 import * as platform from 'platform';
+import {Button} from "ui/button";
 
 import * as vuforia from 'nativescript-vuforia';
 
@@ -38,9 +39,17 @@ export function pageLoaded(args) {
 
     const page:pages.Page = args.object;
     page.backgroundColor = new color.Color("black");
-	
+
 	actionBar = page.actionBar;
-	
+
+	// Set the icon for the menu button
+	const menuButton: Button = page.getViewById("menuBtn");
+	menuButton.text = String.fromCharCode(0xe5d2);
+
+	// Set the icon for the layers button
+	const menuButton: Button = page.getViewById("layerBtn");
+	menuButton.text = String.fromCharCode(0xe53b);
+
 	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
 	if (page.ios) {
 		setTimeout(()=>{
@@ -58,9 +67,9 @@ export function actionBarLoaded(args) {
 
 export function searchBarLoaded(args) {
 	searchBar = args.object;
-	
+
 	searchBar.on(searchbar.SearchBar.submitEvent, () => {
-		let url = searchBar.text; 
+		let url = searchBar.text;
 		const protocolRegex = /^[^:]+(?=:\/\/)/;
 		if (!protocolRegex.test(url)) {
 			url = "http://" + url;
@@ -100,21 +109,21 @@ export function menuLoaded(args) {
 }
 
 class IOSSearchBarController {
-	
+
 	private uiSearchBar:UISearchBar;
 	private textField:UITextField;
-	
+
 	constructor(public searchBar:searchbar.SearchBar) {
     	this.uiSearchBar = searchBar.ios;
 		this.textField = this.uiSearchBar.valueForKey("searchField");
-		
+
     	this.uiSearchBar.showsCancelButton = false;
     	this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
 		this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
     	this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
 		this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
 		this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
-		
+
 		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
 
     	const textFieldEditHandler = () => {
@@ -122,7 +131,7 @@ class IOSSearchBarController {
 				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
 				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
 				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
-				
+
 				const items = actionBar.actionItems.getItems();
 				for (const item of items) {
 					item.visibility = 'collapse'
@@ -147,11 +156,11 @@ class IOSSearchBarController {
 				});
 			}
     	}
-		
+
     	application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
-    	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);	
+    	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
 	}
-	
+
 	private setPlaceholderText(text:string) {
 		if (text) {
 			var attributes = NSMutableDictionary.alloc().init();
@@ -161,18 +170,18 @@ class IOSSearchBarController {
 			this.textField.placeholder = searchBar.hint;
 		}
 	}
-	
+
 	public setText(url) {
 		if (!this.uiSearchBar.isFirstResponder()) {
 			this.setPlaceholderText(url);
 		}
 	}
-	
+
 }
 
 export function menuButtonClicked(args) {
     let menu = views.getViewById(frames.topmost().currentPage, "menu");
-        
+
     if (menu.visibility == "visible") {
         menu.animate({
             scale: { x: 0, y: 0 },
@@ -184,7 +193,7 @@ export function menuButtonClicked(args) {
         // const parent = menu.parent;
         // parent._removeView(menu);
         // parent._addView(menu, 0);
-        
+
         menu.visibility = "visible";
         menu.animate({
             scale: { x: 1, y: 1 },
