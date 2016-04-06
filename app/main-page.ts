@@ -234,3 +234,7 @@ export function historyClicked(args) {
 export function settingsClicked(args) {
     //code to open the settings view goes here
 }
+
+export function layerButtonClicked(args) {
+	browserView.showOverview();
+}

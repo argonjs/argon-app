@@ -8,6 +8,7 @@ var BrowserView = (function (_super) {
     function BrowserView() {
         _super.call(this);
         this.realityLayer = this.addLayer();
+        this.realityLayer.isRealityLayer = true;
         this.addLayer();
     }
     BrowserView.prototype.addLayer = function () {
@@ -29,6 +30,19 @@ var BrowserView = (function (_super) {
         this.addChild(layer);
         this._setFocussedLayer(layer);
         return layer;
+    };
+    BrowserView.prototype.getLayers = function () {
+        var layers = [];
+        for (var i = 0; i < this.getChildrenCount(); i += 1) {
+            var view = this.getChildAt(i);
+            if (view instanceof argon_web_view_1.ArgonWebView && !view.isRealityLayer) {
+                layers.push(view);
+            }
+        }
+        return layers;
+    };
+    BrowserView.prototype.showOverview = function () {
+        console.log(this.getLayers().length);
     };
     BrowserView.prototype.onLoaded = function () {
         _super.prototype.onLoaded.call(this);

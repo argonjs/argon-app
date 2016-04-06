@@ -206,4 +206,8 @@ function settingsClicked(args) {
     //code to open the settings view goes here
 }
 exports.settingsClicked = settingsClicked;
+function layerButtonClicked(args) {
+    exports.browserView.showOverview();
+}
+exports.layerButtonClicked = layerButtonClicked;
 //# sourceMappingURL=main-page.js.map

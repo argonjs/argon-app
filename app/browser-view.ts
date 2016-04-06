@@ -16,6 +16,7 @@ export class BrowserView extends GridLayout {
     constructor() {
         super();
         this.realityLayer = this.addLayer();
+        this.realityLayer.isRealityLayer = true;
         this.addLayer();
     }
 
@@ -38,6 +39,21 @@ export class BrowserView extends GridLayout {
         this.addChild(layer);
         this._setFocussedLayer(layer);
         return layer;
+    }
+
+    private getLayers(): Array<ArgonWebView> {
+      const layers = [];
+      for (let i = 0; i < this.getChildrenCount(); i += 1) {
+        const view = this.getChildAt(i);
+        if (view instanceof ArgonWebView && !view.isRealityLayer) {
+          layers.push(view);
+        }
+      }
+      return layers;
+    }
+
+    showOverview() {
+      // TODO
     }
 
     onLoaded() {
@@ -80,5 +96,4 @@ export class BrowserView extends GridLayout {
     get focussedLayer() {
         return this._focussedLayer;
     }
-
 }
