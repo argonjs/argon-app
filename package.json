@@ -1,23 +1,24 @@
 {
-	"nativescript": {
-		"id": "edu.gatech.ael.argon4",
-		"tns-ios": {
-			"version": "1.7.0"
-		},
-		"tns-android": {
-			"version": "1.7.1"
-		}
-	},
-	"dependencies": {
-		"argon": "file:../argon",
-		"argon-web-view": "file:plugins/argon-web-view",
-		"nativescript-geolocation": "0.0.7",
-		"nativescript-vuforia": "file:plugins/nativescript-vuforia",
-		"openpgp": "^2.1.0",
-		"tns-core-modules": "^1.7.1"
-	},
-	"devDependencies": {
-		"nativescript-dev-typescript": "^0.3.1",
-		"typescript": "^1.9.0-dev.20160313"
-	}
+  "nativescript": {
+    "id": "edu.gatech.ael.argon4",
+    "tns-ios": {
+      "version": "1.7.0"
+    },
+    "tns-android": {
+      "version": "1.7.1"
+    }
+  },
+  "dependencies": {
+    "argon": "file:../argon",
+    "argon-web-view": "file:plugins/argon-web-view",
+    "nativescript-geolocation": "0.0.7",
+    "nativescript-vuforia": "file:plugins/nativescript-vuforia",
+    "openpgp": "^2.1.0",
+    "tns-core-modules": "^1.7.1",
+    "urijs": "^1.17.1"
+  },
+  "devDependencies": {
+    "nativescript-dev-typescript": "^0.3.1",
+    "typescript": "^1.9.0-dev.20160313"
+  }
 }

@@ -1,4 +1,5 @@
 "use strict";
+var URI = require("urijs");
 var application = require('application');
 var views = require('ui/core/view');
 var frames = require('ui/frame');
@@ -47,13 +48,12 @@ function searchBarLoaded(args) {
     searchBar = args.object;
     searchBar.on(searchbar.SearchBar.submitEvent, function () {
         var url = searchBar.text;
-        var protocolRegex = /^[^:]+(?=:\/\/)/;
-        if (!protocolRegex.test(url)) {
-            url = "http://" + url;
+        var url = URI(searchBar.text);
+        if (url.protocol() !== "http" || url.protocol() !== "https") {
+            url.protocol("http");
         }
-        url = url.toLowerCase();
         console.log("Load url: " + url);
-        exports.browserView.focussedLayer.src = url;
+        exports.browserView.focussedLayer.src = url.toString();
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
