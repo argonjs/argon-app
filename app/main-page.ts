@@ -13,6 +13,7 @@ import {Button} from "ui/button";
 
 import * as vuforia from 'nativescript-vuforia';
 
+import * as util from './util';
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
@@ -176,31 +177,41 @@ class IOSSearchBarController {
 			this.setPlaceholderText(url);
 		}
 	}
-
 }
 
 export function menuButtonClicked(args) {
 	let menu = views.getViewById(frames.topmost().currentPage, "menu");
-
 	if (menu.visibility == "visible") {
-		menu.animate({
-			scale: { x: 0, y: 0 },
-			duration: 150,
-			opacity: 0
-		}).then(() => { menu.visibility = "collapsed"; });
+		hideMenu(menu);
 	} else {
-		//make sure the menu view is rendered above any other views
-		// const parent = menu.parent;
-		// parent._removeView(menu);
-		// parent._addView(menu, 0);
+		showMenu(menu);
+	}
+}
 
+function hideMenu(menu: View) {
+		menu.animate({
+			scale: {
+				x: 0,
+				y: 0,
+			},
+			duration: 150,
+			opacity: 0,
+		}).then(() => {
+			menu.visibility = "collapsed";
+		});
+}
+
+function showMenu(menu: View) {
 		menu.visibility = "visible";
 		menu.animate({
-			scale: { x: 1, y: 1 },
+			scale: {
+				x: 1,
+				y: 1,
+			},
 			duration: 150,
-			opacity: 1
+			opacity: 1,
 		});
-	}
+		util.view.bringToFront(menu);
 }
 
 export function onTap() {
@@ -208,7 +219,8 @@ export function onTap() {
 }
 
 export function newChannelClicked(args) {
-    //code to open a new channel goes here
+	browserView.addLayer();
+	hideMenu(args.object.page.getViewById("menu"));
 }
 
 export function bookmarksClicked(args) {
