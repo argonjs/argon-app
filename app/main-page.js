@@ -22,6 +22,12 @@ function pageLoaded(args) {
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
+    // Set the icon for the menu button
+    var menuButton = page.getViewById("menuBtn");
+    menuButton.text = String.fromCharCode(0xe5d2);
+    // Set the icon for the layers button
+    var menuButton = page.getViewById("layerBtn");
+    menuButton.text = String.fromCharCode(0xe53b);
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(function () {
