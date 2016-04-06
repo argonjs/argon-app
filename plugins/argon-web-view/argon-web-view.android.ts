@@ -3,17 +3,19 @@ import page = require('ui/page')
 import Argon = require('argon')
 
 export class ArgonWebView extends common.ArgonWebView {
-    get progress() {
-        // TODO
-        return 0;
-    }
-    
-    evaluateJavascript() {
-        // TODO
-        return Promise.resolve();
-    }
-    
-    bringToFront() {
-        // TODO
-    }
+  get progress() {
+      return this.android.getProgress();
+  }
+
+  evaluateJavascript(script: string) {
+    return new Promise((resolve, reject) => {
+      this.android.evaluateJavascript(script, (value) => {
+        resolve(value);
+      });
+    });
+  }
+
+  bringToFront() {
+    this.android.bringToFront();
+  }
 }

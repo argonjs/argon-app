@@ -7,18 +7,21 @@ var ArgonWebView = (function (_super) {
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {
         get: function () {
-            // TODO
-            return 0;
+            return this.android.getProgress();
         },
         enumerable: true,
         configurable: true
     });
-    ArgonWebView.prototype.evaluateJavascript = function () {
-        // TODO
-        return Promise.resolve();
+    ArgonWebView.prototype.evaluateJavascript = function (script) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.android.evaluateJavascript(script, function (value) {
+                resolve(value);
+            });
+        });
     };
     ArgonWebView.prototype.bringToFront = function () {
-        // TODO
+        this.android.bringToFront();
     };
     return ArgonWebView;
 }(common.ArgonWebView));
