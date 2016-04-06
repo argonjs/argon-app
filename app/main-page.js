@@ -5,6 +5,7 @@ var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
+var util = require('./util');
 var Argon = require('argon');
 require('./argon-camera-service');
 require('./argon-device-service');
@@ -153,32 +154,44 @@ var IOSSearchBarController = (function () {
 function menuButtonClicked(args) {
     var menu = views.getViewById(frames.topmost().currentPage, "menu");
     if (menu.visibility == "visible") {
-        menu.animate({
-            scale: { x: 0, y: 0 },
-            duration: 150,
-            opacity: 0
-        }).then(function () { menu.visibility = "collapsed"; });
+        hideMenu(menu);
     }
     else {
-        //make sure the menu view is rendered above any other views
-        // const parent = menu.parent;
-        // parent._removeView(menu);
-        // parent._addView(menu, 0);
-        menu.visibility = "visible";
-        menu.animate({
-            scale: { x: 1, y: 1 },
-            duration: 150,
-            opacity: 1
-        });
+        showMenu(menu);
     }
 }
 exports.menuButtonClicked = menuButtonClicked;
+function hideMenu(menu) {
+    menu.animate({
+        scale: {
+            x: 0,
+            y: 0,
+        },
+        duration: 150,
+        opacity: 0,
+    }).then(function () {
+        menu.visibility = "collapsed";
+    });
+}
+function showMenu(menu) {
+    menu.visibility = "visible";
+    menu.animate({
+        scale: {
+            x: 1,
+            y: 1,
+        },
+        duration: 150,
+        opacity: 1,
+    });
+    util.view.bringToFront(menu);
+}
 function onTap() {
     console.log('tapped');
 }
 exports.onTap = onTap;
 function newChannelClicked(args) {
-    //code to open a new channel goes here
+    exports.browserView.addLayer();
+    hideMenu(args.object.page.getViewById("menu"));
 }
 exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
