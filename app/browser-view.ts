@@ -82,6 +82,21 @@ export class BrowserView extends GridLayout {
       return layers;
     }
 
+    private static overviewOffset(depth: number): {x: number, y: number} {
+      return {
+        x: 0,
+        y: depth > 0 ? depth * depth * 200 : 0,
+      };
+    };
+
+    private static overviewScale(depth: number): {x: number, y: number} {
+      const factor = Math.max(1 + (depth - 1.5) * 0.15, 0);
+      return {
+        x: factor,
+        y: factor,
+      };
+    };
+
     toggleOverview() {
       if (this.overview.active) {
         this.hideOverview();
@@ -92,6 +107,7 @@ export class BrowserView extends GridLayout {
 
     showOverview() {
       // TODO: do not hardcode pixel values, use percents?
+      // TODO: include the reality as a selectable view
       // Mark as active
       this.overview.active = true;
       this.overview.cleanup.push(() => {
@@ -115,7 +131,16 @@ export class BrowserView extends GridLayout {
       }
 
       // Update for the first time & animate.
-      BrowserView.updateOverview(layers, OVERVIEW_ANIMATION_DURATION);
+      for (let layer of layers) {
+        layer.animate({
+          translate: BrowserView.overviewOffset(layer.overviewIndex),
+          scale: BrowserView.overviewScale(layer.overviewIndex),
+          duration: OVERVIEW_ANIMATION_DURATION,
+          curve: AnimationCurve.easeOut,
+        });
+      }
+
+      // Animation to hide the overview
       this.overview.cleanup.push(() => {
         layers.forEach((layer) => {
           layer.animate({
@@ -133,34 +158,40 @@ export class BrowserView extends GridLayout {
         });
       });
 
-      // Watch for panning
+      // Watch for panning, add gesture
       let pastY = 0;
       const gestureCover = new GridLayout();
       gestureCover.horizontalAlignment = 'stretch';
       gestureCover.verticalAlignment = 'stretch';
       this.addChild(gestureCover);
+
+      // Update and render
       gestureCover.on(GestureTypes.pan, (args: PanGestureEventData) => {
+        // Check if this is a new touch event
         if (args.deltaY === 0) {
           pastY = 0;
         }
         const deltaY = args.deltaY - pastY;
         pastY = args.deltaY;
+
+        // "Re-render" all layers
         layers.forEach((layer) => {
+          // Calculate new positions
           layer.overviewIndex += deltaY * 0.005;
+          const offset = BrowserView.overviewOffset(layer.overviewIndex);
+          const scale = BrowserView.overviewScale(layer.overviewIndex);
+
+          // Set those positions
+          layer.scaleX = scale.x;
+          layer.scaleY = scale.y;
+          layer.translateX = offset.x;
+          layer.translateY = offset.y;
         });
-        BrowserView.updateOverview(layers, 0);
       });
-      // Ability to select view
-      gestureCover.on(GestureTypes.touch, (args: TouchGestureEventData) => {
-        // TODO
-      });
-      gestureCover.on(GestureTypes.tap, (args: GestureEventData) => {
-        // TODO
-      });
+
+      // remove gesture cover and listeners
       this.overview.cleanup.push(() => {
         gestureCover.off(GestureTypes.pan);
-        gestureCover.off(GestureTypes.tap);
-        gestureCover.off(GestureTypes.touch);
         this.removeChild(gestureCover);
       });
     }
@@ -170,29 +201,6 @@ export class BrowserView extends GridLayout {
         task();
       });
       this.overview.cleanup = [];
-    }
-
-    static updateOverview(layers: Array<ArgonWebView>, duration: number) {
-      const y_offset = (depth: number) => {
-        return depth > 0 ? depth * depth * 200 : 0;
-      };
-      const scale = (depth: number) => {
-        return Math.max(1 + (depth - 1.5) * 0.15, 0);
-      };
-      for (let layer of layers) {
-        layer.animate({
-          translate: {
-            x: 0,
-            y: y_offset(layer.overviewIndex),
-          },
-          scale: {
-            x: scale(layer.overviewIndex),
-            y: scale(layer.overviewIndex),
-          },
-          duration: duration,
-          curve: AnimationCurve.easeOut,
-        });
-      }
     }
 
     onLoaded() {
