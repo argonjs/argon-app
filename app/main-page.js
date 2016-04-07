@@ -5,7 +5,8 @@ var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
-var util_1 = require('./util');
+var dialogs = require("ui/dialogs");
+var applicationSettings = require("application-settings");
 var Argon = require('argon');
 require('./argon-camera-service');
 require('./argon-device-service');
@@ -21,6 +22,9 @@ exports.manager = Argon.init({ container: container, config: {
         defaultReality: { type: 'vuforia' }
     } });
 function pageLoaded(args) {
+    var controller = frames.topmost().ios.controller;
+    var navigationItem = controller.visibleViewController.navigationItem;
+    navigationItem.setHidesBackButtonAnimated(true, false);
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
@@ -132,6 +136,16 @@ var IOSSearchBarController = (function () {
         };
         application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
         application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+        if (applicationSettings.getString("url") != "none" && applicationSettings.getString("url") != null) {
+            var bookmark_url = applicationSettings.getString("url");
+            var protocolRegex = /^[^:]+(?=:\/\/)/;
+            if (!protocolRegex.test(bookmark_url)) {
+                bookmark_url = "http://" + bookmark_url;
+            }
+            bookmark_url = bookmark_url.toLowerCase();
+            exports.browserView.focussedLayer.src = bookmark_url;
+            applicationSettings.setString("url", "none");
+        }
     }
     IOSSearchBarController.prototype.setPlaceholderText = function (text) {
         if (text) {
@@ -183,7 +197,7 @@ function showMenu(menu) {
         duration: 150,
         opacity: 1,
     });
-    util_1.Util.bringToFront(menu);
+    Util.bringToFront(menu);
 }
 function onTap() {
     console.log('tapped');
@@ -196,8 +210,49 @@ function newChannelClicked(args) {
 exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
     //code to open the bookmarks view goes here
+    var url_string = exports.browserView.focussedLayer.src;
+    if (url_string != "") {
+        if (!checkExistingUrl(url_string)) {
+            dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
+                if (r.result !== false) {
+                    var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
+                    modified_url = modified_url.replace("/", "");
+                    modified_url = modified_url.replace("/", "");
+                    modified_url = modified_url.replace("http:", "");
+                    modified_url = modified_url.replace("https:", "");
+                    applicationSettings.setString("bookmarkurl", modified_url);
+                    applicationSettings.setString("bookmarkname", r.text);
+                    frames.topmost().navigate("bookmark");
+                }
+            });
+        }
+        else {
+            frames.topmost().navigate("bookmark");
+        }
+    }
+    else {
+        dialogs.alert("Url string for bookmark can't be empty").then(function () {
+        });
+    }
 }
 exports.bookmarksClicked = bookmarksClicked;
+function checkExistingUrl(url_string) {
+    url_string = url_string.replace(/([^:]\/)\/+/g, "");
+    url_string = url_string.replace("/", "");
+    url_string = url_string.replace("/", "");
+    url_string = url_string.replace("http:", "");
+    url_string = url_string.replace("https:", "");
+    var url = [];
+    if (applicationSettings.getString("save_bookmark_url") != null) {
+        url = JSON.parse(applicationSettings.getString("save_bookmark_url"));
+    }
+    for (var i = 0; i < url.length; i++) {
+        if (url[i]["url"] == url_string) {
+            return true;
+        }
+    }
+    return false;
+}
 function historyClicked(args) {
     //code to open the history view goes here
 }
