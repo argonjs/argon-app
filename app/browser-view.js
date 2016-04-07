@@ -1,12 +1,14 @@
 "use strict";
 var grid_layout_1 = require('ui/layouts/grid-layout');
 var argon_web_view_1 = require('argon-web-view');
+var enums_1 = require("ui/enums");
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
 var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
         _super.call(this);
+        this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
         this.addLayer();
@@ -41,8 +43,44 @@ var BrowserView = (function (_super) {
         }
         return layers;
     };
+    BrowserView.prototype.toggleOverview = function () {
+        if (this.inOverview) {
+            this.hideOverview();
+        }
+        else {
+            this.showOverview();
+        }
+    };
     BrowserView.prototype.showOverview = function () {
-        console.log(this.getLayers().length);
+        this.inOverview = true;
+        var i = 1;
+        for (var _i = 0, _a = this.getLayers(); _i < _a.length; _i++) {
+            var layer = _a[_i];
+            layer.overviewIndex = i;
+            layer.animate({
+                translate: {
+                    x: 0,
+                    y: layer.overviewIndex * 200,
+                },
+                duration: 2000,
+                curve: enums_1.AnimationCurve.easeOut,
+            });
+            i += 1;
+        }
+    };
+    BrowserView.prototype.hideOverview = function () {
+        this.inOverview = false;
+        for (var _i = 0, _a = this.getLayers(); _i < _a.length; _i++) {
+            var layer = _a[_i];
+            layer.animate({
+                translate: {
+                    x: 0,
+                    y: 0,
+                },
+                duration: 500,
+                curve: enums_1.AnimationCurve.easeOut,
+            });
+        }
     };
     BrowserView.prototype.onLoaded = function () {
         _super.prototype.onLoaded.call(this);

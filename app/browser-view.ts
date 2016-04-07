@@ -1,7 +1,8 @@
 import {View} from 'ui/core/view';
-import {GridLayout} from 'ui/layouts/grid-layout'
+import {GridLayout} from 'ui/layouts/grid-layout';
 import {ArgonWebView} from 'argon-web-view';
-import {PropertyChangeData} from 'data/observable'
+import {PropertyChangeData} from 'data/observable';
+import {AnimationCurve} from "ui/enums";
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 
@@ -12,9 +13,11 @@ export class BrowserView extends GridLayout {
     private videoViewController:VuforiaVideoViewController;
     private _url:string;
     private _focussedLayer:ArgonWebView;
+    private inOverview: boolean;
 
     constructor() {
         super();
+        this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
         this.addLayer();
@@ -52,8 +55,43 @@ export class BrowserView extends GridLayout {
       return layers;
     }
 
+    toggleOverview() {
+      if (this.inOverview) {
+        this.hideOverview();
+      } else {
+        this.showOverview();
+      }
+    }
+
     showOverview() {
-      // TODO
+      this.inOverview = true;
+      let i = 1;
+      for (let layer of this.getLayers()) {
+        layer.overviewIndex = i;
+        layer.animate({
+          translate: {
+            x: 0,
+            y: layer.overviewIndex * 200,
+          },
+          duration: 250,
+          curve: AnimationCurve.easeOut,
+        });
+        i += 1;
+      }
+    }
+
+    hideOverview() {
+      this.inOverview = false;
+      for (let layer of this.getLayers()) {
+        layer.animate({
+          translate: {
+            x: 0,
+            y: 0,
+          },
+          duration: 250,
+          curve: AnimationCurve.easeOut,
+        });
+      }
     }
 
     onLoaded() {

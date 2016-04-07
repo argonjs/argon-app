@@ -207,7 +207,7 @@ function settingsClicked(args) {
 }
 exports.settingsClicked = settingsClicked;
 function layerButtonClicked(args) {
-    exports.browserView.showOverview();
+    exports.browserView.toggleOverview();
 }
 exports.layerButtonClicked = layerButtonClicked;
 //# sourceMappingURL=main-page.js.map

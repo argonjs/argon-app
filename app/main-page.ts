@@ -236,5 +236,5 @@ export function settingsClicked(args) {
 }
 
 export function layerButtonClicked(args) {
-	browserView.showOverview();
+	browserView.toggleOverview();
 }
