@@ -1,9 +1,12 @@
 "use strict";
+var color_1 = require("color");
 var grid_layout_1 = require('ui/layouts/grid-layout');
 var argon_web_view_1 = require('argon-web-view');
 var enums_1 = require("ui/enums");
+var gestures_1 = require("ui/gestures");
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
+var OVERVIEW_ANIMATION_DURATION = 250;
 var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
@@ -11,7 +14,18 @@ var BrowserView = (function (_super) {
         this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
-        this.addLayer();
+        this.realityLayer.url = "http://elixir-lang.org/";
+        this.backgroundColor = new color_1.Color("#000");
+        this.overview = {
+            active: false,
+            cleanup: [],
+        };
+        var layer1 = this.addLayer();
+        layer1.url = "http://google.com";
+        var layer2 = this.addLayer();
+        layer2.url = "http://m.reddit.com";
+        var layer3 = this.addLayer();
+        layer3.url = "http://rust-lang.org";
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
@@ -44,7 +58,7 @@ var BrowserView = (function (_super) {
         return layers;
     };
     BrowserView.prototype.toggleOverview = function () {
-        if (this.inOverview) {
+        if (this.overview.active) {
             this.hideOverview();
         }
         else {
@@ -52,32 +66,101 @@ var BrowserView = (function (_super) {
         }
     };
     BrowserView.prototype.showOverview = function () {
-        this.inOverview = true;
-        var i = 1;
-        for (var _i = 0, _a = this.getLayers(); _i < _a.length; _i++) {
-            var layer = _a[_i];
-            layer.overviewIndex = i;
-            layer.animate({
-                translate: {
-                    x: 0,
-                    y: layer.overviewIndex * 200,
-                },
-                duration: 2000,
-                curve: enums_1.AnimationCurve.easeOut,
-            });
-            i += 1;
+        var _this = this;
+        // Mark as active
+        this.overview.active = true;
+        this.overview.cleanup.push(function () {
+            _this.overview.active = false;
+        });
+        // Hide reality (its too white!)
+        this.realityLayer.visibility = "collapsed";
+        this.overview.cleanup.push(function () {
+            setTimeout(function () {
+                _this.realityLayer.visibility = "visible";
+            }, OVERVIEW_ANIMATION_DURATION);
+        });
+        // Get all layers
+        var layers = this.getLayers();
+        // Assign individual layers
+        for (var i = 0; i < layers.length; i += 1) {
+            layers[i].overviewIndex = (i + 1) / layers.length;
         }
+        // Update for the first time & animate.
+        BrowserView.updateOverview(layers, OVERVIEW_ANIMATION_DURATION);
+        this.overview.cleanup.push(function () {
+            layers.forEach(function (layer) {
+                layer.animate({
+                    translate: {
+                        x: 0,
+                        y: 0,
+                    },
+                    scale: {
+                        x: 1,
+                        y: 1,
+                    },
+                    duration: OVERVIEW_ANIMATION_DURATION,
+                    curve: enums_1.AnimationCurve.easeOut,
+                });
+            });
+        });
+        // Watch for panning
+        var pastY = 0;
+        var gestureCover = new grid_layout_1.GridLayout();
+        gestureCover.horizontalAlignment = 'stretch';
+        gestureCover.verticalAlignment = 'stretch';
+        this.addChild(gestureCover);
+        gestureCover.on(gestures_1.GestureTypes.pan, function (args) {
+            if (args.deltaY === 0) {
+                pastY = 0;
+            }
+            var deltaY = args.deltaY - pastY;
+            pastY = args.deltaY;
+            layers.forEach(function (layer) {
+                layer.overviewIndex += deltaY * 0.005;
+            });
+            BrowserView.updateOverview(layers, 0);
+        });
+        // Ability to select view
+        gestureCover.on(gestures_1.GestureTypes.touch, function (args) {
+            // TODO
+            console.log("TOUCH");
+        });
+        gestureCover.on(gestures_1.GestureTypes.tap, function (args) {
+            // TODO
+            console.log("TAP");
+        });
+        this.overview.cleanup.push(function () {
+            gestureCover.off(gestures_1.GestureTypes.pan);
+            gestureCover.off(gestures_1.GestureTypes.tap);
+            gestureCover.off(gestures_1.GestureTypes.touch);
+            _this.removeChild(gestureCover);
+        });
     };
     BrowserView.prototype.hideOverview = function () {
-        this.inOverview = false;
-        for (var _i = 0, _a = this.getLayers(); _i < _a.length; _i++) {
-            var layer = _a[_i];
+        this.overview.cleanup.forEach(function (task) {
+            task();
+        });
+        this.overview.cleanup = [];
+    };
+    BrowserView.updateOverview = function (layers, duration) {
+        var y_offset = function (depth) {
+            return depth > 0 ? depth * depth * 200 : 0;
+        };
+        var scale = function (depth) {
+            return Math.max(1 + (depth - 1.5) * 0.15, 0);
+        };
+        for (var _i = 0, layers_1 = layers; _i < layers_1.length; _i++) {
+            var layer = layers_1[_i];
             layer.animate({
                 translate: {
                     x: 0,
-                    y: 0,
+                    y: y_offset(layer.overviewIndex),
                 },
-                duration: 500,
+                scale: {
+                    x: scale(layer.overviewIndex),
+                    y: scale(layer.overviewIndex),
+                },
+                duration: duration,
                 curve: enums_1.AnimationCurve.easeOut,
             });
         }

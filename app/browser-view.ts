@@ -1,11 +1,19 @@
 import {View} from 'ui/core/view';
+import {Color} from "color";
 import {GridLayout} from 'ui/layouts/grid-layout';
 import {ArgonWebView} from 'argon-web-view';
 import {PropertyChangeData} from 'data/observable';
 import {AnimationCurve} from "ui/enums";
+import {
+  GestureTypes,
+  PanGestureEventData,
+  GestureEventData,
+  TouchGestureEventData,
+} from "ui/gestures";
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 
+const OVERVIEW_ANIMATION_DURATION = 250;
 
 export class BrowserView extends GridLayout {
     realityLayer:ArgonWebView;
@@ -15,12 +23,31 @@ export class BrowserView extends GridLayout {
     private _focussedLayer:ArgonWebView;
     private inOverview: boolean;
 
+    private overview: {
+      active: boolean,
+      cleanup: Array<() => void>,
+    };
+
     constructor() {
         super();
         this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
-        this.addLayer();
+        this.realityLayer.url = "http://elixir-lang.org/";
+        this.backgroundColor = new Color("#000");
+
+        this.overview = {
+          active: false,
+          cleanup: [],
+        };
+
+
+        const layer1 = this.addLayer();
+        layer1.url = "http://google.com";
+        const layer2 = this.addLayer();
+        layer2.url = "http://m.reddit.com";
+        const layer3 = this.addLayer();
+        layer3.url = "http://rust-lang.org";
     }
 
     addLayer() {
@@ -56,7 +83,7 @@ export class BrowserView extends GridLayout {
     }
 
     toggleOverview() {
-      if (this.inOverview) {
+      if (this.overview.active) {
         this.hideOverview();
       } else {
         this.showOverview();
@@ -64,31 +91,106 @@ export class BrowserView extends GridLayout {
     }
 
     showOverview() {
-      this.inOverview = true;
-      let i = 1;
-      for (let layer of this.getLayers()) {
-        layer.overviewIndex = i;
-        layer.animate({
-          translate: {
-            x: 0,
-            y: layer.overviewIndex * 200,
-          },
-          duration: 250,
-          curve: AnimationCurve.easeOut,
-        });
-        i += 1;
+      // Mark as active
+      this.overview.active = true;
+      this.overview.cleanup.push(() => {
+        this.overview.active = false;
+      });
+
+      // Hide reality (its too white!)
+      this.realityLayer.visibility = "collapsed";
+      this.overview.cleanup.push(() => {
+        setTimeout(() => {
+          this.realityLayer.visibility = "visible";
+        }, OVERVIEW_ANIMATION_DURATION);
+      });
+
+      // Get all layers
+      const layers = this.getLayers();
+
+      // Assign individual layers
+      for (let i = 0; i < layers.length; i += 1) {
+        layers[i].overviewIndex = (i + 1) / layers.length;
       }
+
+      // Update for the first time & animate.
+      BrowserView.updateOverview(layers, OVERVIEW_ANIMATION_DURATION);
+      this.overview.cleanup.push(() => {
+        layers.forEach((layer) => {
+          layer.animate({
+            translate: {
+              x: 0,
+              y: 0,
+            },
+            scale: {
+              x: 1,
+              y: 1,
+            },
+            duration: OVERVIEW_ANIMATION_DURATION,
+            curve: AnimationCurve.easeOut,
+          });
+        });
+      });
+
+      // Watch for panning
+      let pastY = 0;
+      const gestureCover = new GridLayout();
+      gestureCover.horizontalAlignment = 'stretch';
+      gestureCover.verticalAlignment = 'stretch';
+      this.addChild(gestureCover);
+      gestureCover.on(GestureTypes.pan, (args: PanGestureEventData) => {
+        if (args.deltaY === 0) {
+          pastY = 0;
+        }
+        const deltaY = args.deltaY - pastY;
+        pastY = args.deltaY;
+        layers.forEach((layer) => {
+          layer.overviewIndex += deltaY * 0.005;
+        });
+        BrowserView.updateOverview(layers, 0);
+      });
+      // Ability to select view
+      gestureCover.on(GestureTypes.touch, (args: TouchGestureEventData) => {
+        // TODO
+        console.log("TOUCH");
+      });
+      gestureCover.on(GestureTypes.tap, (args: GestureEventData) => {
+        // TODO
+        console.log("TAP");
+      });
+      this.overview.cleanup.push(() => {
+        gestureCover.off(GestureTypes.pan);
+        gestureCover.off(GestureTypes.tap);
+        gestureCover.off(GestureTypes.touch);
+        this.removeChild(gestureCover);
+      });
     }
 
     hideOverview() {
-      this.inOverview = false;
-      for (let layer of this.getLayers()) {
+      this.overview.cleanup.forEach((task) => {
+        task();
+      });
+      this.overview.cleanup = [];
+    }
+
+    static updateOverview(layers: Array<ArgonWebView>, duration: number) {
+      const y_offset = (depth: number) => {
+        return depth > 0 ? depth * depth * 200 : 0;
+      };
+      const scale = (depth: number) => {
+        return Math.max(1 + (depth - 1.5) * 0.15, 0);
+      };
+      for (let layer of layers) {
         layer.animate({
           translate: {
             x: 0,
-            y: 0,
+            y: y_offset(layer.overviewIndex),
           },
-          duration: 250,
+          scale: {
+            x: scale(layer.overviewIndex),
+            y: scale(layer.overviewIndex),
+          },
+          duration: duration,
           curve: AnimationCurve.easeOut,
         });
       }
