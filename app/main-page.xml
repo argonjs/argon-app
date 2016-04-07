@@ -20,6 +20,10 @@
             <Label class="menuItem" text="Bookmarks" tap="bookmarksClicked"/>
             <Label class="menuItem" text="History" tap="historyClicked"/>
             <Label class="menuItem" text="Settings" tap="settingsClicked"/>
+            <Label class="menuItem" text="Debug" tap="debugClicked"/>
         </StackLayout>
+        <HtmlView id="debug" loaded="debugViewLoaded">
+            
+        </HtmlView>
     </browserView:BrowserView>
 </Page>
