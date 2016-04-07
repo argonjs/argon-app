@@ -52,17 +52,17 @@ export class BrowserView extends GridLayout {
 
     addLayer() {
         const layer = new ArgonWebView;
-        layer.on('propertyChange', (eventData:PropertyChangeData)=>{
+        layer.on('propertyChange', (eventData:PropertyChangeData) => {
             if (eventData.propertyName === 'url' && layer === this.focussedLayer) {
                 this._setURL(eventData.value);
             }
         });
-        layer.on('sessionConnect', (eventData)=>{
+        layer.on('sessionConnect', (eventData) => {
             const session = eventData.session;
             if (layer === this.focussedLayer) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
             }
-        })
+        });
         layer.horizontalAlignment = 'stretch';
         layer.verticalAlignment = 'stretch';
 
@@ -126,8 +126,11 @@ export class BrowserView extends GridLayout {
       const layers = this.getLayers();
 
       // Assign individual layers
+      const initialDepth = (index: number): number => {
+        return ((index + 1) / 2) - (layers.length / 2) + 1;
+      };
       for (let i = 0; i < layers.length; i += 1) {
-        layers[i].overviewIndex = ((i + 1) / 2) - (layers.length / 2) + 1;
+        layers[i].overviewIndex = initialDepth(i);
       }
 
       // Update for the first time & animate.
