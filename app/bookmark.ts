@@ -67,10 +67,6 @@ export function listViewItemTap(args) {
 	for (var i = 0; i < arr.length; i++){
       if (arr[i].name == sender.id){
         applicationSettings.setString("url", url[i].url);
-        var navigationEntry = {
-            moduleName: "main-page",
-            backstackVisible: false
-        };
         frames.topmost().navigate("main-page");
       }
     }

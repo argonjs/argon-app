@@ -42,10 +42,10 @@ manager = Argon.init({container, config: {
 }});
 
 export function pageLoaded(args) {
+	//This was added to fix the bug of bookmark back navigation is shown when going back
 	var controller = frames.topmost().ios.controller;
   var navigationItem = controller.visibleViewController.navigationItem;
 	navigationItem.setHidesBackButtonAnimated(true, false);
-
 	const page:pages.Page = args.object;
 	page.backgroundColor = new color.Color("black");
 
@@ -167,15 +167,17 @@ class IOSSearchBarController {
 
     	application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
     	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+
+			//This part is for bookmark. It basically checks if the app just returning from bookmark. And load the url
 			if(applicationSettings.getString("url") != "none" && applicationSettings.getString("url") != null) {
-					let bookmark_url = applicationSettings.getString("url");
-					const protocolRegex = /^[^:]+(?=:\/\/)/;
-					if (!protocolRegex.test(bookmark_url)) {
-						bookmark_url = "http://" + bookmark_url;
-					}
-					bookmark_url = bookmark_url.toLowerCase();
-					browserView.focussedLayer.src = bookmark_url;
-					applicationSettings.setString("url", "none");
+				let bookmark_url = applicationSettings.getString("url");
+				const protocolRegex = /^[^:]+(?=:\/\/)/;
+				if (!protocolRegex.test(bookmark_url)) {
+					bookmark_url = "http://" + bookmark_url;
+				}
+				bookmark_url = bookmark_url.toLowerCase();
+				browserView.focussedLayer.src = bookmark_url;
+				applicationSettings.setString("url", "none");
 			}
 	}
 
@@ -261,12 +263,12 @@ export function bookmarksClicked(args) {
 			} else {
 				frames.topmost().navigate("bookmark");
 			}
-	} else {
-				dialogs.alert("Url string for bookmark can't be empty").then(function() {
-        });
-  }
+		} else {
+			dialogs.alert("Url string for bookmark can't be empty").then(function() {});
+		}
 }
 
+//Helper function for bookmark. It checks if the url already existed in bookmark
 function checkExistingUrl(url_string) {
 	url_string = url_string.replace(/([^:]\/)\/+/g,"");
 	url_string = url_string.replace("/","");
@@ -278,10 +280,10 @@ function checkExistingUrl(url_string) {
 		url = JSON.parse(applicationSettings.getString("save_bookmark_url"));
 	}
 	for(var i = 0 ; i < url.length; i++) {
-        if(url[i]["url"] == url_string) {
+		if(url[i]["url"] == url_string) {
 			return true;
-        }
-    }
+		}
+	}
 	return false;
 }
 
