@@ -91,6 +91,7 @@ export class BrowserView extends GridLayout {
     }
 
     showOverview() {
+      // TODO: do not hardcode pixel values, use percents?
       // Mark as active
       this.overview.active = true;
       this.overview.cleanup.push(() => {
@@ -110,7 +111,7 @@ export class BrowserView extends GridLayout {
 
       // Assign individual layers
       for (let i = 0; i < layers.length; i += 1) {
-        layers[i].overviewIndex = (i + 1) / layers.length;
+        layers[i].overviewIndex = ((i + 1) / 2) - (layers.length / 2) + 1;
       }
 
       // Update for the first time & animate.
@@ -152,11 +153,9 @@ export class BrowserView extends GridLayout {
       // Ability to select view
       gestureCover.on(GestureTypes.touch, (args: TouchGestureEventData) => {
         // TODO
-        console.log("TOUCH");
       });
       gestureCover.on(GestureTypes.tap, (args: GestureEventData) => {
         // TODO
-        console.log("TAP");
       });
       this.overview.cleanup.push(() => {
         gestureCover.off(GestureTypes.pan);
