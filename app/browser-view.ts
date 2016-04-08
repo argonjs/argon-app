@@ -1,14 +1,15 @@
 import {View} from 'ui/core/view';
-import {Color} from "color";
+import {Color} from 'color';
 import {GridLayout} from 'ui/layouts/grid-layout';
 import {ArgonWebView} from 'argon-web-view';
 import {PropertyChangeData} from 'data/observable';
-import {AnimationCurve} from "ui/enums";
+import {AnimationCurve} from 'ui/enums';
 import {
   GestureTypes,
   TouchGestureEventData,
   GestureEventData,
-} from "ui/gestures";
+} from 'ui/gestures';
+import * as util from './util';
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 
@@ -27,12 +28,14 @@ export class BrowserView extends GridLayout {
       cleanup: Array<() => void>,
     };
 
+    private zHeap: Array<number>;
+
     constructor() {
         super();
+        this.zHeap = [];
         this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
-        this.realityLayer.url = "http://elixir-lang.org/";
         this.backgroundColor = new Color("#555");
 
         this.overview = {
@@ -40,6 +43,7 @@ export class BrowserView extends GridLayout {
           cleanup: [],
         };
 
+        this.realityLayer.url = "http://elixir-lang.org/";
         const layer1 = this.addLayer();
         layer1.url = "http://google.com";
         const layer2 = this.addLayer();
@@ -70,10 +74,23 @@ export class BrowserView extends GridLayout {
         layer.horizontalAlignment = 'stretch';
         layer.verticalAlignment = 'stretch';
 
+        // Keep track of how z it is
+        this.zHeap.push(this.zHeap.length);
+
         container.addChild(layer);
         this.addChild(container);
         this._setFocussedLayer(layer);
         return layer;
+    }
+
+    private focusAndSyncHeap(index: number) {
+      const oldDepth = this.zHeap[index];
+      for (let i = 0; i < this.zHeap.length; i += 1) {
+        if (this.zHeap[i] > oldDepth) {
+          this.zHeap[i] -= 1;
+        }
+      }
+      this.zHeap[index] = this.zHeap.length - 1;
     }
 
     private getLayers(): Array<GridLayout> {
@@ -102,6 +119,10 @@ export class BrowserView extends GridLayout {
       };
     };
 
+    private static initialDepth(index: number, max: number): number {
+        return ((index + 1) / 2) - (max / 2) + 1;
+    }
+
     toggleOverview() {
       if (this.overview.active) {
         this.hideOverview();
@@ -125,11 +146,8 @@ export class BrowserView extends GridLayout {
       const layers = this.getLayers();
 
       // Assign individual layers
-      const initialDepth = (index: number): number => {
-        return ((index + 1) / 2) - (layers.length / 2) + 1;
-      };
       for (let i = 0; i < layers.length; i += 1) {
-        depths.push(initialDepth(i));
+        depths.push(BrowserView.initialDepth(this.zHeap[i], layers.length));
       }
 
       // Update for the first time & animate.
@@ -189,7 +207,8 @@ export class BrowserView extends GridLayout {
       };
 
       // Watch for panning, add gesture
-      for (const layer of layers) {
+      for (let i = 0; i < layers.length; i += 1) {
+        const layer = layers[i];
         // Cover the webview to detect gestures and disable interaction
         const gestureCover = new GridLayout();
         gestureCover.horizontalAlignment = 'stretch';
@@ -200,7 +219,10 @@ export class BrowserView extends GridLayout {
           // NOTE: relies on layer's internal structure.
           const container = <GridLayout> event.view.parent;
           const argonView = <ArgonWebView> container.getChildAt(0);
-          console.log("Selected: " + argonView.url);
+          this._setFocussedLayer(argonView);
+          this.focusAndSyncHeap(i);
+          util.view.bringToFront(container);
+          this.hideOverview();
         });
         layer.addChild(gestureCover);
 
