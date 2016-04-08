@@ -20,7 +20,7 @@ application.on(application.resumeEvent, ()=> {
 
 function _isLandscapeInterface() {
     const statusBarOrientation = UIApplication.sharedApplication().statusBarOrientation;
-    const isLandscape = 
+    const isLandscape =
         statusBarOrientation == UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft ||
         statusBarOrientation == UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight;
     return isLandscape;
@@ -30,7 +30,7 @@ var nextStateUpdateCommand:Function;
 
 function executeOnNextStateUpdate(cb:Function) {
     return new Promise((resolve, reject)=>{
-        if (nextStateUpdateCommand) 
+        if (nextStateUpdateCommand)
             console.error('A state update command is already pending: ' + nextStateUpdateCommand['cb']);
         nextStateUpdateCommand = ()=>{
             cb()
@@ -67,7 +67,7 @@ export function init(licenseKey:string) {
     return new Promise<void>((resolve, reject) => {
         vuforia.initARDone(licenseKey, (error:NSError) => {
             common.setViewSize(null);
-            if (error) { 
+            if (error) {
                 common.events.notify({
                     eventName: common.initErrorEvent,
                     object: this,
@@ -97,7 +97,7 @@ export function deinit() {
         })
     }
 }
-	
+
 export function startCamera() {
     vuforia.startCamera(VuforiaCameraDeviceCamera.Default);
 }
@@ -149,7 +149,7 @@ export function loadDataSet(url) {
                 })
             } else {
                 _loadedDataSets.set(url, dataSet);
-                
+
                 const trackables = {};
                 const numTrackables = dataSet.getNumTrackables();
                 for (let i=0; i<numTrackables; i++) {
@@ -163,7 +163,7 @@ export function loadDataSet(url) {
                     }
                     trackables[name] = {id,name,size}
                 }
-                
+
                 common.events.notify({
                     eventName: common.dataSetLoadEvent,
                     object: this,
@@ -184,7 +184,7 @@ export function loadDataSet(url) {
 export function _getDataSetLocation(url) : Promise<string> {
     let location = _dataSetLocation.get(url);
     if (!location) {
-        return new Promise<string>((resolve, reject) => {	
+        return new Promise<string>((resolve, reject) => {
             vuforia.downloadDataSetFromURLDone(url, (location, error:NSError) => {
                 if (error || !VuforiaDataSet.exists(location)) {
                     reject("Unable to download dataSet");
@@ -197,7 +197,7 @@ export function _getDataSetLocation(url) : Promise<string> {
         })
     }
     return Promise.resolve(location);
-} 
+}
 
 export function unloadDataSet(url) {
     return executeOnNextStateUpdate(() => {

@@ -10,6 +10,7 @@ import {CreateViewEventData} from 'ui/placeholder';
 import * as color from 'color';
 import * as platform from 'platform';
 import {Button} from "ui/button";
+import {View} from "ui/core/view";
 
 import * as vuforia from 'nativescript-vuforia';
 
@@ -45,12 +46,12 @@ export function pageLoaded(args) {
 	actionBar = page.actionBar;
 
 	// Set the icon for the menu button
-	const menuButton: Button = page.getViewById("menuBtn");
+	const menuButton = <Button> page.getViewById("menuBtn");
 	menuButton.text = String.fromCharCode(0xe5d2);
 
 	// Set the icon for the layers button
-	const menuButton: Button = page.getViewById("layerBtn");
-	menuButton.text = String.fromCharCode(0xe53b);
+	const layerButton = <Button> page.getViewById("layerBtn");
+	layerButton.text = String.fromCharCode(0xe53b);
 
 	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
 	if (page.ios) {
@@ -71,7 +72,6 @@ export function searchBarLoaded(args) {
 	searchBar = args.object;
 
 	searchBar.on(searchbar.SearchBar.submitEvent, () => {
-		let url = searchBar.text;
 		const url = URI(searchBar.text);
 		if (url.protocol() !== "http" || url.protocol() !== "https") {
 			url.protocol("http");
