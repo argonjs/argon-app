@@ -12,8 +12,12 @@ import {
 import * as util from './util';
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
+import * as fs from 'file-system';
 
 const OVERVIEW_ANIMATION_DURATION = 250;
+const DEFAULT_REALITY_HTML = "default-reality.html";
+const APP_FOLDER = fs.knownFolders.currentApp().path;
+const DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
 
 export class BrowserView extends GridLayout {
     realityLayer:ArgonWebView;
@@ -33,9 +37,11 @@ export class BrowserView extends GridLayout {
 
     constructor() {
         super();
+        const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.zHeap = [];
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
+        this.realityLayer.src = realityHtml.readTextSync();
         this.backgroundColor = new Color("#555");
 
         this.overview = {
