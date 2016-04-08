@@ -22,6 +22,7 @@ export class BrowserView extends GridLayout {
     private _url:string;
     private _focussedLayer:ArgonWebView;
     private inOverview: boolean;
+    private overviewAnimating: boolean;
 
     private overview: {
       active: boolean,
@@ -133,6 +134,16 @@ export class BrowserView extends GridLayout {
 
     showOverview() {
       // TODO: do not hardcode pixel values, use percents?
+      // Do not start if we're already doing this.
+      if (this.overviewAnimating) {
+        return;
+      }
+      // Mark us as doing work.
+      this.overviewAnimating = true;
+      setTimeout(() => {
+        this.overviewAnimating = false;
+      }, OVERVIEW_ANIMATION_DURATION);
+
       // Mark as active
       this.overview.active = true;
       this.overview.cleanup.push(() => {
@@ -242,6 +253,15 @@ export class BrowserView extends GridLayout {
     }
 
     hideOverview() {
+      if (this.overviewAnimating) {
+        return;
+      }
+      // Mark us as doing work.
+      this.overviewAnimating = true;
+      setTimeout(() => {
+        this.overviewAnimating = false;
+      }, OVERVIEW_ANIMATION_DURATION);
+
       this.overview.cleanup.forEach((task) => {
         task();
       });
