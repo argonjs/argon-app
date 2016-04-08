@@ -43,14 +43,6 @@ export class BrowserView extends GridLayout {
           animating: false,
           cleanup: [],
         };
-
-        this.realityLayer.url = "http://elixir-lang.org/";
-        const layer1 = this.addLayer();
-        layer1.url = "http://google.com";
-        const layer2 = this.addLayer();
-        layer2.url = "http://m.reddit.com";
-        const layer3 = this.addLayer();
-        layer3.url = "http://rust-lang.org";
     }
 
     addLayer() {
