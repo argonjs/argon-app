@@ -189,29 +189,30 @@ export function menuButtonClicked(args) {
 }
 
 function hideMenu(menu: View) {
-		menu.animate({
-			scale: {
-				x: 0,
-				y: 0,
-			},
-			duration: 150,
-			opacity: 0,
-		}).then(() => {
-			menu.visibility = "collapsed";
-		});
+	menu.animate({
+		scale: {
+			x: 0,
+			y: 0,
+		},
+		duration: 150,
+		opacity: 0,
+	}).then(() => {
+		menu.visibility = "collapsed";
+	});
 }
 
 function showMenu(menu: View) {
-		menu.visibility = "visible";
-		menu.animate({
-			scale: {
-				x: 1,
-				y: 1,
-			},
-			duration: 150,
-			opacity: 1,
-		});
-		util.view.bringToFront(menu);
+	browserView.hideOverview();
+	menu.visibility = "visible";
+	menu.animate({
+		scale: {
+			x: 1,
+			y: 1,
+		},
+		duration: 150,
+		opacity: 1,
+	});
+	util.view.bringToFront(menu);
 }
 
 export function onTap() {

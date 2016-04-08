@@ -22,10 +22,10 @@ export class BrowserView extends GridLayout {
     private _url:string;
     private _focussedLayer:ArgonWebView;
     private inOverview: boolean;
-    private overviewAnimating: boolean;
 
     private overview: {
       active: boolean,
+      animating: boolean,
       cleanup: Array<() => void>,
     };
 
@@ -34,13 +34,13 @@ export class BrowserView extends GridLayout {
     constructor() {
         super();
         this.zHeap = [];
-        this.inOverview = false;
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
         this.backgroundColor = new Color("#555");
 
         this.overview = {
           active: false,
+          animating: false,
           cleanup: [],
         };
 
@@ -113,15 +113,24 @@ export class BrowserView extends GridLayout {
     };
 
     private static overviewScale(depth: number): {x: number, y: number} {
-      const factor = Math.max(1 + (depth - 1.5) * 0.15, 0);
+      const factor = 1 + (depth - 1.5) * 0.15;
       return {
         x: factor,
         y: factor,
       };
     };
 
-    private static initialDepth(index: number, max: number): number {
-        return ((index + 1) / 2) - (max / 2) + 1;
+    private static depths(index: number, max: number): {
+      min: number,
+      current: number,
+      max: number,
+    } {
+        const initial = (index + 1) / 2 - (max / 2) + 1;
+        return {
+          min: -2 + initial,
+          current: initial,
+          max: initial + max / 2,
+        };
     }
 
     toggleOverview() {
@@ -135,13 +144,13 @@ export class BrowserView extends GridLayout {
     showOverview() {
       // TODO: do not hardcode pixel values, use percents?
       // Do not start if we're already doing this.
-      if (this.overviewAnimating) {
+      if (this.overview.animating || this.overview.active) {
         return;
       }
       // Mark us as doing work.
-      this.overviewAnimating = true;
+      this.overview.animating = true;
       setTimeout(() => {
-        this.overviewAnimating = false;
+        this.overview.animating = false;
       }, OVERVIEW_ANIMATION_DURATION);
 
       // Mark as active
@@ -151,21 +160,25 @@ export class BrowserView extends GridLayout {
       });
 
       // Store depths
-      const depths = [];
+      const depths: Array<{
+        min: number,
+        current: number,
+        max: number,
+      }> = [];
 
       // Get all layers
       const layers = this.getLayers();
 
       // Assign individual layers
       for (let i = 0; i < layers.length; i += 1) {
-        depths.push(BrowserView.initialDepth(this.zHeap[i], layers.length));
+        depths.push(BrowserView.depths(this.zHeap[i], layers.length));
       }
 
       // Update for the first time & animate.
       for (let i = 0; i < layers.length; i += 1) {
         layers[i].animate({
-          translate: BrowserView.overviewOffset(depths[i]),
-          scale: BrowserView.overviewScale(depths[i]),
+          translate: BrowserView.overviewOffset(depths[i].current),
+          scale: BrowserView.overviewScale(depths[i].current),
           duration: OVERVIEW_ANIMATION_DURATION,
           curve: AnimationCurve.easeOut,
         });
@@ -204,10 +217,17 @@ export class BrowserView extends GridLayout {
         // "Re-render" all layers
         for (let i = 0; i < layers.length; i += 1) {
           // Calculate new positions
-          depths[i] += deltaY * 0.005;
+          const depth = depths[i];
+          depth.current += deltaY * 0.005;
+          if (depth.current > depth.max) {
+            depth.current = depth.max;
+          } else if (depth.current < depth.min) {
+            depth.current = depth.min;
+          }
+
           const layer = layers[i];
-          const offset = BrowserView.overviewOffset(depths[i]);
-          const scale = BrowserView.overviewScale(depths[i]);
+          const offset = BrowserView.overviewOffset(depth.current);
+          const scale = BrowserView.overviewScale(depth.current);
 
           // Set those positions
           layer.scaleX = scale.x;
@@ -253,13 +273,14 @@ export class BrowserView extends GridLayout {
     }
 
     hideOverview() {
-      if (this.overviewAnimating) {
+      // Do not start if we're already doing this.
+      if (this.overview.animating || !this.overview.active) {
         return;
       }
       // Mark us as doing work.
-      this.overviewAnimating = true;
+      this.overview.animating = true;
       setTimeout(() => {
-        this.overviewAnimating = false;
+        this.overview.animating = false;
       }, OVERVIEW_ANIMATION_DURATION);
 
       this.overview.cleanup.forEach((task) => {
