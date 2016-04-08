@@ -170,6 +170,22 @@ export class BrowserView extends GridLayout {
       // Get all layers
       const layers = this.getLayers();
 
+      // For transparent webviews, add a little bit of opacity
+      layers.forEach((layer) => {
+        layer.animate({
+          backgroundColor: new Color(128, 255, 255, 255),
+          duration: OVERVIEW_ANIMATION_DURATION,
+        });
+      });
+      this.overview.cleanup.push(() => {
+        layers.forEach((layer) => {
+          layer.animate({
+            backgroundColor: new Color(0, 255, 255, 255),
+            duration: OVERVIEW_ANIMATION_DURATION,
+          });
+        });
+      });
+
       // Assign individual layers
       for (let i = 0; i < layers.length; i += 1) {
         depths.push(BrowserView.depths(this.zHeap[i], layers.length));
