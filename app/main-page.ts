@@ -14,7 +14,7 @@ import {View} from "ui/core/view";
 
 import * as vuforia from 'nativescript-vuforia';
 
-import * as util from './util';
+import {Util} from './util';
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
@@ -189,29 +189,30 @@ export function menuButtonClicked(args) {
 }
 
 function hideMenu(menu: View) {
-		menu.animate({
-			scale: {
-				x: 0,
-				y: 0,
-			},
-			duration: 150,
-			opacity: 0,
-		}).then(() => {
-			menu.visibility = "collapsed";
-		});
+	menu.animate({
+		scale: {
+			x: 0,
+			y: 0,
+		},
+		duration: 150,
+		opacity: 0,
+	}).then(() => {
+		menu.visibility = "collapsed";
+	});
 }
 
 function showMenu(menu: View) {
-		menu.visibility = "visible";
-		menu.animate({
-			scale: {
-				x: 1,
-				y: 1,
-			},
-			duration: 150,
-			opacity: 1,
-		});
-		util.view.bringToFront(menu);
+	browserView.hideOverview();
+	menu.visibility = "visible";
+	menu.animate({
+		scale: {
+			x: 1,
+			y: 1,
+		},
+		duration: 150,
+		opacity: 1,
+	});
+	Util.bringToFront(menu);
 }
 
 export function onTap() {
@@ -233,4 +234,8 @@ export function historyClicked(args) {
 
 export function settingsClicked(args) {
     //code to open the settings view goes here
+}
+
+export function layerButtonClicked(args) {
+	browserView.toggleOverview();
 }

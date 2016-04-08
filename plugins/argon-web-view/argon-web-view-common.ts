@@ -13,7 +13,6 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public log:string[] = [];
     public isRealityLayer = false;
-    public overviewIndex = 0;
 
     public _handleArgonMessage(message:string) {
         if (typeof this._sessionMessagePort == 'undefined') {

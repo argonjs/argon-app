@@ -1,1 +1,0 @@
-{"version":3,"file":"util.android.js","sourceRoot":"","sources":["util.android.ts"],"names":[],"mappings":";AAEA,IAAM,IAAI,GAAG;IACX,IAAI,EAAE;QACJ,YAAY,EAAE,UAAC,IAAU;YACvB,IAAI,CAAC,OAAO,CAAC,YAAY,EAAE,CAAC;QAC9B,CAAC;KACF;CACF,CAAC;AAEF,MAAM,CAAC,OAAO,GAAG,IAAI,CAAC"}
