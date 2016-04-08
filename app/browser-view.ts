@@ -43,6 +43,9 @@ export class BrowserView extends GridLayout {
           animating: false,
           cleanup: [],
         };
+
+        // Make a new layer to be used with the url bar.
+        this._setFocussedLayer(this.addLayer());
     }
 
     addLayer() {
@@ -196,13 +199,13 @@ export class BrowserView extends GridLayout {
 
       // Update and render
       let pastY = 0;
-      const touchHandle = (args: TouchGestureEventData) => {
+      const touchHandle = (y: number, action: string, view: View) => {
         // NOTE: relies on layer's internal structure.
-        const nextY = args.getY() + args.view.parent.translateY;
+        const nextY = y + view.parent.translateY;
         const deltaY = nextY - pastY;
         pastY = nextY;
 
-        if (args.action === "down" || args.action === "up") {
+        if (action === "up" || action === "down") {
           return;
         }
 
@@ -236,7 +239,9 @@ export class BrowserView extends GridLayout {
         const gestureCover = new GridLayout();
         gestureCover.horizontalAlignment = 'stretch';
         gestureCover.verticalAlignment = 'stretch';
-        gestureCover.on(GestureTypes.touch, touchHandle);
+        gestureCover.on(GestureTypes.touch, (event: TouchGestureEventData) => {
+          touchHandle(event.getY(), event.action, event.view);
+        });
         gestureCover.on(GestureTypes.tap, (event: GestureEventData) => {
           // Get the webview that was tapped
           // NOTE: relies on layer's internal structure.
@@ -258,7 +263,9 @@ export class BrowserView extends GridLayout {
       }
 
       // Be able to drag on black
-      this.on(GestureTypes.touch, touchHandle);
+      this.on(GestureTypes.touch, (event: TouchGestureEventData) => {
+        touchHandle(event.getY(), event.action, event.view);
+      });
       this.overview.cleanup.push(() => {
         this.off(GestureTypes.pan);
       });
