@@ -6,9 +6,8 @@ import {PropertyChangeData} from 'data/observable';
 import {AnimationCurve} from "ui/enums";
 import {
   GestureTypes,
-  PanGestureEventData,
-  GestureEventData,
   TouchGestureEventData,
+  GestureEventData,
 } from "ui/gestures";
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
@@ -34,13 +33,12 @@ export class BrowserView extends GridLayout {
         this.realityLayer = this.addLayer();
         this.realityLayer.isRealityLayer = true;
         this.realityLayer.url = "http://elixir-lang.org/";
-        this.backgroundColor = new Color("#000");
+        this.backgroundColor = new Color("#555");
 
         this.overview = {
           active: false,
           cleanup: [],
         };
-
 
         const layer1 = this.addLayer();
         layer1.url = "http://google.com";
@@ -51,6 +49,12 @@ export class BrowserView extends GridLayout {
     }
 
     addLayer() {
+        // Put things in a grid layout to be able to decorate later.
+        const container = new GridLayout();
+        container.horizontalAlignment = 'stretch';
+        container.verticalAlignment = 'stretch';
+
+        // Make an argon-enabled webview
         const layer = new ArgonWebView;
         layer.on('propertyChange', (eventData:PropertyChangeData) => {
             if (eventData.propertyName === 'url' && layer === this.focussedLayer) {
@@ -66,16 +70,17 @@ export class BrowserView extends GridLayout {
         layer.horizontalAlignment = 'stretch';
         layer.verticalAlignment = 'stretch';
 
-        this.addChild(layer);
+        container.addChild(layer);
+        this.addChild(container);
         this._setFocussedLayer(layer);
         return layer;
     }
 
-    private getLayers(): Array<ArgonWebView> {
+    private getLayers(): Array<GridLayout> {
       const layers = [];
       for (let i = 0; i < this.getChildrenCount(); i += 1) {
         const view = this.getChildAt(i);
-        if (view instanceof ArgonWebView && !view.isRealityLayer) {
+        if (view instanceof GridLayout) {
           layers.push(view);
         }
       }
@@ -107,20 +112,14 @@ export class BrowserView extends GridLayout {
 
     showOverview() {
       // TODO: do not hardcode pixel values, use percents?
-      // TODO: include the reality as a selectable view
       // Mark as active
       this.overview.active = true;
       this.overview.cleanup.push(() => {
         this.overview.active = false;
       });
 
-      // Hide reality (its too white!)
-      this.realityLayer.visibility = "collapsed";
-      this.overview.cleanup.push(() => {
-        setTimeout(() => {
-          this.realityLayer.visibility = "visible";
-        }, OVERVIEW_ANIMATION_DURATION);
-      });
+      // Store depths
+      const depths = [];
 
       // Get all layers
       const layers = this.getLayers();
@@ -130,14 +129,14 @@ export class BrowserView extends GridLayout {
         return ((index + 1) / 2) - (layers.length / 2) + 1;
       };
       for (let i = 0; i < layers.length; i += 1) {
-        layers[i].overviewIndex = initialDepth(i);
+        depths.push(initialDepth(i));
       }
 
       // Update for the first time & animate.
-      for (let layer of layers) {
-        layer.animate({
-          translate: BrowserView.overviewOffset(layer.overviewIndex),
-          scale: BrowserView.overviewScale(layer.overviewIndex),
+      for (let i = 0; i < layers.length; i += 1) {
+        layers[i].animate({
+          translate: BrowserView.overviewOffset(depths[i]),
+          scale: BrowserView.overviewScale(depths[i]),
           duration: OVERVIEW_ANIMATION_DURATION,
           curve: AnimationCurve.easeOut,
         });
@@ -161,41 +160,62 @@ export class BrowserView extends GridLayout {
         });
       });
 
-      // Watch for panning, add gesture
-      let pastY = 0;
-      const gestureCover = new GridLayout();
-      gestureCover.horizontalAlignment = 'stretch';
-      gestureCover.verticalAlignment = 'stretch';
-      this.addChild(gestureCover);
-
       // Update and render
-      gestureCover.on(GestureTypes.pan, (args: PanGestureEventData) => {
-        // Check if this is a new touch event
-        if (args.deltaY === 0) {
-          pastY = 0;
+      let pastY = 0;
+      const touchHandle = (args: TouchGestureEventData) => {
+        // NOTE: relies on layer's internal structure.
+        const nextY = args.getY() + args.view.parent.translateY;
+        const deltaY = nextY - pastY;
+        pastY = nextY;
+
+        if (args.action === "down" || args.action === "up") {
+          return;
         }
-        const deltaY = args.deltaY - pastY;
-        pastY = args.deltaY;
 
         // "Re-render" all layers
-        layers.forEach((layer) => {
+        for (let i = 0; i < layers.length; i += 1) {
           // Calculate new positions
-          layer.overviewIndex += deltaY * 0.005;
-          const offset = BrowserView.overviewOffset(layer.overviewIndex);
-          const scale = BrowserView.overviewScale(layer.overviewIndex);
+          depths[i] += deltaY * 0.005;
+          const layer = layers[i];
+          const offset = BrowserView.overviewOffset(depths[i]);
+          const scale = BrowserView.overviewScale(depths[i]);
 
           // Set those positions
           layer.scaleX = scale.x;
           layer.scaleY = scale.y;
           layer.translateX = offset.x;
           layer.translateY = offset.y;
-        });
-      });
+        };
+      };
 
-      // remove gesture cover and listeners
+      // Watch for panning, add gesture
+      for (const layer of layers) {
+        // Cover the webview to detect gestures and disable interaction
+        const gestureCover = new GridLayout();
+        gestureCover.horizontalAlignment = 'stretch';
+        gestureCover.verticalAlignment = 'stretch';
+        gestureCover.on(GestureTypes.touch, touchHandle);
+        gestureCover.on(GestureTypes.tap, (event: GestureEventData) => {
+          // Get the webview that was tapped
+          // NOTE: relies on layer's internal structure.
+          const container = <GridLayout> event.view.parent;
+          const argonView = <ArgonWebView> container.getChildAt(0);
+          console.log("Selected: " + argonView.url);
+        });
+        layer.addChild(gestureCover);
+
+        // remove gesture cover and listeners
+        this.overview.cleanup.push(() => {
+          gestureCover.off(GestureTypes.touch);
+          gestureCover.off(GestureTypes.tap);
+          layer.removeChild(gestureCover);
+        });
+      }
+
+      // Be able to drag on black
+      this.on(GestureTypes.touch, touchHandle);
       this.overview.cleanup.push(() => {
-        gestureCover.off(GestureTypes.pan);
-        this.removeChild(gestureCover);
+        this.off(GestureTypes.pan);
       });
     }
 
