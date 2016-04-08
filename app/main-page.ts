@@ -14,7 +14,7 @@ import {View} from "ui/core/view";
 
 import * as vuforia from 'nativescript-vuforia';
 
-import * as util from './util';
+import {Util} from './util';
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
@@ -212,7 +212,7 @@ function showMenu(menu: View) {
 		duration: 150,
 		opacity: 1,
 	});
-	util.view.bringToFront(menu);
+	Util.bringToFront(menu);
 }
 
 export function onTap() {

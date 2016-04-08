@@ -9,7 +9,7 @@ import {
   TouchGestureEventData,
   GestureEventData,
 } from 'ui/gestures';
-import * as util from './util';
+import {Util} from './util';
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 import * as fs from 'file-system';
@@ -271,7 +271,7 @@ export class BrowserView extends GridLayout {
           const argonView = <ArgonWebView> container.getChildAt(0);
           this._setFocussedLayer(argonView);
           this.focusAndSyncHeap(i);
-          util.view.bringToFront(container);
+          Util.bringToFront(container);
           this.hideOverview();
         });
         layer.addChild(gestureCover);
