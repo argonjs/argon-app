@@ -8,7 +8,6 @@ var ArgonWebView = (function (_super) {
         var _this = this;
         _super.call(this);
         this.on(view_1.View.loadedEvent, function () {
-            // Make transparent
             _this.backgroundColor = new color_1.Color(0, 255, 255, 255);
             _this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         });
@@ -23,9 +22,11 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype.evaluateJavascript = function (script) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            _this.android.evaluateJavascript(script, function (value) {
-                resolve(value);
-            });
+            _this.android.evaluateJavascript(script, new android.webkit.ValueCallback({
+                onReceiveValue: function (value) {
+                    resolve(value);
+                },
+            }));
         });
     };
     ArgonWebView.prototype.bringToFront = function () {
