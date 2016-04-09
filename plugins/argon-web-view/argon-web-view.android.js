@@ -8,8 +8,13 @@ var ArgonWebView = (function (_super) {
         var _this = this;
         _super.call(this);
         this.on(view_1.View.loadedEvent, function () {
+            // Make transparent
             _this.backgroundColor = new color_1.Color(0, 255, 255, 255);
             _this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            var settings = _this.android.getSettings();
+            var userAgent = settings.getUserAgentString();
+            settings.setUserAgentString(userAgent + " Argon");
+            settings.setJavaScriptEnabled(true);
         });
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {
