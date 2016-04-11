@@ -1,5 +1,5 @@
-<Page 
-    xmlns="http://schemas.nativescript.org/tns.xsd" 
+<Page
+    xmlns="http://schemas.nativescript.org/tns.xsd"
     xmlns:browserView="browser-view"
     loaded="pageLoaded" backgroundColor="#00000000">
     <Page.actionBar>
@@ -7,9 +7,8 @@
             <ActionBar.titleView  margin="0px" padding="0px" >
             <GridLayout id="header" columns="*, auto, auto, auto" rows="auto" horizontalAlignment="stretch">
                 <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" />
-                <Button col="1" text="layers" class="material-icon" width="8%" style="font-size:22px; color:#545454;" margin="0px 0px 0px 10px" />
-                <Button col="2" text="more_vert" class="material-icon" width="8%" style="font-size:22px; color:#545454;" tap="menuButtonClicked" />
-                <Label col="3" text=" " width="5%"/>
+                <Button col="1" id="layerBtn" class="material-icon action-btn" tap="layerButtonClicked" />
+                <Button col="2" id="menuBtn" class="material-icon action-btn" tap="menuButtonClicked" />
             </GridLayout>
             </ActionBar.titleView>
         </ActionBar>

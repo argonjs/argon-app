@@ -1,9 +1,11 @@
 "use strict";
+var URI = require("urijs");
 var application = require('application');
 var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
+var util_1 = require('./util');
 var Argon = require('argon');
 require('./argon-camera-service');
 require('./argon-device-service');
@@ -24,6 +26,12 @@ function pageLoaded(args) {
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
+    // Set the icon for the menu button
+    var menuButton = page.getViewById("menuBtn");
+    menuButton.text = String.fromCharCode(0xe5d2);
+    // Set the icon for the layers button
+    var layerButton = page.getViewById("layerBtn");
+    layerButton.text = String.fromCharCode(0xe53b);
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(function () {
@@ -42,14 +50,12 @@ exports.actionBarLoaded = actionBarLoaded;
 function searchBarLoaded(args) {
     searchBar = args.object;
     searchBar.on(searchbar.SearchBar.submitEvent, function () {
-        var url = searchBar.text;
-        var protocolRegex = /^[^:]+(?=:\/\/)/;
-        if (!protocolRegex.test(url)) {
-            url = "http://" + url;
+        var url = URI(searchBar.text);
+        if (url.protocol() !== "http" || url.protocol() !== "https") {
+            url.protocol("http");
         }
-        url = url.toLowerCase();
         console.log("Load url: " + url);
-        exports.browserView.focussedLayer.src = url;
+        exports.browserView.focussedLayer.src = url.toString();
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
@@ -154,32 +160,45 @@ var IOSSearchBarController = (function () {
 function menuButtonClicked(args) {
     var menu = views.getViewById(frames.topmost().currentPage, "menu");
     if (menu.visibility == "visible") {
-        menu.animate({
-            scale: { x: 0, y: 0 },
-            duration: 150,
-            opacity: 0
-        }).then(function () { menu.visibility = "collapsed"; });
+        hideMenu(menu);
     }
     else {
-        //make sure the menu view is rendered above any other views
-        // const parent = menu.parent;
-        // parent._removeView(menu);
-        // parent._addView(menu, 0);
-        menu.visibility = "visible";
-        menu.animate({
-            scale: { x: 1, y: 1 },
-            duration: 150,
-            opacity: 1
-        });
+        showMenu(menu);
     }
 }
 exports.menuButtonClicked = menuButtonClicked;
+function hideMenu(menu) {
+    menu.animate({
+        scale: {
+            x: 0,
+            y: 0,
+        },
+        duration: 150,
+        opacity: 0,
+    }).then(function () {
+        menu.visibility = "collapsed";
+    });
+}
+function showMenu(menu) {
+    exports.browserView.hideOverview();
+    menu.visibility = "visible";
+    menu.animate({
+        scale: {
+            x: 1,
+            y: 1,
+        },
+        duration: 150,
+        opacity: 1,
+    });
+    util_1.Util.bringToFront(menu);
+}
 function onTap() {
     console.log('tapped');
 }
 exports.onTap = onTap;
 function newChannelClicked(args) {
-    //code to open a new channel goes here
+    exports.browserView.addLayer();
+    hideMenu(args.object.page.getViewById("menu"));
 }
 exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
@@ -199,4 +218,8 @@ function settingsClicked(args) {
     //code to open the settings view goes here
 }
 exports.settingsClicked = settingsClicked;
+function layerButtonClicked(args) {
+    exports.browserView.toggleOverview();
+}
+exports.layerButtonClicked = layerButtonClicked;
 //# sourceMappingURL=main-page.js.map

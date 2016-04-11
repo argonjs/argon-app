@@ -1,3 +1,4 @@
+import * as URI from "urijs";
 
 import * as application from 'application';
 import * as pages from 'ui/page';
@@ -9,9 +10,12 @@ import {CreateViewEventData} from 'ui/placeholder';
 import {LoadEventData} from 'ui/web-view';
 import * as color from 'color';
 import * as platform from 'platform';
+import {Button} from "ui/button";
+import {View} from "ui/core/view";
 
 import * as vuforia from 'nativescript-vuforia';
 
+import {Util} from './util';
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
@@ -40,11 +44,19 @@ manager = Argon.init({container, config: {
 
 export function pageLoaded(args) {
 
-    const page:pages.Page = args.object;
-    page.backgroundColor = new color.Color("black");
-	
+	const page:pages.Page = args.object;
+	page.backgroundColor = new color.Color("black");
+
 	actionBar = page.actionBar;
-	
+
+	// Set the icon for the menu button
+	const menuButton = <Button> page.getViewById("menuBtn");
+	menuButton.text = String.fromCharCode(0xe5d2);
+
+	// Set the icon for the layers button
+	const layerButton = <Button> page.getViewById("layerBtn");
+	layerButton.text = String.fromCharCode(0xe53b);
+
 	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
 	if (page.ios) {
 		setTimeout(()=>{
@@ -62,19 +74,17 @@ export function actionBarLoaded(args) {
 
 export function searchBarLoaded(args) {
 	searchBar = args.object;
-	
+
 	searchBar.on(searchbar.SearchBar.submitEvent, () => {
-		let url = searchBar.text; 
-		const protocolRegex = /^[^:]+(?=:\/\/)/;
-		if (!protocolRegex.test(url)) {
-			url = "http://" + url;
+		const url = URI(searchBar.text);
+		if (url.protocol() !== "http" || url.protocol() !== "https") {
+			url.protocol("http");
 		}
-		url = url.toLowerCase();
 		console.log("Load url: " + url);
-		browserView.focussedLayer.src = url;
+		browserView.focussedLayer.src = url.toString();
 	});
 
-    if (application.ios) {
+	if (application.ios) {
 		iosSearchBarController = new IOSSearchBarController(searchBar);
 	}
 }
@@ -101,38 +111,38 @@ export function browserViewLoaded(args) {
 
 // initialize some properties of the menu so that animations will render correctly
 export function menuLoaded(args) {
-    let menu:views.View = args.object;
+	let menu:views.View = args.object;
 	menu.originX = 1;
-    menu.originY = 0;
+	menu.originY = 0;
 	menu.scaleX = 0;
-    menu.scaleY = 0;
+	menu.scaleY = 0;
 	menu.opacity = 0;
 }
 
 class IOSSearchBarController {
-	
+
 	private uiSearchBar:UISearchBar;
 	private textField:UITextField;
-	
+
 	constructor(public searchBar:searchbar.SearchBar) {
-    	this.uiSearchBar = searchBar.ios;
+		this.uiSearchBar = searchBar.ios;
 		this.textField = this.uiSearchBar.valueForKey("searchField");
-		
-    	this.uiSearchBar.showsCancelButton = false;
-    	this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
+
+		this.uiSearchBar.showsCancelButton = false;
+		this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
 		this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
-    	this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
+		this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
 		this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
 		this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
-		
+
 		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
 
-    	const textFieldEditHandler = () => {
-    		if (this.uiSearchBar.isFirstResponder()) {
+		const textFieldEditHandler = () => {
+			if (this.uiSearchBar.isFirstResponder()) {
 				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
 				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
 				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
-				
+
 				const items = actionBar.actionItems.getItems();
 				for (const item of items) {
 					item.visibility = 'collapse'
@@ -156,12 +166,12 @@ class IOSSearchBarController {
 					}
 				});
 			}
-    	}
-		
-    	application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
-    	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);	
+		}
+
+		application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
+		application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
 	}
-	
+
 	private setPlaceholderText(text:string) {
 		if (text) {
 			var attributes = NSMutableDictionary.alloc().init();
@@ -171,37 +181,48 @@ class IOSSearchBarController {
 			this.textField.placeholder = searchBar.hint;
 		}
 	}
-	
+
 	public setText(url) {
 		if (!this.uiSearchBar.isFirstResponder()) {
 			this.setPlaceholderText(url);
 		}
 	}
-	
 }
 
 export function menuButtonClicked(args) {
-    let menu = views.getViewById(frames.topmost().currentPage, "menu");
-        
-    if (menu.visibility == "visible") {
-        menu.animate({
-            scale: { x: 0, y: 0 },
-            duration: 150,
-			opacity: 0
-        }).then(() => { menu.visibility = "collapsed"; });
-    } else {
-        //make sure the menu view is rendered above any other views
-        // const parent = menu.parent;
-        // parent._removeView(menu);
-        // parent._addView(menu, 0);
-        
-        menu.visibility = "visible";
-        menu.animate({
-            scale: { x: 1, y: 1 },
-            duration: 150,
-			opacity: 1
-        });
-    }
+	let menu = views.getViewById(frames.topmost().currentPage, "menu");
+	if (menu.visibility == "visible") {
+		hideMenu(menu);
+	} else {
+		showMenu(menu);
+	}
+}
+
+function hideMenu(menu: View) {
+	menu.animate({
+		scale: {
+			x: 0,
+			y: 0,
+		},
+		duration: 150,
+		opacity: 0,
+	}).then(() => {
+		menu.visibility = "collapsed";
+	});
+}
+
+function showMenu(menu: View) {
+	browserView.hideOverview();
+	menu.visibility = "visible";
+	menu.animate({
+		scale: {
+			x: 1,
+			y: 1,
+		},
+		duration: 150,
+		opacity: 1,
+	});
+	Util.bringToFront(menu);
 }
 
 export function onTap() {
@@ -209,7 +230,8 @@ export function onTap() {
 }
 
 export function newChannelClicked(args) {
-    //code to open a new channel goes here
+	browserView.addLayer();
+	hideMenu(args.object.page.getViewById("menu"));
 }
 
 export function bookmarksClicked(args) {
@@ -227,4 +249,8 @@ export function historyClicked(args) {
 
 export function settingsClicked(args) {
     //code to open the settings view goes here
+}
+
+export function layerButtonClicked(args) {
+	browserView.toggleOverview();
 }
