@@ -20,32 +20,32 @@ const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI)
 const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI)
 
 export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
-	
+
 	private scratchMatrix4 = new Argon.Cesium.Matrix4();
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
-    
+
     private iosTrackableRotation = new Quaternion;
-	
+
 	constructor() {
         super();
-        
+
         vuforia.events.on(vuforia.initErrorEvent, (event:vuforia.EventData) => {
             this.errorEvent.raiseEvent({
                 type: Argon.VuforiaErrorType.InitError,
                 message: event.message,
                 data: {code: event.code}
-            })  
+            })
             console.error(event.message + " code: " + event.code);
         })
-        
+
         vuforia.events.on(vuforia.loadDataSetErrorEvent, (event:vuforia.EventData) => {
             this.errorEvent.raiseEvent({
                 type: Argon.VuforiaErrorType.LoadDataSetError,
                 message: event.message
-            })  
+            })
             console.error(event.message);
         })
-        
+
         vuforia.events.on(vuforia.unloadDataSetErrorEvent, (event:vuforia.EventData) => {
             this.errorEvent.raiseEvent({
                 type: Argon.VuforiaErrorType.UnloadDataSetError,
@@ -53,7 +53,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             })
             console.error(event.message);
         })
-        
+
         vuforia.events.on(vuforia.activateDataSetErrorEvent, (event:vuforia.EventData) => {
             this.errorEvent.raiseEvent({
                 type: Argon.VuforiaErrorType.ActivateDataSetError,
@@ -61,7 +61,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             })
             console.error(event.message);
         })
-        
+
         vuforia.events.on(vuforia.dataSetLoadEvent, (event:vuforia.DataSetLoadEventData) => {
             const url = event.url;
             const trackables = event.trackables;
@@ -73,143 +73,143 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             console.log('DataSet loaded: ' + JSON.stringify(msg));
             this.dataSetLoadEvent.raiseEvent(msg);
         });
-        
+
         if (vuforia.ios) {
-            
+
             // TODO: wrap some of this ios-specific stuff up in nativescript-vuforia plugin
-            
+
             const vuforiaCameraPose = {
                 referenceFrame: 'DEVICE',
                 position: {x:0,y:0,z:0},
                 orientation: Quaternion.multiply(x180, z90, <any>{})
             }
-            
+
             vuforia.events.on(vuforia.stateUpdateEvent, (e:vuforia.StateUpdateEventData) => {
                 const state:VuforiaState = e.state;
-                
+
                 let frame = state.getFrame();
                 const frameNumber = frame.getIndex();
                 const timestamp = frame.getTimeStamp();
-                
+
                 const time = JulianDate.addSeconds(iosSystemBootDate, timestamp, <any>{});
-                
+
                 const entities:Argon.EntityPoseMap = {}
                 const trackableResultsCount = state.getNumTrackableResults();
-                
+
                 entities['VUFORIA_CAMERA'] = vuforiaCameraPose;
-                
+
                 for (let i=0; i<trackableResultsCount; i++) {
                     const trackableResult = state.getTrackableResult(i);
                     const trackable = trackableResult.getTrackable();
                     const id = "vuforia_trackable_" + trackable.getId();
                     const pose = trackableResult.getPose();
-                    
+
                     const postMatrix4 = [
                         pose._0, pose._1, pose._2, pose._3,
                         pose._4, pose._5, pose._6, pose._7,
                         pose._8, pose._9, pose._10, pose._11,
                         0, 0, 0, 1
                     ]
-                        
+
                     // Vuforia trackable modelViewMatrix is reported in a row-major matrix
                     const trackablePose = Matrix4.fromRowMajorArray(postMatrix4, this.scratchMatrix4);
-                    
+
                     // get the position and orientation out of the modelViewMatrix
                     const position = Matrix4.getTranslation(trackablePose, <Argon.Cesium.Cartesian3>{});
                     const rotationMatrix = Matrix4.getRotation(trackablePose, this.scratchMatrix3);
                     const orientation = Quaternion.fromRotationMatrix(rotationMatrix, <Argon.Cesium.Quaternion>{});
-                    
+
                     entities[id] = {
                         referenceFrame: 'VUFORIA_CAMERA',
                         position,
                         orientation
                     }
                 }
-                
+
                 const frameState:Argon.MinimalFrameState = {
                     time,
                     frameNumber,
                     entities
                 }
-                
+
                 // console.debug(JSON.stringify(frameState));
-                
+
                 this.updateEvent.raiseEvent(frameState);
             });
         }
-        
+
 	}
-    
+
     isSupported() {
         return vuforia.isSupported();
     }
-	
+
 	init(options:Argon.VuforiaInitOptions) {
         console.log("Initializing Vuforia with options: " + JSON.stringify(options));
 		const licenseKey = options.licenseKey || defaultVuforiaLicenseKey;
 		return vuforia.init(licenseKey);
 	}
-	
+
 	deinit() {
         console.log("Deinitializing Vuforia");
 		return vuforia.deinit();
 	}
-	
+
 	startCamera() {
         console.log("Starting Camera");
 		return vuforia.startCamera();
 	}
-	
+
 	stopCamera() {
         console.log("Stopping Camera");
 		return vuforia.stopCamera();
 	}
-    
+
 	startObjectTracker() {
         console.log("Starting ObjectTracker");
 		return vuforia.startObjectTracker();
 	}
-	
+
 	stopObjectTracker() {
         console.log("Stopping ObjectTracker");
 		return vuforia.stopObjectTracker();
 	}
-    
+
     hintMaxSimultaneousImageTargets(max:number) {
         console.log("Setting hint max simultanous image targets: " + max);
         return vuforia.hintMaxSimultaneousImageTargets(max);
     }
-    
+
     setVideoBackgroundConfig(videoConfig:Argon.VuforiaVideoBackgroundConfig) {
         console.log("Set video background config: " + JSON.stringify(videoConfig));
         return vuforia.setVideoBackgroundConfig(videoConfig)
     }
-    
+
     setViewSize(viewSize:{width:number,height:number}) {
         console.log("Set view size: " + JSON.stringify(viewSize));
         return vuforia.setViewSize(viewSize);
     }
-	
+
 	loadDataSet(url) {
         console.log("Loading dataset: " + url);
 		return vuforia.loadDataSet(url);
 	}
-	
+
 	unloadDataSet(url) {
         console.log("Unloading dataset: " + url);
 		return vuforia.unloadDataSet(url);
 	}
-	
+
 	activateDataSet(url) {
         console.log("Activating dataset: " + url);
 		return vuforia.activateDataSet(url);
 	}
-	
+
 	deactivateDataSet(url) {
         console.log("Deactivating dataset: " + url);
 		return vuforia.deactivateDataSet(url);
 	}
-    
+
     getVideoMode() {
         return vuforia.getVideoMode();
     }

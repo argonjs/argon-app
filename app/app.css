@@ -6,6 +6,12 @@
     background-color: #BBFFFFFF;
 }
 
+.action-btn {
+  font-size: 22px;
+  color: #545454;
+  width: 11%;
+}
+
 .material-icon {
 	font-family: "MaterialIcons-Regular";
 }
