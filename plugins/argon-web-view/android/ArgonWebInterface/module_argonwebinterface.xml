@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_argonwebinterface" default="compile.module.argonwebinterface">
+  <dirname property="module.argonwebinterface.basedir" file="${ant.file.module_argonwebinterface}"/>
+
+  <property name="module.jdk.home.argonwebinterface" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.argonwebinterface" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.argonwebinterface" value="${project.jdk.classpath}"/>
+
+  <property name="compiler.args.argonwebinterface" value="-encoding UTF-8 -source 8 -target 8 ${compiler.args}"/>
+
+  <property name="argonwebinterface.output.dir" value="${module.argonwebinterface.basedir}/out/production/ArgonWebInterface"/>
+  <property name="argonwebinterface.testoutput.dir" value="${module.argonwebinterface.basedir}/out/test/ArgonWebInterface"/>
+
+  <path id="argonwebinterface.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+
+  <path id="argonwebinterface.module.production.classpath">
+    <path refid="${module.jdk.classpath.argonwebinterface}"/>
+    <pathelement location="${path.android.sdk.jar}"/>
+  </path>
+
+  <path id="argonwebinterface.runtime.production.module.classpath">
+    <pathelement location="${argonwebinterface.output.dir}"/>
+    <pathelement location="${path.android.sdk.jar}"/>
+  </path>
+
+  <path id="argonwebinterface.module.classpath">
+    <path refid="${module.jdk.classpath.argonwebinterface}"/>
+    <pathelement location="${argonwebinterface.output.dir}"/>
+    <pathelement location="${path.android.sdk.jar}"/>
+  </path>
+
+  <path id="argonwebinterface.runtime.module.classpath">
+    <pathelement location="${argonwebinterface.testoutput.dir}"/>
+    <pathelement location="${argonwebinterface.output.dir}"/>
+    <pathelement location="${path.android.sdk.jar}"/>
+  </path>
+
+
+  <patternset id="excluded.from.module.argonwebinterface">
+    <patternset refid="ignored.files"/>
+  </patternset>
+
+  <patternset id="excluded.from.compilation.argonwebinterface">
+    <patternset refid="excluded.from.module.argonwebinterface"/>
+  </patternset>
+
+  <path id="argonwebinterface.module.sourcepath">
+    <dirset dir="${module.argonwebinterface.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+
+
+  <target name="compile.module.argonwebinterface" depends="compile.module.argonwebinterface.production,compile.module.argonwebinterface.tests" description="Compile module ArgonWebInterface"/>
+
+  <target name="compile.module.argonwebinterface.production" description="Compile module ArgonWebInterface; production classes">
+    <mkdir dir="${argonwebinterface.output.dir}"/>
+    <javac includeantruntime="false" destdir="${argonwebinterface.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.argonwebinterface}/javac">
+      <compilerarg line="${compiler.args.argonwebinterface}"/>
+      <bootclasspath refid="argonwebinterface.module.bootclasspath"/>
+      <classpath refid="argonwebinterface.module.production.classpath"/>
+      <src refid="argonwebinterface.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.argonwebinterface"/>
+    </javac>
+
+    <copy todir="${argonwebinterface.output.dir}">
+      <fileset dir="${module.argonwebinterface.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="compile.module.argonwebinterface.tests" depends="compile.module.argonwebinterface.production" description="compile module ArgonWebInterface; test classes" unless="skip.tests"/>
+
+  <target name="clean.module.argonwebinterface" description="cleanup module">
+    <delete dir="${argonwebinterface.output.dir}"/>
+    <delete dir="${argonwebinterface.testoutput.dir}"/>
+  </target>
+</project>
