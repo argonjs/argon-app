@@ -4,6 +4,8 @@ import * as Argon from "argon";
 import {View} from "ui/core/view";
 import {Color} from "color";
 
+const AndroidWebInterface = io.argonjs.AndroidWebInterface;
+
 export class ArgonWebView extends common.ArgonWebView {
 
   constructor() {
@@ -17,6 +19,13 @@ export class ArgonWebView extends common.ArgonWebView {
       const userAgent = settings.getUserAgentString();
       settings.setUserAgentString(userAgent + " Argon");
       settings.setJavaScriptEnabled(true);
+
+      this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
+          onArgonEvent: (event: string, data: string) => {
+              console.log(event + ": " + data);
+              // TODO
+          },
+      }))(), "argon");
     });
   }
 
