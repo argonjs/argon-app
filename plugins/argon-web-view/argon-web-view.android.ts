@@ -22,8 +22,7 @@ export class ArgonWebView extends common.ArgonWebView {
 
       this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
           onArgonEvent: (event: string, data: string) => {
-              console.log(event + ": " + data);
-              // TODO
+              this._handleArgonMessage(data);
           },
       }))(), "argon");
     });
