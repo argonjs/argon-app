@@ -7,17 +7,21 @@ import {Color} from "color";
 export class ArgonWebView extends common.ArgonWebView {
 
   constructor() {
-      super();
+    super();
+    this.on(View.loadedEvent, () => {
+      // Make transparent
+      this.backgroundColor = new Color(0, 255, 255, 255);
+      this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
 
-      this.on(View.loadedEvent, () => {
-        // Make transparent
-        this.backgroundColor = new Color(0, 255, 255, 255);
-        this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-      });
+      const settings = <android.webkit.WebSettings> this.android.getSettings();
+      const userAgent = settings.getUserAgentString();
+      settings.setUserAgentString(userAgent + " Argon");
+      settings.setJavaScriptEnabled(true);
+    });
   }
 
   get progress() {
-      return this.android.getProgress();
+    return this.android.getProgress();
   }
 
   evaluateJavascript(script: string) {
