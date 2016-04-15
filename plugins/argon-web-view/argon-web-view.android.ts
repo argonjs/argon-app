@@ -30,7 +30,7 @@ export class ArgonWebView extends common.ArgonWebView {
                   this._handleLogMessage(data);
               }
           },
-      }))(), "argon");
+      }))(), "__argon_android__");
     });
 
     this.on(ArgonWebView.loadStartedEvent, () => {
@@ -38,8 +38,8 @@ export class ArgonWebView extends common.ArgonWebView {
       const injectLogger = () => {
           const logger = window.console.log;
           window.console.log = (...args) => {
-              if (window.argon) {
-                  window.argon.emit("log", args.join(" "));
+              if (window.__argon_android__) {
+                  window.__argon_android__.emit("log", args.join(" "));
               }
               logger.apply(window.console, args);
           };
