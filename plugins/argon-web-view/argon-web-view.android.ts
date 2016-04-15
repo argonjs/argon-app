@@ -22,9 +22,11 @@ export class ArgonWebView extends common.ArgonWebView {
 
   evaluateJavascript(script: string) {
     return new Promise((resolve, reject) => {
-      this.android.evaluateJavascript(script, (value) => {
-        resolve(value);
-      });
+      this.android.evaluateJavascript(script, new android.webkit.ValueCallback({
+        onReceiveValue: (value: any) => {
+          resolve(value);
+        },
+      }));
     });
   }
 
