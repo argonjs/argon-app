@@ -6,7 +6,7 @@
   <property name="module.jdk.bin.argonwebinterface" value="${project.jdk.bin}"/>
   <property name="module.jdk.classpath.argonwebinterface" value="${project.jdk.classpath}"/>
 
-  <property name="compiler.args.argonwebinterface" value="-encoding UTF-8 -source 8 -target 8 ${compiler.args}"/>
+  <property name="compiler.args.argonwebinterface" value="-encoding UTF-8 -source 7 -target 7 ${compiler.args}"/>
 
   <property name="argonwebinterface.output.dir" value="${module.argonwebinterface.basedir}/out/production/ArgonWebInterface"/>
   <property name="argonwebinterface.testoutput.dir" value="${module.argonwebinterface.basedir}/out/test/ArgonWebInterface"/>

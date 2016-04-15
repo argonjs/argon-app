@@ -52,9 +52,9 @@
   </patternset>
 
   <!-- JDK definitions -->
-  <property name="jdk.bin.1.8" value="${jdk.home.1.8}/bin"/>
-  <path id="jdk.classpath.1.8">
-    <fileset dir="${jdk.home.1.8}">
+  <property name="jdk.bin" value="${jdk.home}/bin"/>
+  <path id="jdk.classpath">
+    <fileset dir="${jdk.home}">
       <include name="jre/lib/charsets.jar"/>
       <include name="jre/lib/deploy.jar"/>
       <include name="jre/lib/ext/cldrdata.jar"/>
@@ -79,9 +79,9 @@
     </fileset>
   </path>
 
-  <property name="project.jdk.home" value="${jdk.home.1.8}"/>
-  <property name="project.jdk.bin" value="${jdk.bin.1.8}"/>
-  <property name="project.jdk.classpath" value="jdk.classpath.1.8"/>
+  <property name="project.jdk.home" value="${jdk.home}"/>
+  <property name="project.jdk.bin" value="${jdk.bin}"/>
+  <property name="project.jdk.classpath" value="jdk.classpath"/>
 
   <!-- Modules -->
 
@@ -112,7 +112,7 @@
       <zipfileset dir="${argonwebinterface.output.dir}"/>
     </jar>
     <copy file="${temp.jar.path.ArgonWebInterface.jar}" tofile="${artifact.output.argonwebinterface:jar}/ArgonWebInterface.jar"/>
-    <copy file="${temp.jar.path.ArgonWebInterface.jar}" tofile="${basedir}/../../platforms/android/libs/ArgonWebInterface.jar"/>
+    <copy file="${temp.jar.path.ArgonWebInterface.jar}" tofile="${basedir}/../../platforms/android/ArgonWebInterface.jar"/>
     <copy file="${path.android.sdk.jar}" tofile="${artifact.output.argonwebinterface:jar}/android.jar"/>
   </target>
 
