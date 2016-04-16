@@ -11,6 +11,8 @@ require('./argon-camera-service');
 require('./argon-device-service');
 require('./argon-viewport-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
+var historyView = require('./history-view');
+var history = require('./shared/history');
 var actionBar;
 var searchBar;
 var iosSearchBarController;
@@ -71,6 +73,11 @@ function browserViewLoaded(args) {
             else {
                 searchBar.text = url;
             }
+        }
+    });
+    exports.browserView.focussedLayer.on("loadFinished", function (eventData) {
+        if (!eventData.error) {
+            history.addPage(eventData.url);
         }
     });
 }
@@ -199,7 +206,12 @@ function bookmarksClicked(args) {
 }
 exports.bookmarksClicked = bookmarksClicked;
 function historyClicked(args) {
-    //code to open the history view goes here
+    frames.topmost().currentPage.showModal("history-view", null, function () {
+        var url = historyView.getTappedUrl();
+        if (url) {
+            exports.browserView.focussedLayer.src = url;
+        }
+    }, true);
 }
 exports.historyClicked = historyClicked;
 function settingsClicked(args) {

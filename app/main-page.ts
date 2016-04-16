@@ -7,6 +7,7 @@ import * as frames from 'ui/frame';
 import * as searchbar from 'ui/search-bar';
 import * as actionbar from 'ui/action-bar';
 import {CreateViewEventData} from 'ui/placeholder';
+import {LoadEventData} from 'ui/web-view';
 import * as color from 'color';
 import * as platform from 'platform';
 import {Button} from "ui/button";
@@ -23,6 +24,9 @@ import './argon-camera-service';
 import './argon-device-service';
 import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
+
+import * as historyView from './history-view';
+import * as history from './shared/history';
 
 export let manager:Argon.ArgonSystem;
 export let browserView:BrowserView;
@@ -97,6 +101,12 @@ export function browserViewLoaded(args) {
 			}
 		}
 	});
+    
+    browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
+        if (!eventData.error) {
+            history.addPage(eventData.url);
+        }
+    });
 }
 
 // initialize some properties of the menu so that animations will render correctly
@@ -229,7 +239,12 @@ export function bookmarksClicked(args) {
 }
 
 export function historyClicked(args) {
-    //code to open the history view goes here
+    frames.topmost().currentPage.showModal("history-view", null, () => {
+        const url = historyView.getTappedUrl();
+        if (url) {
+            browserView.focussedLayer.src = url;
+        }
+    }, true);
 }
 
 export function settingsClicked(args) {
