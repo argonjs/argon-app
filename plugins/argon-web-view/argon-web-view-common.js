@@ -15,7 +15,7 @@ var ArgonWebView = (function (_super) {
     });
     ArgonWebView.prototype._handleArgonMessage = function (message) {
         var _this = this;
-        if (typeof this._sessionMessagePort == 'undefined') {
+        if (!this._sessionMessagePort) {
             console.log('Connecting to argon.js application at ' + this.url);
             var manager = Argon.ArgonSystem.instance;
             var messageChannel = manager.session.createMessageChannel();

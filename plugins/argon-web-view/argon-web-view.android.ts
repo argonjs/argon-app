@@ -4,10 +4,13 @@ import * as Argon from "argon";
 import {View} from "ui/core/view";
 import {Color} from "color";
 
+const AndroidWebInterface = io.argonjs.AndroidWebInterface;
+
 export class ArgonWebView extends common.ArgonWebView {
 
   constructor() {
     super();
+
     this.on(View.loadedEvent, () => {
       // Make transparent
       this.backgroundColor = new Color(0, 255, 255, 255);
@@ -17,6 +20,31 @@ export class ArgonWebView extends common.ArgonWebView {
       const userAgent = settings.getUserAgentString();
       settings.setUserAgentString(userAgent + " Argon");
       settings.setJavaScriptEnabled(true);
+
+      // Inject Javascript Interface
+      this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
+          onArgonEvent: (event: string, data: string) => {
+              if (event === "message") {
+                  this._handleArgonMessage(data);
+              } else if (event === "log") {
+                  this._handleLogMessage(data);
+              }
+          },
+      }))(), "__argon_android__");
+    });
+
+    this.on(ArgonWebView.loadStartedEvent, () => {
+      // Hook into the logging
+      const injectLogger = () => {
+          const logger = window.console.log;
+          window.console.log = (...args) => {
+              if (window["__argon_android__"]) {
+                  window["__argon_android__"].emit("log", args.join(" "));
+              }
+              logger.apply(window.console, args);
+          };
+      };
+      this.evaluateJavascript("(" + injectLogger.toString() + ")()");
     });
   }
 
