@@ -15,6 +15,7 @@ import {View} from "ui/core/view";
 
 import * as vuforia from 'nativescript-vuforia';
 
+import {ArgonWebView} from 'argon-web-view'
 import {Util} from './util';
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
@@ -250,6 +251,36 @@ export function historyClicked(args) {
 export function settingsClicked(args) {
     //code to open the settings view goes here
 }
+
+export function debugClicked(args) {
+    
+}
+
+ export function debugViewLoaded(args) {
+     let debug = args.object;
+     if(debug.ios) {
+         (<UIView>debug.ios)["setUserInteractionEnabled"](false);
+     }
+    
+     let layer:ArgonWebView;
+     let txt = "";
+     function logChangeCallback() {
+ layer.log.forEach(function(element, index, array) {
+    txt = txt+element+"\n";
+ })
+debug.html = txt;
+    }
+    
+browserView.on("propertyChange", (evt:PropertyChangeData)=>{
+     if (evt.propertyName === "focussedLayer") {
+         if (layer) {
+             layer.removeEventListener("log", logChangeCallback);
+         }
+         layer = browserView.focussedLayer;
+         layer.on("log", logChangeCallback)
+    }
+      })
+ }
 
 export function layerButtonClicked(args) {
 	browserView.toggleOverview();
