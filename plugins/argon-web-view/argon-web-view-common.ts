@@ -15,7 +15,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public isRealityLayer = false;
 
     public _handleArgonMessage(message:string) {
-        if (typeof this._sessionMessagePort == 'undefined') {
+        if (!this._sessionMessagePort) {
             console.log('Connecting to argon.js application at ' + this.url);
             const manager = Argon.ArgonSystem.instance;
             const messageChannel = manager.session.createMessageChannel();
