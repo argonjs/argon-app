@@ -14,7 +14,7 @@
 
 
 @interface VuforiaCameraCalibration ()
-@property (nonatomic) const Vuforia::CameraCalibration *cpp;
+@property (nonatomic, assign) const Vuforia::CameraCalibration *cpp;
 @end
 
 @implementation VuforiaCameraCalibration : NSObject
@@ -49,10 +49,14 @@
     return (VuforiaVec2F&)v;
 }
 
+- (void)dealloc {
+    self.cpp = nil;
+}
+
 @end
 
 @interface VuforiaCameraDevice ()
-@property (nonatomic) Vuforia::CameraDevice *cpp;
+@property (nonatomic, assign) Vuforia::CameraDevice *cpp;
 @end
 
 @implementation VuforiaCameraDevice : NSObject
@@ -160,6 +164,11 @@ static VuforiaCameraDevice *cameraDevice = nil;
  */
 -(BOOL)setFocusMode:(VuforiaCameraDeviceFocusMode)focusMode {
     return self.cpp->setFocusMode(focusMode);
+}
+
+
+- (void)dealloc {
+    self.cpp = nil;
 }
 
 @end

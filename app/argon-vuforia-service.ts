@@ -135,7 +135,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
         
-        vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        // vuforia.api.onNextStateUpdate(stateUpdateCallback);
 	}
     
     _getIdForTrackable(trackable:vuforia.Trackable) : string {

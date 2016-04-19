@@ -92,7 +92,7 @@
 
 
 @interface VuforiaFrame ()
-@property (nonatomic) Vuforia::Frame cpp;
+@property (nonatomic, assign) Vuforia::Frame cpp;
 @end
 
 @implementation VuforiaFrame

@@ -116,7 +116,7 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
             });
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
-        vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        // vuforia.api.onNextStateUpdate(stateUpdateCallback);
     }
     NativeScriptVuforiaServiceDelegate.prototype._getIdForTrackable = function (trackable) {
         if (trackable instanceof vuforia.ObjectTarget) {

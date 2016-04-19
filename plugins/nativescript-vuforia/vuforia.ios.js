@@ -1,357 +1,757 @@
 "use strict";
-var _this = this;
 var common = require('./vuforia-common');
 var application = require('application');
-var vuforia = (typeof VuforiaApplicationSession !== 'undefined') ? VuforiaApplicationSession.new() : undefined;
-exports.ios = vuforia;
 global.moduleMerge(common, exports);
+exports.ios = (VuforiaVideoView ? VuforiaVideoView.new() : undefined);
 application.on(application.suspendEvent, function () {
-    if (vuforia) {
-        vuforia.pauseAR();
-        vuforia.videoViewController.eaglView.finishOpenGLESCommands();
-        vuforia.videoViewController.eaglView.freeOpenGLESResources();
+    if (VuforiaSession) {
+        VuforiaSession.onPause();
+        exports.ios.finishOpenGLESCommands();
+        exports.ios.freeOpenGLESResources();
     }
+});
+function setVuforiaRotation() {
+    var contentScaleFactor = exports.ios.contentScaleFactor;
+    VuforiaSession.onSurfaceChanged({
+        x: exports.ios.frame.size.width * contentScaleFactor,
+        y: exports.ios.frame.size.height * contentScaleFactor
+    });
+    VuforiaSession.setRotation(128 /* IOS_90 */);
+    var orientation = UIApplication.sharedApplication().statusBarOrientation;
+    switch (orientation) {
+        case UIInterfaceOrientation.UIInterfaceOrientationPortrait:
+            VuforiaSession.setRotation(128 /* IOS_90 */);
+            break;
+        case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown:
+            VuforiaSession.setRotation(512 /* IOS_270 */);
+            break;
+        case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft:
+            VuforiaSession.setRotation(256 /* IOS_180 */);
+            break;
+        case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight:
+            VuforiaSession.setRotation(1024 /* IOS_0 */);
+            break;
+    }
+}
+// doesn't seem to work: ? 
+//application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarOrientationNotification, setVuforiaRotation);
+application.on(application.orientationChangedEvent, function () {
+    Promise.resolve().then(setVuforiaRotation); // delay until the interface orientation actually changes
 });
 application.on(application.resumeEvent, function () {
-    vuforia && vuforia.resumeAR();
+    VuforiaSession && VuforiaSession.onResume();
+    setVuforiaRotation();
 });
-function _isLandscapeInterface() {
-    var statusBarOrientation = UIApplication.sharedApplication().statusBarOrientation;
-    var isLandscape = statusBarOrientation == UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft ||
-        statusBarOrientation == UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight;
-    return isLandscape;
-}
-var nextStateUpdateCommand;
-function executeOnNextStateUpdate(cb) {
-    return new Promise(function (resolve, reject) {
-        if (nextStateUpdateCommand)
-            console.error('A state update command is already pending: ' + nextStateUpdateCommand['cb']);
-        nextStateUpdateCommand = function () {
-            cb();
-            nextStateUpdateCommand = null;
-            resolve();
-        };
-        nextStateUpdateCommand['cb'] = cb;
-    });
-}
-if (vuforia) {
-    vuforia.stateUpdateCallback = function (state) {
-        if (nextStateUpdateCommand) {
-            nextStateUpdateCommand();
-        }
-        common.events.notify({
-            eventName: common.stateUpdateEvent,
-            object: _this,
-            state: state
-        });
-    };
-}
-function isSupported() {
-    return typeof vuforia !== 'undefined';
-}
-exports.isSupported = isSupported;
-exports._loadedDataSets = new Map();
-exports._dataSetLocation = new Map();
-var isInitialized = false;
-function init(licenseKey) {
-    var _this = this;
-    return new Promise(function (resolve, reject) {
-        vuforia.initARDone(licenseKey, function (error) {
-            common.setViewSize(null);
-            if (error) {
-                common.events.notify({
-                    eventName: common.initErrorEvent,
-                    object: _this,
-                    message: error.description,
-                    code: error.code
-                });
-            }
-            else {
-                isInitialized = true;
-            }
-            resolve();
-        });
-    });
-}
-exports.init = init;
-function deinit() {
-    if (isInitialized) {
-        return executeOnNextStateUpdate(function () {
-            vuforia.stopObjectTracker();
-            exports._loadedDataSets.forEach(function (dataSet, url) {
-                if (dataSet.isActive())
-                    vuforia.deactivateDataSet(dataSet);
-                vuforia.destroyDataSet(dataSet);
-            });
-            exports._loadedDataSets.clear();
-        }).then(function () {
-            vuforia.deinitAR();
-            isInitialized = false;
-        });
+var API = (function (_super) {
+    __extends(API, _super);
+    function API() {
+        _super.apply(this, arguments);
+        this.cameraDevice = new CameraDevice();
+        this.device = new Device();
+        this.renderer = new Renderer();
     }
-}
-exports.deinit = deinit;
-function startCamera() {
-    vuforia.startCamera(VuforiaCameraDeviceCamera.Default);
-}
-exports.startCamera = startCamera;
-function stopCamera() {
-    vuforia.stopCamera();
-}
-exports.stopCamera = stopCamera;
-function startObjectTracker() {
-    return executeOnNextStateUpdate(function () {
-        if (!vuforia.startObjectTracker()) {
-        }
-    });
-}
-exports.startObjectTracker = startObjectTracker;
-function stopObjectTracker() {
-    return executeOnNextStateUpdate(function () {
-        vuforia.stopObjectTracker();
-    });
-}
-exports.stopObjectTracker = stopObjectTracker;
-function hintMaxSimultaneousImageTargets(max) {
-    vuforia.hintMaxSimultaneousImageTargets(max);
-}
-exports.hintMaxSimultaneousImageTargets = hintMaxSimultaneousImageTargets;
-function setVideoBackgroundConfig(videoConfig) {
-    var fixedConfig = calculateVideoBackgroundConfigToFixed(videoConfig);
-    vuforia.videoBackgroundConfig = {
-        enabled: fixedConfig.enabled,
-        positionX: fixedConfig.positionX,
-        positionY: fixedConfig.positionY,
-        sizeX: fixedConfig.sizeX,
-        sizeY: fixedConfig.sizeY,
-        reflection: 0 /* Default */
+    API.prototype.setLicenseKey = function (licenseKey) {
+        return VuforiaSession.setLicenseKey(licenseKey) === 0;
     };
-}
-exports.setVideoBackgroundConfig = setVideoBackgroundConfig;
-function loadDataSet(url) {
-    var _this = this;
-    return _getDataSetLocation(url).then(function (location) {
-        return executeOnNextStateUpdate(function () {
-            var dataSet = vuforia.createDataSet();
-            if (!dataSet.load(location)) {
-                vuforia.destroyDataSet(dataSet);
-                common.events.notify({
-                    eventName: common.loadDataSetErrorEvent,
-                    object: _this,
-                    message: "Unable to load dataSet"
-                });
-            }
-            else {
-                exports._loadedDataSets.set(url, dataSet);
-                var trackables = {};
-                var numTrackables = dataSet.getNumTrackables();
-                for (var i = 0; i < numTrackables; i++) {
-                    var trackable = dataSet.getTrackable(i);
-                    var id = trackable.getId();
-                    var name_1 = trackable.getName();
-                    var objectTarget = trackable.asObjectTarget();
-                    var size = undefined;
-                    if (objectTarget) {
-                        size = objectTarget.getSize();
-                    }
-                    trackables[name_1] = { id: id, name: name_1, size: size };
-                }
-                common.events.notify({
-                    eventName: common.dataSetLoadEvent,
-                    object: _this,
-                    url: url,
-                    trackables: trackables
-                });
-            }
-        });
-    }).catch(function (failMsg) {
-        common.events.notify({
-            eventName: common.loadDataSetErrorEvent,
-            object: _this,
-            message: failMsg
-        });
-    });
-}
-exports.loadDataSet = loadDataSet;
-function _getDataSetLocation(url) {
-    var location = exports._dataSetLocation.get(url);
-    if (!location) {
+    API.prototype.setHint = function (hint, value) {
+        return VuforiaSession.setHintValue(hint, value);
+    };
+    API.prototype.init = function () {
+        var _this = this;
         return new Promise(function (resolve, reject) {
-            vuforia.downloadDataSetFromURLDone(url, function (location, error) {
-                if (error || !VuforiaDataSet.exists(location)) {
-                    reject("Unable to download dataSet");
-                }
-                else {
-                    console.log("Downloaded dataset " + url + " to " + location);
-                    exports._dataSetLocation.set(url, location);
-                    resolve(location);
-                }
+            VuforiaSession.initDone(function (result) {
+                VuforiaSession.onSurfaceCreated();
+                setVuforiaRotation();
+                VuforiaSession.registerCallback(function (state) {
+                    _this._stateUpdateCallback(new State(state));
+                });
+                resolve(result);
             });
         });
+    };
+    API.prototype.deinit = function () {
+        VuforiaSession.deinit();
+    };
+    API.prototype.getCameraDevice = function () {
+        return this.cameraDevice;
+    };
+    API.prototype.getDevice = function () {
+        return this.device;
+    };
+    API.prototype.getRenderer = function () {
+        return this.renderer;
+    };
+    API.prototype.initObjectTracker = function () {
+        if (VuforiaObjectTracker.initTracker()) {
+            this.objectTracker = new ObjectTracker();
+            return true;
+        }
+        ;
+        return false;
+    };
+    API.prototype.getObjectTracker = function () {
+        return this.objectTracker;
+    };
+    API.prototype.deinitObjectTracker = function () {
+        if (VuforiaObjectTracker.deinitTracker()) {
+            this.objectTracker = null;
+            return true;
+        }
+        return false;
+    };
+    API.prototype.getSystemBootTime = function () {
+        return VuforiaSession.systemBoottime();
+    };
+    return API;
+}(common.APIBase));
+exports.API = API;
+function createMatrix44(mat) {
+    return [
+        mat._0,
+        mat._1,
+        mat._2,
+        mat._3,
+        mat._4,
+        mat._5,
+        mat._6,
+        mat._7,
+        mat._8,
+        mat._9,
+        mat._10,
+        mat._11,
+        0,
+        0,
+        0,
+        1
+    ];
+}
+var Trackable = (function () {
+    function Trackable(ios) {
+        this.ios = ios;
     }
-    return Promise.resolve(location);
-}
-exports._getDataSetLocation = _getDataSetLocation;
-function unloadDataSet(url) {
-    var _this = this;
-    return executeOnNextStateUpdate(function () {
-        var dataSet = exports._loadedDataSets.get(url);
-        if (dataSet && vuforia.destroyDataSet(dataSet)) {
-            exports._loadedDataSets.delete(url);
+    Trackable.createTrackable = function (ios) {
+        if (ios instanceof VuforiaMarker) {
+            return new Marker(ios);
         }
-        else {
-            common.events.notify({
-                eventName: common.unloadDataSetErrorEvent,
-                object: _this,
-                message: "Unable to unload dataSet at " + url
-            });
+        else if (ios instanceof VuforiaWord) {
+            return new Word(ios);
         }
-    });
-}
-exports.unloadDataSet = unloadDataSet;
-function activateDataSet(url) {
-    var _this = this;
-    return executeOnNextStateUpdate(function () {
-        var dataSet = exports._loadedDataSets.get(url);
-        if (!dataSet) {
-            common.events.notify({
-                eventName: common.activateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to activate dataset at " + url + " because the dataSet is not loaded"
-            });
+        else if (ios instanceof VuforiaImageTarget) {
+            return new ImageTarget(ios);
         }
-        else if (dataSet.isActive()) {
-            common.events.notify({
-                eventName: common.activateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to activate dataset at " + url + " because the dataSet is already activated"
-            });
+        else if (ios instanceof VuforiaCylinderTarget) {
+            return new CylinderTarget(ios);
         }
-        else if (!vuforia.activateDataSet(dataSet)) {
-            common.events.notify({
-                eventName: common.activateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to activate dataset at " + url
-            });
+        else if (ios instanceof VuforiaObjectTarget) {
+            return new ObjectTarget(ios);
         }
-    });
-}
-exports.activateDataSet = activateDataSet;
-function deactivateDataSet(url) {
-    var _this = this;
-    return executeOnNextStateUpdate(function () {
-        var dataSet = exports._loadedDataSets.get(url);
-        if (!dataSet) {
-            common.events.notify({
-                eventName: common.deactivateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to deactivate dataset at " + url + " because the dataSet is not loaded"
-            });
+        else if (ios instanceof VuforiaTrackable) {
+            return new Trackable(ios);
         }
-        else if (!dataSet.isActive()) {
-            common.events.notify({
-                eventName: common.deactivateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to deactivate dataset at " + url + " because the dataSet is already deactivated"
-            });
-        }
-        else if (!vuforia.deactivateDataSet(dataSet)) {
-            common.events.notify({
-                eventName: common.deactivateDataSetErrorEvent,
-                object: _this,
-                message: "Unable to deactivate dataset at " + url
-            });
-        }
-    });
-}
-exports.deactivateDataSet = deactivateDataSet;
-// getters
-function getVideoMode() {
-    return vuforia.getVideoMode();
-}
-exports.getVideoMode = getVideoMode;
-function getCameraCalibration() {
-    return common.calculateCameraCalibrationForCurrentInterfaceOrientation(vuforia.getCameraCalibration());
-}
-exports.getCameraCalibration = getCameraCalibration;
-function getVideoBackgroundConfig() {
-    return calculateVideoBackgroundConfigFromFixed(vuforia.videoBackgroundConfig);
-}
-exports.getVideoBackgroundConfig = getVideoBackgroundConfig;
-function calculateVideoBackgroundConfigFromFixed(vConfig) {
-    var interfaceRotation = common.getInterfaceOrientation();
-    var fixedVideoConfig = undefined;
-    switch (interfaceRotation) {
-        case 0:
-            fixedVideoConfig = vConfig;
-            break;
-        case 90:
-            fixedVideoConfig = {
-                enabled: vConfig.enabled,
-                positionX: -vConfig.positionY,
-                positionY: vConfig.positionX,
-                sizeX: vConfig.sizeY,
-                sizeY: vConfig.sizeX,
-            };
-            break;
-        case -90:
-            fixedVideoConfig = {
-                enabled: vConfig.enabled,
-                positionX: vConfig.positionY,
-                positionY: -vConfig.positionX,
-                sizeX: vConfig.sizeY,
-                sizeY: vConfig.sizeX,
-            };
-            break;
-        case 180:
-            fixedVideoConfig = {
-                enabled: vConfig.enabled,
-                positionX: -vConfig.positionX,
-                positionY: -vConfig.positionY,
-                sizeX: vConfig.sizeX,
-                sizeY: vConfig.sizeY,
-            };
-            break;
+    };
+    Trackable.prototype.getId = function () {
+        return this.ios.getId();
+    };
+    Trackable.prototype.getName = function () {
+        return this.ios.getName();
+    };
+    Trackable.prototype.isExtendedTrackingStarted = function () {
+        return this.ios.isExtendedTrackingStarted();
+    };
+    Trackable.prototype.startExtendedTracking = function () {
+        return this.ios.startExtendedTracking();
+    };
+    Trackable.prototype.stopExtendedTracking = function () {
+        return this.ios.stopExtendedTracking();
+    };
+    return Trackable;
+}());
+exports.Trackable = Trackable;
+var TrackableResult = (function () {
+    function TrackableResult(ios) {
+        this.ios = ios;
     }
-    return fixedVideoConfig;
-}
-exports.calculateVideoBackgroundConfigFromFixed = calculateVideoBackgroundConfigFromFixed;
-function calculateVideoBackgroundConfigToFixed(fixedVideoConfig) {
-    var interfaceRotation = common.getInterfaceOrientation();
-    var videoConfig = undefined;
-    switch (interfaceRotation) {
-        case 0:
-            videoConfig = fixedVideoConfig;
-            break;
-        case 90:
-            videoConfig = {
-                enabled: fixedVideoConfig.enabled,
-                positionX: fixedVideoConfig.positionY,
-                positionY: -fixedVideoConfig.positionX,
-                sizeX: fixedVideoConfig.sizeY,
-                sizeY: fixedVideoConfig.sizeX,
-            };
-            break;
-        case -90:
-            videoConfig = {
-                enabled: fixedVideoConfig.enabled,
-                positionX: -fixedVideoConfig.positionY,
-                positionY: fixedVideoConfig.positionX,
-                sizeX: fixedVideoConfig.sizeY,
-                sizeY: fixedVideoConfig.sizeX,
-            };
-            break;
-        case 180:
-            videoConfig = {
-                enabled: fixedVideoConfig.enabled,
-                positionX: -fixedVideoConfig.positionX,
-                positionY: -fixedVideoConfig.positionY,
-                sizeX: fixedVideoConfig.sizeX,
-                sizeY: fixedVideoConfig.sizeY,
-            };
-            break;
+    TrackableResult.createTrackableResult = function (ios) {
+        if (ios instanceof VuforiaMarkerResult) {
+            return new MarkerResult(ios);
+        }
+        else if (ios instanceof VuforiaWordResult) {
+            return new WordResult(ios);
+        }
+        else if (ios instanceof VuforiaImageTargetResult) {
+            return new ImageTargetResult(ios);
+        }
+        else if (ios instanceof VuforiaCylinderTargetResult) {
+            return new CylinderTargetResult(ios);
+        }
+        else if (ios instanceof VuforiaObjectTargetResult) {
+            return new ObjectTargetResult(ios);
+        }
+        else if (ios instanceof VuforiaTrackableResult) {
+            return new TrackableResult(ios);
+        }
+    };
+    TrackableResult.prototype.getPose = function () {
+        return createMatrix44(this.ios.getPose());
+    };
+    TrackableResult.prototype.getTimeStamp = function () {
+        return this.ios.getTimeStamp();
+    };
+    TrackableResult.prototype.getStatus = function () {
+        return this.ios.getStatus();
+    };
+    TrackableResult.prototype.getTrackable = function () {
+        return Trackable.createTrackable(this.ios.getTrackable());
+    };
+    return TrackableResult;
+}());
+exports.TrackableResult = TrackableResult;
+var Marker = (function (_super) {
+    __extends(Marker, _super);
+    function Marker(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
     }
-    return videoConfig;
-}
-exports.calculateVideoBackgroundConfigToFixed = calculateVideoBackgroundConfigToFixed;
+    return Marker;
+}(Trackable));
+exports.Marker = Marker;
+var MarkerResult = (function (_super) {
+    __extends(MarkerResult, _super);
+    function MarkerResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return MarkerResult;
+}(TrackableResult));
+exports.MarkerResult = MarkerResult;
+var Word = (function (_super) {
+    __extends(Word, _super);
+    function Word(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return Word;
+}(Trackable));
+exports.Word = Word;
+var WordResult = (function (_super) {
+    __extends(WordResult, _super);
+    function WordResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return WordResult;
+}(TrackableResult));
+exports.WordResult = WordResult;
+var ObjectTarget = (function (_super) {
+    __extends(ObjectTarget, _super);
+    function ObjectTarget(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    ObjectTarget.prototype.getUniqueTargetId = function () {
+        return this.ios.getUniqueTargetId();
+    };
+    ObjectTarget.prototype.getSize = function () {
+        return this.ios.getSize();
+    };
+    return ObjectTarget;
+}(Trackable));
+exports.ObjectTarget = ObjectTarget;
+var ObjectTargetResult = (function (_super) {
+    __extends(ObjectTargetResult, _super);
+    function ObjectTargetResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return ObjectTargetResult;
+}(TrackableResult));
+exports.ObjectTargetResult = ObjectTargetResult;
+var ImageTarget = (function (_super) {
+    __extends(ImageTarget, _super);
+    function ImageTarget(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return ImageTarget;
+}(ObjectTarget));
+var ImageTargetResult = (function (_super) {
+    __extends(ImageTargetResult, _super);
+    function ImageTargetResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return ImageTargetResult;
+}(ObjectTargetResult));
+var MultiTarget = (function (_super) {
+    __extends(MultiTarget, _super);
+    function MultiTarget(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return MultiTarget;
+}(ObjectTarget));
+exports.MultiTarget = MultiTarget;
+var MultiTargetResult = (function (_super) {
+    __extends(MultiTargetResult, _super);
+    function MultiTargetResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return MultiTargetResult;
+}(ObjectTargetResult));
+exports.MultiTargetResult = MultiTargetResult;
+var CylinderTarget = (function (_super) {
+    __extends(CylinderTarget, _super);
+    function CylinderTarget(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return CylinderTarget;
+}(ObjectTarget));
+var CylinderTargetResult = (function (_super) {
+    __extends(CylinderTargetResult, _super);
+    function CylinderTargetResult(ios) {
+        _super.call(this, ios);
+        this.ios = ios;
+    }
+    return CylinderTargetResult;
+}(ObjectTargetResult));
+var Image = (function () {
+    function Image(ios) {
+        this.ios = ios;
+    }
+    Image.prototype.getBufferHeight = function () {
+        return this.ios.getBufferHeight();
+    };
+    Image.prototype.getBufferWidth = function () {
+        return this.ios.getBufferWidth();
+    };
+    Image.prototype.getFormat = function () {
+        return this.ios.getFormat();
+    };
+    Image.prototype.getHeight = function () {
+        return this.ios.getHeight();
+    };
+    Image.prototype.getPixels = function () {
+        return this.ios.getPixels();
+    };
+    Image.prototype.getStride = function () {
+        return this.ios.getStride();
+    };
+    Image.prototype.getWidth = function () {
+        return this.ios.getWidth();
+    };
+    return Image;
+}());
+exports.Image = Image;
+var Frame = (function () {
+    function Frame(ios) {
+        this.ios = ios;
+    }
+    Frame.prototype.getImage = function (idx) {
+        var img = this.ios.getImage(idx);
+        if (img) {
+            return new Image(img);
+        }
+        return null;
+    };
+    Frame.prototype.getIndex = function () {
+        return this.ios.getIndex();
+    };
+    Frame.prototype.getNumImages = function () {
+        return this.ios.getNumImages();
+    };
+    Frame.prototype.getTimeStamp = function () {
+        return this.ios.getTimeStamp();
+    };
+    return Frame;
+}());
+exports.Frame = Frame;
+var State = (function () {
+    function State(ios) {
+        this.ios = ios;
+    }
+    State.prototype.getFrame = function () {
+        var frame = this.ios.getFrame();
+        if (frame) {
+            return new Frame(frame);
+        }
+        return null;
+    };
+    State.prototype.getNumTrackableResults = function () {
+        return this.ios.getNumTrackableResults();
+    };
+    State.prototype.getNumTrackables = function () {
+        return this.ios.getNumTrackables();
+    };
+    State.prototype.getTrackable = function (idx) {
+        var trackable = this.ios.getTrackable(idx);
+        if (trackable) {
+            return Trackable.createTrackable(trackable);
+        }
+        return null;
+    };
+    State.prototype.getTrackableResult = function (idx) {
+        var result = this.ios.getTrackableResult(idx);
+        if (result) {
+            return TrackableResult.createTrackableResult(result);
+        }
+        return null;
+    };
+    return State;
+}());
+exports.State = State;
+var CameraCalibration = (function () {
+    function CameraCalibration(ios) {
+        this.ios = ios;
+    }
+    CameraCalibration.prototype.getDistortionParameters = function () {
+        return this.ios.getDistortionParameters();
+    };
+    CameraCalibration.prototype.getFieldOfViewRads = function () {
+        return this.ios.getFieldOfViewRads();
+    };
+    CameraCalibration.prototype.getFocalLength = function () {
+        return this.ios.getFocalLength();
+    };
+    CameraCalibration.prototype.getPrincipalPoint = function () {
+        return this.ios.getPrincipalPoint();
+    };
+    CameraCalibration.prototype.getSize = function () {
+        return this.ios.getSize();
+    };
+    return CameraCalibration;
+}());
+exports.CameraCalibration = CameraCalibration;
+var CameraDevice = (function () {
+    function CameraDevice() {
+    }
+    CameraDevice.prototype.init = function (camera) {
+        return VuforiaCameraDevice.getInstance().initCamera(camera);
+    };
+    CameraDevice.prototype.deinit = function () {
+        return VuforiaCameraDevice.getInstance().deinitCamera();
+    };
+    CameraDevice.prototype.getCameraCalibration = function () {
+        var calibration = VuforiaCameraDevice.getInstance().getCameraCalibration();
+        return new CameraCalibration(calibration);
+    };
+    CameraDevice.prototype.getCameraDirection = function () {
+        return VuforiaCameraDevice.getInstance().getCameraDirection();
+    };
+    CameraDevice.prototype.getNumVideoModes = function () {
+        return VuforiaCameraDevice.getInstance().getNumVideoModes();
+    };
+    CameraDevice.prototype.getVideoMode = function (nIndex) {
+        return VuforiaCameraDevice.getInstance().getVideoMode(nIndex);
+    };
+    CameraDevice.prototype.selectVideoMode = function (index) {
+        return VuforiaCameraDevice.getInstance().selectVideoMode(index);
+    };
+    CameraDevice.prototype.setFlashTorchMode = function (on) {
+        return VuforiaCameraDevice.getInstance().setFlashTorchMode(on);
+    };
+    CameraDevice.prototype.setFocusMode = function (focusMode) {
+        return VuforiaCameraDevice.getInstance().setFocusMode(focusMode);
+    };
+    CameraDevice.prototype.start = function () {
+        return VuforiaCameraDevice.getInstance().start();
+    };
+    CameraDevice.prototype.stop = function () {
+        return VuforiaCameraDevice.getInstance().stop();
+    };
+    return CameraDevice;
+}());
+exports.CameraDevice = CameraDevice;
+var ViewList = (function () {
+    function ViewList(ios) {
+        this.ios = ios;
+    }
+    ViewList.prototype.contains = function (view) {
+        return this.ios.contains(view);
+    };
+    ViewList.prototype.getNumViews = function () {
+        return this.ios.getNumViews();
+    };
+    ViewList.prototype.getView = function (idx) {
+        return this.ios.getView(idx);
+    };
+    return ViewList;
+}());
+exports.ViewList = ViewList;
+var ViewerParameters = (function () {
+    function ViewerParameters(ios) {
+        this.ios = ios;
+    }
+    ViewerParameters.prototype.containsMagnet = function () {
+        return this.ios.containsMagnet();
+    };
+    ViewerParameters.prototype.getButtonType = function () {
+        return this.ios.getButtonType();
+    };
+    ViewerParameters.prototype.getDistortionCoefficient = function (idx) {
+        return this.ios.getDistortionCoefficient(idx);
+    };
+    ViewerParameters.prototype.getFieldOfView = function () {
+        return this.ios.getFieldOfView();
+    };
+    ViewerParameters.prototype.getInterLensDistance = function () {
+        return this.ios.getInterLensDistance();
+    };
+    ViewerParameters.prototype.getLensCentreToTrayDistance = function () {
+        return this.ios.getLensCentreToTrayDistance();
+    };
+    ViewerParameters.prototype.getManufacturer = function () {
+        return this.ios.getManufacturer();
+    };
+    ViewerParameters.prototype.getName = function () {
+        return this.ios.getName();
+    };
+    ViewerParameters.prototype.getNumDistortionCoefficients = function () {
+        return this.ios.getNumDistortionCoefficients();
+    };
+    ViewerParameters.prototype.getScreenToLensDistance = function () {
+        return this.ios.getScreenToLensDistance();
+    };
+    ViewerParameters.prototype.getTrayAlignment = function () {
+        return this.ios.getTrayAlignment();
+    };
+    ViewerParameters.prototype.getVersion = function () {
+        return this.ios.getVersion();
+    };
+    return ViewerParameters;
+}());
+exports.ViewerParameters = ViewerParameters;
+var ViewerParametersList = (function () {
+    function ViewerParametersList(ios) {
+        this.ios = ios;
+    }
+    ViewerParametersList.prototype.get = function (idx) {
+        var vp = this.ios.get(idx);
+        if (vp)
+            return new ViewerParameters(vp);
+        return null;
+    };
+    ViewerParametersList.prototype.getNameManufacturer = function (name, manufacturer) {
+        var vp = this.ios.getNameManufacturer(name, manufacturer);
+        if (vp)
+            return new ViewerParameters(vp);
+        return null;
+    };
+    ViewerParametersList.prototype.setSDKFilter = function (filter) {
+        this.ios.setSDKFilter(filter);
+    };
+    ViewerParametersList.prototype.size = function () {
+        return this.ios.size();
+    };
+    return ViewerParametersList;
+}());
+exports.ViewerParametersList = ViewerParametersList;
+var Device = (function () {
+    function Device() {
+    }
+    Device.prototype.setMode = function (mode) {
+        return VuforiaDevice.getInstance().setMode(mode);
+    };
+    Device.prototype.getMode = function () {
+        return VuforiaDevice.getInstance().getMode();
+    };
+    Device.prototype.setViewerActive = function (active) {
+        VuforiaDevice.getInstance().setViewerActive(active);
+    };
+    Device.prototype.isViewerActive = function () {
+        return VuforiaDevice.getInstance().isViewerActive();
+    };
+    Device.prototype.getViewerList = function () {
+        var viewerList = VuforiaDevice.getInstance().getViewerList();
+        return new ViewerParametersList(viewerList);
+    };
+    Device.prototype.selectViewer = function (viewer) {
+        return VuforiaDevice.getInstance().selectViewer(viewer.ios);
+    };
+    Device.prototype.getSelectedViewer = function () {
+        return new ViewerParameters(VuforiaDevice.getInstance().getSelectedViewer());
+    };
+    Device.prototype.getRenderingPrimitives = function () {
+        return new RenderingPrimitives(VuforiaDevice.getInstance().getRenderingPrimitives());
+    };
+    return Device;
+}());
+exports.Device = Device;
+var Renderer = (function () {
+    function Renderer() {
+    }
+    Renderer.prototype.getRecommendedFps = function (flags) {
+        return VuforiaRenderer.getRecommendedFps(flags);
+    };
+    Renderer.prototype.getVideoBackgroundConfig = function () {
+        return VuforiaRenderer.getVideoBackgroundConfig();
+    };
+    Renderer.prototype.setTargetFps = function (fps) {
+        return VuforiaRenderer.setTargetFps(fps);
+    };
+    Renderer.prototype.setVideoBackgroundConfig = function (cfg) {
+        VuforiaRenderer.setVideoBackgroundConfig(cfg);
+    };
+    return Renderer;
+}());
+exports.Renderer = Renderer;
+var Mesh = (function () {
+    function Mesh(ios) {
+        this.ios = ios;
+    }
+    Mesh.prototype.getNormalCoordinates = function () {
+        return this.ios.getNormalCoordinates();
+    };
+    Mesh.prototype.getNormals = function () {
+        return this.ios.getNormals();
+    };
+    Mesh.prototype.getNumTriangles = function () {
+        return this.ios.getNumTriangles();
+    };
+    Mesh.prototype.getNumVertices = function () {
+        return this.ios.getNumVertices();
+    };
+    Mesh.prototype.getPositionCoordinates = function () {
+        return this.ios.getPositionCoordinates();
+    };
+    Mesh.prototype.getPositions = function () {
+        return this.ios.getPositions();
+    };
+    Mesh.prototype.getTriangles = function () {
+        return this.ios.getTriangles();
+    };
+    Mesh.prototype.getUVCoordinates = function () {
+        return this.ios.getUVCoordinates();
+    };
+    Mesh.prototype.getUVs = function () {
+        return this.ios.getUVs();
+    };
+    Mesh.prototype.hasNormals = function () {
+        return this.ios.hasNormals();
+    };
+    Mesh.prototype.hasPositions = function () {
+        return this.ios.hasPositions();
+    };
+    Mesh.prototype.hasUVs = function () {
+        return this.ios.hasUVs();
+    };
+    return Mesh;
+}());
+exports.Mesh = Mesh;
+var RenderingPrimitives = (function () {
+    function RenderingPrimitives(ios) {
+        this.ios = ios;
+    }
+    RenderingPrimitives.prototype.getDistortionTextureMesh = function (viewID) {
+        var mesh = this.ios.getDistortionTextureMesh(viewID);
+        if (mesh)
+            return new Mesh(mesh);
+        return null;
+    };
+    RenderingPrimitives.prototype.getDistortionTextureSize = function (viewID) {
+        return this.ios.getDistortionTextureSize(viewID);
+    };
+    RenderingPrimitives.prototype.getDistortionTextureViewport = function (viewID) {
+        return this.ios.getDistortionTextureViewport(viewID);
+    };
+    RenderingPrimitives.prototype.getEyeDisplayAdjustmentMatrix = function (viewID) {
+        return createMatrix44(this.ios.getEyeDisplayAdjustmentMatrix(viewID));
+    };
+    RenderingPrimitives.prototype.getNormalizedViewport = function (viewID) {
+        return this.ios.getNormalizedViewport(viewID);
+    };
+    RenderingPrimitives.prototype.getProjectionMatrix = function (viewID, csType) {
+        return createMatrix44(this.ios.getProjectionMatrixCoordinateSystem(viewID, csType));
+    };
+    RenderingPrimitives.prototype.getRenderingViews = function () {
+        return new ViewList(this.ios.getRenderingViews());
+    };
+    RenderingPrimitives.prototype.getVideoBackgroundMesh = function (viewID) {
+        var mesh = this.ios.getVideoBackgroundMesh(viewID);
+        if (mesh)
+            return new Mesh(mesh);
+        return null;
+    };
+    RenderingPrimitives.prototype.getVideoBackgroundProjectionMatrix = function (viewID, csType) {
+        return createMatrix44(this.ios.getVideoBackgroundProjectionMatrixCoordinateSystem(viewID, csType));
+    };
+    RenderingPrimitives.prototype.getViewport = function (viewID) {
+        return this.ios.getViewport(viewID);
+    };
+    return RenderingPrimitives;
+}());
+exports.RenderingPrimitives = RenderingPrimitives;
+var Tracker = (function () {
+    function Tracker() {
+    }
+    return Tracker;
+}());
+exports.Tracker = Tracker;
+var DataSet = (function () {
+    function DataSet(ios) {
+        this.ios = ios;
+    }
+    DataSet.prototype.createMultiTarget = function (name) {
+        var mt = this.ios.createMultiTarget(name);
+        if (mt)
+            return new MultiTarget(mt);
+        return null;
+    };
+    DataSet.prototype.destroy = function (trackable) {
+        return this.ios.destroy(trackable.ios);
+    };
+    DataSet.prototype.exists = function (path, storageType) {
+        return this.ios.existsStorageType(path, storageType);
+    };
+    DataSet.prototype.getNumTrackables = function () {
+        return this.ios.getNumTrackables();
+    };
+    DataSet.prototype.getTrackable = function (idx) {
+        var trackable = this.ios.getTrackable(idx);
+        if (trackable)
+            return Trackable.createTrackable(trackable);
+        return null;
+    };
+    DataSet.prototype.hasReachedTrackableLimit = function () {
+        return this.ios.hasReachedTrackableLimit();
+    };
+    DataSet.prototype.isActive = function () {
+        return this.ios.isActive();
+    };
+    DataSet.prototype.load = function (path, storageType) {
+        return this.ios.loadStorageType(path, storageType);
+    };
+    return DataSet;
+}());
+var ObjectTracker = (function (_super) {
+    __extends(ObjectTracker, _super);
+    function ObjectTracker() {
+        _super.apply(this, arguments);
+    }
+    ObjectTracker.prototype.start = function () {
+        return VuforiaObjectTracker.getInstance().start();
+    };
+    ObjectTracker.prototype.stop = function () {
+        VuforiaObjectTracker.getInstance().stop();
+    };
+    ObjectTracker.prototype.createDataSet = function () {
+        var ds = VuforiaObjectTracker.getInstance().createDataSet();
+        if (ds)
+            return new DataSet(ds);
+        return null;
+    };
+    ObjectTracker.prototype.destroyDataSet = function (dataSet) {
+        return VuforiaObjectTracker.getInstance().destroyDataSet(dataSet.ios);
+    };
+    ObjectTracker.prototype.activateDataSet = function (dataSet) {
+        return VuforiaObjectTracker.getInstance().activateDataSet(dataSet.ios);
+    };
+    ObjectTracker.prototype.deactivateDataSet = function (dataSet) {
+        return VuforiaObjectTracker.getInstance().deactivateDataSet(dataSet.ios);
+    };
+    return ObjectTracker;
+}(Tracker));
+exports.ObjectTracker = ObjectTracker;
+exports.api = VuforiaSession ? new API() : undefined;
 //# sourceMappingURL=vuforia.ios.js.map

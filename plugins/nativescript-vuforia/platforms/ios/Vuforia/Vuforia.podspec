@@ -27,7 +27,9 @@ Pod::Spec.new do |s|
   s.platform     = :ios, '8.0'
   s.requires_arc = true
 
-  s.source_files = 'Source/**/*', 'SDK/include/**/*'
+  s.source_files = 'Source/**/*.{h,m,mm}', 'SDK/include/**/*'
+  s.resources = 'Source/VideoView/shaders/*'
+  
   s.header_dir = 'Vuforia'
   
   s.vendored_libraries = 'SDK/lib/arm/libVuforia.a'

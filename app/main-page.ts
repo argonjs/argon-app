@@ -12,6 +12,7 @@ import * as color from 'color';
 import * as platform from 'platform';
 import {Button} from "ui/button";
 import {View} from "ui/core/view";
+import {HtmlView} from 'ui/html-view'
 import {Color} from "color";
 
 import * as vuforia from 'nativescript-vuforia';
@@ -57,7 +58,7 @@ export function pageLoaded(args) {
 
 	// Set the icon for the menu button
 	const menuButton = <Button> page.getViewById("menuBtn");
-	menuButton.text = String.fromCharCode(0xe5d2);
+	menuButton.text = String.fromCharCode(0xe5d4);
 
 	// Set the icon for the layers button
 	const layerButton = <Button> page.getViewById("layerBtn");
@@ -87,7 +88,7 @@ export function searchBarLoaded(args) {
 			url.protocol("http");
 		}
 		console.log("Load url: " + url);
-		browserView.focussedLayer.src = url.toString();
+		browserView.focussedLayer.webView.src = url.toString();
 	});
 
 	if (application.ios) {
@@ -108,40 +109,40 @@ export function browserViewLoaded(args) {
 		}
 	});
 
-    browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
+    browserView.focussedLayer.webView.on("loadFinished", (eventData: LoadEventData) => {
         if (!eventData.error) {
             history.addPage(eventData.url);
         }
     });
 
     // Setup the debug view
-    let debug = args.object.page.getViewById("debug");
+    let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
     debug.horizontalAlignment = 'stretch';
     debug.verticalAlignment = 'stretch';
     debug.backgroundColor = new Color(150, 255, 255, 255);
     debug.visibility = "collapsed";
     if (debug.ios) {
-        (<UIView>debug.ios)["setUserInteractionEnabled"](false);
+        // (<UIView>debug.ios)["setUserInteractionEnabled"](false);
     }
 
     let layer = browserView.focussedLayer;
-    console.log("FOCUSSED LAYER: " + layer.src);
+    console.log("FOCUSSED LAYER: " + layer.webView.src);
 
     const logChangeCallback = (args) => {
-        console.log("LOGS " + layer.log);
-        debug.html = layer.log.join("\n");
+        console.log("LOGS " + layer.webView.log);
+        debug.html = layer.webView.log.join("\n");
     };
-    layer.on("log", logChangeCallback)
+    layer.webView.on("log", logChangeCallback)
 
     browserView.on("propertyChange", (evt: PropertyChangeData) => {
         if (evt.propertyName === "focussedLayer") {
             console.log("CHANGE FOCUS");
             if (layer) {
-                layer.removeEventListener("log", logChangeCallback);
+                layer.webView.removeEventListener("log", logChangeCallback);
             }
             layer = browserView.focussedLayer;
-            console.log("FOCUSSED LAYER: " + layer.src);
-            layer.on("log", logChangeCallback)
+            console.log("FOCUSSED LAYER: " + layer.webView.src);
+            layer.webView.on("log", logChangeCallback)
         }
     });
 }
@@ -279,7 +280,7 @@ export function historyClicked(args) {
     frames.topmost().currentPage.showModal("history-view", null, () => {
         const url = historyView.getTappedUrl();
         if (url) {
-            browserView.focussedLayer.src = url;
+            browserView.focussedLayer.webView.src = url;
         }
     }, true);
 }

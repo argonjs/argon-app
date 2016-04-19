@@ -153,6 +153,8 @@ namespace{
         if (context != [EAGLContext currentContext]) {
             [EAGLContext setCurrentContext:context];
         }
+        
+        [self initShaders];
     }
 
     return self;
@@ -511,7 +513,7 @@ namespace{
     NSLog(@"debug: shaderName=(%@), shaderFileTYpe=(%@)", shaderName, shaderFileType);
     
     // 1
-    NSString* shaderPath = [[NSBundle mainBundle] pathForResource:shaderName ofType:shaderFileType];
+    NSString* shaderPath = [[NSBundle bundleForClass:[VuforiaVideoView class]] pathForResource:shaderName ofType:shaderFileType];
     NSLog(@"debug: shaderPath=(%@)", shaderPath);
     NSError* error;
     NSString* shaderString = [NSString stringWithContentsOfFile:shaderPath encoding:NSUTF8StringEncoding error:&error];

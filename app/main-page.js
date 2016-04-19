@@ -30,7 +30,7 @@ function pageLoaded(args) {
     actionBar = page.actionBar;
     // Set the icon for the menu button
     var menuButton = page.getViewById("menuBtn");
-    menuButton.text = String.fromCharCode(0xe5d2);
+    menuButton.text = String.fromCharCode(0xe5d4);
     // Set the icon for the layers button
     var layerButton = page.getViewById("layerBtn");
     layerButton.text = String.fromCharCode(0xe53b);
@@ -57,7 +57,7 @@ function searchBarLoaded(args) {
             url.protocol("http");
         }
         console.log("Load url: " + url);
-        exports.browserView.focussedLayer.src = url.toString();
+        exports.browserView.focussedLayer.webView.src = url.toString();
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
@@ -77,36 +77,35 @@ function browserViewLoaded(args) {
             }
         }
     });
-    exports.browserView.focussedLayer.on("loadFinished", function (eventData) {
+    exports.browserView.focussedLayer.webView.on("loadFinished", function (eventData) {
         if (!eventData.error) {
             history.addPage(eventData.url);
         }
     });
     // Setup the debug view
-    var debug = args.object.page.getViewById("debug");
+    var debug = exports.browserView.page.getViewById("debug");
     debug.horizontalAlignment = 'stretch';
     debug.verticalAlignment = 'stretch';
     debug.backgroundColor = new color_1.Color(150, 255, 255, 255);
     debug.visibility = "collapsed";
     if (debug.ios) {
-        debug.ios["setUserInteractionEnabled"](false);
     }
     var layer = exports.browserView.focussedLayer;
-    console.log("FOCUSSED LAYER: " + layer.src);
+    console.log("FOCUSSED LAYER: " + layer.webView.src);
     var logChangeCallback = function (args) {
-        console.log("LOGS " + layer.log);
-        debug.html = layer.log.join("\n");
+        console.log("LOGS " + layer.webView.log);
+        debug.html = layer.webView.log.join("\n");
     };
-    layer.on("log", logChangeCallback);
+    layer.webView.on("log", logChangeCallback);
     exports.browserView.on("propertyChange", function (evt) {
         if (evt.propertyName === "focussedLayer") {
             console.log("CHANGE FOCUS");
             if (layer) {
-                layer.removeEventListener("log", logChangeCallback);
+                layer.webView.removeEventListener("log", logChangeCallback);
             }
             layer = exports.browserView.focussedLayer;
-            console.log("FOCUSSED LAYER: " + layer.src);
-            layer.on("log", logChangeCallback);
+            console.log("FOCUSSED LAYER: " + layer.webView.src);
+            layer.webView.on("log", logChangeCallback);
         }
     });
 }
@@ -238,7 +237,7 @@ function historyClicked(args) {
     frames.topmost().currentPage.showModal("history-view", null, function () {
         var url = historyView.getTappedUrl();
         if (url) {
-            exports.browserView.focussedLayer.src = url;
+            exports.browserView.focussedLayer.webView.src = url;
         }
     }, true);
 }

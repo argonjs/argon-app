@@ -18,7 +18,7 @@
 #import <Vuforia/Device.h>
 
 @interface VuforiaViewerParameters ()
-@property (nonatomic) const Vuforia::ViewerParameters *cpp;
+@property (nonatomic, assign) const Vuforia::ViewerParameters *cpp;
 @end
 
 @implementation VuforiaViewerParameters
@@ -96,7 +96,7 @@
 
 
 @interface VuforiaViewerParametersList ()
-@property (nonatomic) Vuforia::ViewerParametersList *cpp;
+@property (nonatomic, assign) Vuforia::ViewerParametersList *cpp;
 @end
 
 
@@ -149,7 +149,7 @@
 
 
 @interface VuforiaViewList ()
-@property (nonatomic) const Vuforia::RenderingPrimitives *cpp;
+@property (nonatomic, assign) const Vuforia::RenderingPrimitives *cpp;
 @end
 
 @implementation VuforiaViewList
@@ -176,7 +176,7 @@
 @end
 
 @interface VuforiaMesh ()
-@property (nonatomic) const Vuforia::Mesh *cpp;
+@property (nonatomic, assign) const Vuforia::Mesh *cpp;
 @end
 
 @implementation VuforiaMesh
@@ -249,7 +249,7 @@
 
 
 @interface VuforiaRenderingPrimitives ()
-@property (nonatomic) const Vuforia::RenderingPrimitives *cpp;
+@property (nonatomic, assign) const Vuforia::RenderingPrimitives *cpp;
 @end
 
 @implementation VuforiaRenderingPrimitives
