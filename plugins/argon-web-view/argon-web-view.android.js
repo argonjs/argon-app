@@ -9,27 +9,31 @@ var ArgonWebView = (function (_super) {
         var _this = this;
         _super.call(this);
         this.on(view_1.View.loadedEvent, function () {
-            // Make transparent
             _this.backgroundColor = new color_1.Color(0, 255, 255, 255);
             _this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             var settings = _this.android.getSettings();
             var userAgent = settings.getUserAgentString();
             settings.setUserAgentString(userAgent + " Argon");
             settings.setJavaScriptEnabled(true);
-            // Inject Javascript Interface
+            if (!_this.id) {
+                _this.id = Date.now().toString();
+            }
+            ArgonWebView.layersById[_this.id] = _this;
             _this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
-                onArgonEvent: function (event, data) {
-                    if (event === "message") {
-                        _this._handleArgonMessage(data);
-                    }
-                    else if (event === "log") {
-                        _this._handleLogMessage(data);
+                onArgonEvent: function (id, event, data) {
+                    var self = ArgonWebView.layersById[id];
+                    if (self) {
+                        if (event === "message") {
+                            self._handleArgonMessage(data);
+                        }
+                        else if (event === "log") {
+                            self._handleLogMessage(data);
+                        }
                     }
                 },
-            }))(), "__argon_android__");
+            }))(new java.lang.String(_this.id)), "__argon_android__");
         });
         this.on(ArgonWebView.loadStartedEvent, function () {
-            // Hook into the logging
             var injectLogger = function () {
                 var logger = window.console.log;
                 window.console.log = function () {
@@ -66,6 +70,7 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype.bringToFront = function () {
         this.android.bringToFront();
     };
+    ArgonWebView.layersById = {};
     return ArgonWebView;
 }(common.ArgonWebView));
 exports.ArgonWebView = ArgonWebView;
