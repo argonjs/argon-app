@@ -5,6 +5,7 @@ var views = require('ui/core/view');
 var frames = require('ui/frame');
 var searchbar = require('ui/search-bar');
 var color = require('color');
+var color_1 = require("color");
 var util_1 = require('./util');
 var Argon = require('argon');
 require('./argon-camera-service');
@@ -26,13 +27,10 @@ function pageLoaded(args) {
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
-    // Set the icon for the menu button
     var menuButton = page.getViewById("menuBtn");
     menuButton.text = String.fromCharCode(0xe5d2);
-    // Set the icon for the layers button
     var layerButton = page.getViewById("layerBtn");
     layerButton.text = String.fromCharCode(0xe53b);
-    // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(function () {
             page.requestLayout();
@@ -80,9 +78,34 @@ function browserViewLoaded(args) {
             history.addPage(eventData.url);
         }
     });
+    var debug = args.object.page.getViewById("debug");
+    debug.horizontalAlignment = 'stretch';
+    debug.verticalAlignment = 'stretch';
+    debug.backgroundColor = new color_1.Color(150, 255, 255, 255);
+    debug.visibility = "collapsed";
+    if (debug.ios) {
+        debug.ios["setUserInteractionEnabled"](false);
+    }
+    var layer = exports.browserView.focussedLayer;
+    console.log("FOCUSSED LAYER: " + layer.src);
+    var logChangeCallback = function (args) {
+        console.log("LOGS " + layer.log);
+        debug.html = layer.log.join("\n");
+    };
+    layer.on("log", logChangeCallback);
+    exports.browserView.on("propertyChange", function (evt) {
+        if (evt.propertyName === "focussedLayer") {
+            console.log("CHANGE FOCUS");
+            if (layer) {
+                layer.removeEventListener("log", logChangeCallback);
+            }
+            layer = exports.browserView.focussedLayer;
+            console.log("FOCUSSED LAYER: " + layer.src);
+            layer.on("log", logChangeCallback);
+        }
+    });
 }
 exports.browserViewLoaded = browserViewLoaded;
-// initialize some properties of the menu so that animations will render correctly
 function menuLoaded(args) {
     var menu = args.object;
     menu.originX = 1;
@@ -202,7 +225,6 @@ function newChannelClicked(args) {
 }
 exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
-    //code to open the bookmarks view goes here
 }
 exports.bookmarksClicked = bookmarksClicked;
 function historyClicked(args) {
@@ -215,11 +237,23 @@ function historyClicked(args) {
 }
 exports.historyClicked = historyClicked;
 function settingsClicked(args) {
-    //code to open the settings view goes here
 }
 exports.settingsClicked = settingsClicked;
 function layerButtonClicked(args) {
     exports.browserView.toggleOverview();
+    args.object.page.getViewById("debug").visibility = "collapsed";
 }
 exports.layerButtonClicked = layerButtonClicked;
+function debugClicked(args) {
+    var debugView = args.object.page.getViewById("debug");
+    if (debugView.visibility == "visible") {
+        debugView.visibility = "collapsed";
+    }
+    else {
+        debugView.visibility = "visible";
+        util_1.Util.bringToFront(debugView);
+    }
+    hideMenu(args.object.page.getViewById("menu"));
+}
+exports.debugClicked = debugClicked;
 //# sourceMappingURL=main-page.js.map

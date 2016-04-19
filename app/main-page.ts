@@ -12,10 +12,12 @@ import * as color from 'color';
 import * as platform from 'platform';
 import {Button} from "ui/button";
 import {View} from "ui/core/view";
+import {Color} from "color";
 
 import * as vuforia from 'nativescript-vuforia';
 
 import {Util} from './util';
+import {ArgonWebView} from 'argon-web-view'
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
@@ -101,10 +103,41 @@ export function browserViewLoaded(args) {
 			}
 		}
 	});
-    
+
     browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
         if (!eventData.error) {
             history.addPage(eventData.url);
+        }
+    });
+
+    // Setup the debug view
+    let debug = args.object.page.getViewById("debug");
+    debug.horizontalAlignment = 'stretch';
+    debug.verticalAlignment = 'stretch';
+    debug.backgroundColor = new Color(150, 255, 255, 255);
+    debug.visibility = "collapsed";
+    if (debug.ios) {
+        (<UIView>debug.ios)["setUserInteractionEnabled"](false);
+    }
+
+    let layer = browserView.focussedLayer;
+    console.log("FOCUSSED LAYER: " + layer.src);
+
+    const logChangeCallback = (args) => {
+        console.log("LOGS " + layer.log);
+        debug.html = layer.log.join("\n");
+    };
+    layer.on("log", logChangeCallback)
+
+    browserView.on("propertyChange", (evt: PropertyChangeData) => {
+        if (evt.propertyName === "focussedLayer") {
+            console.log("CHANGE FOCUS");
+            if (layer) {
+                layer.removeEventListener("log", logChangeCallback);
+            }
+            layer = browserView.focussedLayer;
+            console.log("FOCUSSED LAYER: " + layer.src);
+            layer.on("log", logChangeCallback)
         }
     });
 }
@@ -251,6 +284,19 @@ export function settingsClicked(args) {
     //code to open the settings view goes here
 }
 
+
 export function layerButtonClicked(args) {
 	browserView.toggleOverview();
+	args.object.page.getViewById("debug").visibility = "collapsed";
+}
+
+export function debugClicked(args) {
+	const debugView = args.object.page.getViewById("debug");
+	if (debugView.visibility == "visible") {
+		debugView.visibility = "collapsed";
+	} else {
+		debugView.visibility = "visible";
+		Util.bringToFront(debugView);
+	}
+	hideMenu(args.object.page.getViewById("menu"));
 }
