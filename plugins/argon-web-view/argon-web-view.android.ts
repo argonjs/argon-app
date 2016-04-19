@@ -8,6 +8,10 @@ const AndroidWebInterface = io.argonjs.AndroidWebInterface;
 
 export class ArgonWebView extends common.ArgonWebView {
 
+    private static layersById: {
+        [id: string]: ArgonWebView,
+    } = {};
+
   constructor() {
     super();
 
@@ -21,16 +25,25 @@ export class ArgonWebView extends common.ArgonWebView {
       settings.setUserAgentString(userAgent + " Argon");
       settings.setJavaScriptEnabled(true);
 
+      // Remember a particular id for each webview
+      if (!this.id) {
+          this.id = Date.now().toString();
+      }
+      ArgonWebView.layersById[this.id] = this;
+
       // Inject Javascript Interface
       this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
-          onArgonEvent: (event: string, data: string) => {
-              if (event === "message") {
-                  this._handleArgonMessage(data);
-              } else if (event === "log") {
-                  this._handleLogMessage(data);
+          onArgonEvent: (id: string, event: string, data: string) => {
+              const self = ArgonWebView.layersById[id];
+              if (self) {
+                  if (event === "message") {
+                      self._handleArgonMessage(data);
+                  } else if (event === "log") {
+                      self._handleLogMessage(data);
+                  }
               }
           },
-      }))(), "__argon_android__");
+      }))(new java.lang.String(this.id)), "__argon_android__");
     });
 
     this.on(ArgonWebView.loadStartedEvent, () => {
