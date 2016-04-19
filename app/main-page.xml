@@ -21,8 +21,8 @@
             <Label class="menuItem" text="Settings" tap="settingsClicked"/>
             <Label class="menuItem" text="Debug" tap="debugClicked"/>
         </StackLayout>
-        <HtmlView id="debug" loaded="debugViewLoaded">
-            
+        <HtmlView id="debug">
+
         </HtmlView>
     </browserView:BrowserView>
 </Page>
