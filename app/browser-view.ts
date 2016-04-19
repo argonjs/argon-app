@@ -2,7 +2,6 @@ import {View} from 'ui/core/view';
 import {Color} from 'color';
 import {GridLayout} from 'ui/layouts/grid-layout';
 import {ArgonWebView} from 'argon-web-view';
-import {PropertyChangeData} from 'data/observable';
 import {AnimationCurve} from 'ui/enums';
 import {
   GestureTypes,
@@ -10,6 +9,8 @@ import {
   GestureEventData,
 } from 'ui/gestures';
 import {Util} from './util';
+import {PropertyChangeData} from 'data/observable'
+import {Placeholder, CreateViewEventData} from 'ui/placeholder'
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 import * as fs from 'file-system';
@@ -21,8 +22,8 @@ const DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
 
 export class BrowserView extends GridLayout {
     realityLayer:ArgonWebView;
-
-    private videoViewController:VuforiaVideoViewController;
+    videoView:Placeholder;
+        
     private _url:string;
     private _focussedLayer:ArgonWebView;
     private inOverview: boolean;
@@ -40,18 +41,16 @@ export class BrowserView extends GridLayout {
         const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.zHeap = [];
         this.realityLayer = this.addLayer();
-        this.realityLayer.isRealityLayer = true;
-        this.realityLayer.src = realityHtml.readTextSync();
-        this.backgroundColor = new Color("#555");
-
-        this.overview = {
-          active: false,
-          animating: false,
-          cleanup: [],
-        };
-
-        // Make a new layer to be used with the url bar.
-        this._setFocussedLayer(this.addLayer());
+        this.addLayer();
+        
+        const placeholder = new Placeholder();
+        placeholder.on(Placeholder.creatingViewEvent, (evt:CreateViewEventData)=>{
+            evt.view = vuforia.ios || vuforia.android || null;
+        });
+        this.addChild(placeholder);
+        placeholder.horizontalAlignment = 'stretch';
+        placeholder.verticalAlignment = 'stretch';
+        this.videoView = placeholder;
     }
 
     addLayer() {
@@ -310,21 +309,11 @@ export class BrowserView extends GridLayout {
       this.overview.cleanup = [];
     }
 
-    onLoaded() {
-        super.onLoaded();
-        if (vuforia.ios) {
-            const pageUIViewController:UIViewController = this.page.ios;
-            const realityLayerUIView:UIView = this.realityLayer.ios;
-            this.videoViewController = vuforia.ios.videoViewController;
-            pageUIViewController.addChildViewController(this.videoViewController);
-            realityLayerUIView.addSubview(this.videoViewController.view);
-            realityLayerUIView.sendSubviewToBack(this.videoViewController.view);
-        }
-    }
-
     onLayout(left:number, top:number, right:number, bottom:number) {
         super.onLayout(left, top, right, bottom);
-        // this.videoViewController.view.setNeedsLayout();
+        if (vuforia.ios) {
+            (<UIView>vuforia.ios).setNeedsLayout();
+        }
     }
 
     private _setURL(url:string) {

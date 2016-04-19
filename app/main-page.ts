@@ -22,9 +22,7 @@ import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
 import * as Argon from 'argon';
-import './argon-camera-service';
 import './argon-device-service';
-import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 import * as historyView from './history-view';
@@ -37,12 +35,18 @@ let searchBar:searchbar.SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
-const container = new Argon.Container;
+const container = new Argon.DI.Container;
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+
 manager = Argon.init({container, config: {
-	role: Argon.Role.MANAGER,
-	defaultReality: {type: 'vuforia'}
+	role: Argon.Role.MANAGER
 }});
+
+manager.reality.setDefault({type:'vuforia'});
+
+manager.vuforia.init({
+	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+})
 
 export function pageLoaded(args) {
 

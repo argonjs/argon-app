@@ -9,16 +9,19 @@ var ArgonWebView = (function (_super) {
         var _this = this;
         _super.call(this);
         this.on(view_1.View.loadedEvent, function () {
+            // Make transparent
             _this.backgroundColor = new color_1.Color(0, 255, 255, 255);
             _this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             var settings = _this.android.getSettings();
             var userAgent = settings.getUserAgentString();
             settings.setUserAgentString(userAgent + " Argon");
             settings.setJavaScriptEnabled(true);
+            // Remember a particular id for each webview
             if (!_this.id) {
                 _this.id = Date.now().toString();
             }
             ArgonWebView.layersById[_this.id] = _this;
+            // Inject Javascript Interface
             _this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
                 onArgonEvent: function (id, event, data) {
                     var self = ArgonWebView.layersById[id];
@@ -34,6 +37,7 @@ var ArgonWebView = (function (_super) {
             }))(new java.lang.String(_this.id)), "__argon_android__");
         });
         this.on(ArgonWebView.loadStartedEvent, function () {
+            // Hook into the logging
             var injectLogger = function () {
                 var logger = window.console.log;
                 window.console.log = function () {

@@ -124,7 +124,7 @@ function setVideoBackgroundConfig(videoConfig) {
         positionY: fixedConfig.positionY,
         sizeX: fixedConfig.sizeX,
         sizeY: fixedConfig.sizeY,
-        reflection: VuforiaVideoBackgroundReflection.Default
+        reflection: 0 /* Default */
     };
 }
 exports.setVideoBackgroundConfig = setVideoBackgroundConfig;

@@ -16,13 +16,12 @@
 		6003F5A7195388D20070C39A /* VuforiaViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6003F5A6195388D20070C39A /* VuforiaViewController.m */; };
 		6003F5A9195388D20070C39A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6003F5A8195388D20070C39A /* Images.xcassets */; };
 		873B8AEB1B1F5CCA007FD442 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 873B8AEA1B1F5CCA007FD442 /* Main.storyboard */; };
-		BD0B5D242ED5D8D15F1DCD7F /* Pods_Vuforia_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE71BD8A77FCA2B2F74C1EAE /* Pods_Vuforia_Example.framework */; };
+		D93AC9E088DE5D22019722F7 /* Pods_Vuforia_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCBA2E457FE91F0CB831957F /* Pods_Vuforia_Example.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		497D624628D001B0C995EB39 /* Pods-Vuforia_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Tests.release.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Tests/Pods-Vuforia_Tests.release.xcconfig"; sourceTree = "<group>"; };
+		007EE7CAD9EC384A43467516 /* Pods-Vuforia_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Example/Pods-Vuforia_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		51D180EFF5A8E60D1CE2B32B /* Vuforia.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = Vuforia.podspec; path = ../Vuforia.podspec; sourceTree = "<group>"; };
-		5D0B5DEADD17FBCC2782A647 /* Pods_Vuforia_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Vuforia_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6003F58A195388D20070C39A /* Vuforia_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vuforia_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6003F58D195388D20070C39A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		6003F58F195388D20070C39A /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -43,11 +42,9 @@
 		606FC2411953D9B200FFA9A0 /* Tests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tests-Prefix.pch"; sourceTree = "<group>"; };
 		6E042D1026DC232A10989FBB /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		873B8AEA1B1F5CCA007FD442 /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Main.storyboard; sourceTree = "<group>"; };
-		A3DD1B38C6F0CDAFD3FC7E91 /* Pods-Vuforia_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Example.release.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Example/Pods-Vuforia_Example.release.xcconfig"; sourceTree = "<group>"; };
-		B5B154C2A4E18B1E94B2A818 /* Pods-Vuforia_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Example.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Example/Pods-Vuforia_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		BE3827204ABE986E4E54AE29 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
-		E074010F927EFA339ED31667 /* Pods-Vuforia_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Tests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Tests/Pods-Vuforia_Tests.debug.xcconfig"; sourceTree = "<group>"; };
-		FE71BD8A77FCA2B2F74C1EAE /* Pods_Vuforia_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Vuforia_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA0A6CB9B56EA2DE2A42A821 /* Pods-Vuforia_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Vuforia_Example.release.xcconfig"; path = "Pods/Target Support Files/Pods-Vuforia_Example/Pods-Vuforia_Example.release.xcconfig"; sourceTree = "<group>"; };
+		FCBA2E457FE91F0CB831957F /* Pods_Vuforia_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Vuforia_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,24 +55,13 @@
 				6003F590195388D20070C39A /* CoreGraphics.framework in Frameworks */,
 				6003F592195388D20070C39A /* UIKit.framework in Frameworks */,
 				6003F58E195388D20070C39A /* Foundation.framework in Frameworks */,
-				BD0B5D242ED5D8D15F1DCD7F /* Pods_Vuforia_Example.framework in Frameworks */,
+				D93AC9E088DE5D22019722F7 /* Pods_Vuforia_Example.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		314799C29E137C7702EA0E86 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				B5B154C2A4E18B1E94B2A818 /* Pods-Vuforia_Example.debug.xcconfig */,
-				A3DD1B38C6F0CDAFD3FC7E91 /* Pods-Vuforia_Example.release.xcconfig */,
-				E074010F927EFA339ED31667 /* Pods-Vuforia_Tests.debug.xcconfig */,
-				497D624628D001B0C995EB39 /* Pods-Vuforia_Tests.release.xcconfig */,
-			);
-			name = Pods;
-			sourceTree = "<group>";
-		};
 		6003F581195388D10070C39A = {
 			isa = PBXGroup;
 			children = (
@@ -84,7 +70,7 @@
 				6003F5B5195388D20070C39A /* Tests */,
 				6003F58C195388D20070C39A /* Frameworks */,
 				6003F58B195388D20070C39A /* Products */,
-				314799C29E137C7702EA0E86 /* Pods */,
+				9A7739E2EAC2FE964E2F2CE3 /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,8 +89,7 @@
 				6003F58F195388D20070C39A /* CoreGraphics.framework */,
 				6003F591195388D20070C39A /* UIKit.framework */,
 				6003F5AF195388D20070C39A /* XCTest.framework */,
-				FE71BD8A77FCA2B2F74C1EAE /* Pods_Vuforia_Example.framework */,
-				5D0B5DEADD17FBCC2782A647 /* Pods_Vuforia_Tests.framework */,
+				FCBA2E457FE91F0CB831957F /* Pods_Vuforia_Example.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -164,6 +149,15 @@
 			name = "Podspec Metadata";
 			sourceTree = "<group>";
 		};
+		9A7739E2EAC2FE964E2F2CE3 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				007EE7CAD9EC384A43467516 /* Pods-Vuforia_Example.debug.xcconfig */,
+				DA0A6CB9B56EA2DE2A42A821 /* Pods-Vuforia_Example.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -171,12 +165,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6003F5BF195388D20070C39A /* Build configuration list for PBXNativeTarget "Vuforia_Example" */;
 			buildPhases = (
-				0059A30B8AD37A30093DAEE8 /* Check Pods Manifest.lock */,
+				6CE83E1D187FCE91EDDF7527 /* Check Pods Manifest.lock */,
 				6003F586195388D20070C39A /* Sources */,
 				6003F587195388D20070C39A /* Frameworks */,
 				6003F588195388D20070C39A /* Resources */,
-				A13D971A1333DD8E8B6E3DA8 /* Embed Pods Frameworks */,
-				5AEF97ED0671D5CFC1D44540 /* Copy Pods Resources */,
+				E14637AC4FD3856B8D6AFF55 /* Embed Pods Frameworks */,
+				AEB4E96E6989943DB2B3A87E /* Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -229,7 +223,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		0059A30B8AD37A30093DAEE8 /* Check Pods Manifest.lock */ = {
+		6CE83E1D187FCE91EDDF7527 /* Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -244,7 +238,7 @@
 			shellScript = "diff \"${PODS_ROOT}/../Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [[ $? != 0 ]] ; then\n    cat << EOM\nerror: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\nEOM\n    exit 1\nfi\n";
 			showEnvVarsInLog = 0;
 		};
-		5AEF97ED0671D5CFC1D44540 /* Copy Pods Resources */ = {
+		AEB4E96E6989943DB2B3A87E /* Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -259,7 +253,7 @@
 			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Vuforia_Example/Pods-Vuforia_Example-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A13D971A1333DD8E8B6E3DA8 /* Embed Pods Frameworks */ = {
+		E14637AC4FD3856B8D6AFF55 /* Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -383,7 +377,7 @@
 		};
 		6003F5C0195388D20070C39A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B5B154C2A4E18B1E94B2A818 /* Pods-Vuforia_Example.debug.xcconfig */;
+			baseConfigurationReference = 007EE7CAD9EC384A43467516 /* Pods-Vuforia_Example.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -399,7 +393,7 @@
 		};
 		6003F5C1195388D20070C39A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A3DD1B38C6F0CDAFD3FC7E91 /* Pods-Vuforia_Example.release.xcconfig */;
+			baseConfigurationReference = DA0A6CB9B56EA2DE2A42A821 /* Pods-Vuforia_Example.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;

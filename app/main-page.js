@@ -8,29 +8,33 @@ var color = require('color');
 var color_1 = require("color");
 var util_1 = require('./util');
 var Argon = require('argon');
-require('./argon-camera-service');
 require('./argon-device-service');
-require('./argon-viewport-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
 var historyView = require('./history-view');
 var history = require('./shared/history');
 var actionBar;
 var searchBar;
 var iosSearchBarController;
-var container = new Argon.Container;
+var container = new Argon.DI.Container;
 container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
 exports.manager = Argon.init({ container: container, config: {
-        role: Argon.Role.MANAGER,
-        defaultReality: { type: 'vuforia' }
+        role: Argon.Role.MANAGER
     } });
+exports.manager.reality.setDefault({ type: 'vuforia' });
+exports.manager.vuforia.init({
+    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+});
 function pageLoaded(args) {
     var page = args.object;
     page.backgroundColor = new color.Color("black");
     actionBar = page.actionBar;
+    // Set the icon for the menu button
     var menuButton = page.getViewById("menuBtn");
     menuButton.text = String.fromCharCode(0xe5d2);
+    // Set the icon for the layers button
     var layerButton = page.getViewById("layerBtn");
     layerButton.text = String.fromCharCode(0xe53b);
+    // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(function () {
             page.requestLayout();
@@ -78,6 +82,7 @@ function browserViewLoaded(args) {
             history.addPage(eventData.url);
         }
     });
+    // Setup the debug view
     var debug = args.object.page.getViewById("debug");
     debug.horizontalAlignment = 'stretch';
     debug.verticalAlignment = 'stretch';
@@ -106,6 +111,7 @@ function browserViewLoaded(args) {
     });
 }
 exports.browserViewLoaded = browserViewLoaded;
+// initialize some properties of the menu so that animations will render correctly
 function menuLoaded(args) {
     var menu = args.object;
     menu.originX = 1;
@@ -225,6 +231,7 @@ function newChannelClicked(args) {
 }
 exports.newChannelClicked = newChannelClicked;
 function bookmarksClicked(args) {
+    //code to open the bookmarks view goes here
 }
 exports.bookmarksClicked = bookmarksClicked;
 function historyClicked(args) {
@@ -237,6 +244,7 @@ function historyClicked(args) {
 }
 exports.historyClicked = historyClicked;
 function settingsClicked(args) {
+    //code to open the settings view goes here
 }
 exports.settingsClicked = settingsClicked;
 function layerButtonClicked(args) {

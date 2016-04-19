@@ -1,6 +1,7 @@
 "use strict";
 var application = require("application");
 var vuforia = require('nativescript-vuforia');
+var utils = require('utils/utils');
 var Argon = require("argon");
 var JulianDate = Argon.Cesium.JulianDate;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -10,13 +11,13 @@ var Transforms = Argon.Cesium.Transforms;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Matrix3 = Argon.Cesium.Matrix3;
 var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
-exports.iosSystemBootDate = Argon.Cesium.JulianDate.now();
-if (vuforia.ios) {
-    exports.iosSystemBootDate = Argon.Cesium.JulianDate.fromDate(new Date(vuforia.ios.boottime().sec * 1000));
+exports.systemBootDate = Argon.Cesium.JulianDate.now();
+if (vuforia.api) {
+    exports.systemBootDate = Argon.Cesium.JulianDate.fromDate(new Date(vuforia.api.getSystemBootTime() * 1000));
 }
 else if (application.ios) {
     var uptime = NSProcessInfo.processInfo().systemUptime;
-    JulianDate.addSeconds(exports.iosSystemBootDate, -uptime, exports.iosSystemBootDate);
+    JulianDate.addSeconds(exports.systemBootDate, -uptime, exports.systemBootDate);
 }
 var scratchTime = new JulianDate(0, 0);
 var scratchCartesian3 = new Cartesian3;
@@ -61,8 +62,7 @@ function getIosMotionManager() {
     }
     iosMotionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
 }
-var _getPose = Argon.DeviceService.prototype.getPose;
-Argon.DeviceService.prototype.getPose = function () {
+Argon.DeviceService.prototype.update = function () {
     var self = this;
     if (application.ios) {
         var motionManager = getIosMotionManager();
@@ -83,7 +83,7 @@ Argon.DeviceService.prototype.getPose = function () {
         if (motion && position) {
             var motionQuaternion = motionManager.deviceMotion.attitude.quaternion;
             var motionTimestamp = motionManager.deviceMotion.timestamp; // this timestamp is in seconds, not an NSDate object
-            var motionTime = JulianDate.addSeconds(exports.iosSystemBootDate, motionTimestamp, scratchTime);
+            var motionTime = JulianDate.addSeconds(exports.systemBootDate, motionTimestamp, scratchTime);
             // Apple's orientation is reported in NWU, so convert to ENU
             var orientation_1 = Quaternion.multiply(z90, motionQuaternion, scratchQuaternion);
             // Finally, convert from local ENU to ECEF (Earth-Centered-Earth-Fixed)
@@ -95,17 +95,34 @@ Argon.DeviceService.prototype.getPose = function () {
             sampledOrientation.addSample(motionTime, orientation_1);
         }
     }
-    return _getPose.call(this, time);
+    var interfaceOrientation = getInterfaceOrientation();
+    var interfaceOrientationRad = Argon.Cesium.CesiumMath.toRadians(interfaceOrientation);
+    var interfaceOrientationProperty = self.interfaceEntity.orientation;
+    interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad));
 };
-var _getEyePose = Argon.DeviceService.prototype.getEyePose;
-Argon.DeviceService.prototype.getEyePose = function () {
-    var self = this;
-    if (vuforia.isSupported()) {
-        var orientation_2 = vuforia.getInterfaceOrientation();
-        var orientationRad = Argon.Cesium.CesiumMath.toRadians(orientation_2);
-        var orientationProperty = self.eyeEntity.orientation;
-        orientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, orientationRad));
+function getInterfaceOrientation() {
+    if (application.ios) {
+        var orientation_2 = UIApplication.sharedApplication().statusBarOrientation;
+        switch (orientation_2) {
+            case UIInterfaceOrientation.UIInterfaceOrientationUnknown:
+            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: return 0;
+            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: return 180;
+            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: return 90;
+            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: return -90;
+        }
     }
-    return _getEyePose.call(this, time);
-};
+    if (application.android) {
+        var context = utils.ad.getApplicationContext();
+        var display = context.getSystemService(android.content.Context.WINDOW_SERVICE).getDefaultDisplay();
+        var rotation = display.getRotation();
+        switch (rotation) {
+            case android.view.Surface.ROTATION_0: return 0;
+            case android.view.Surface.ROTATION_180: return 180;
+            case android.view.Surface.ROTATION_90: return 90;
+            case android.view.Surface.ROTATION_270: return -90;
+        }
+    }
+    return 0;
+}
+exports.getInterfaceOrientation = getInterfaceOrientation;
 //# sourceMappingURL=argon-device-service.js.map

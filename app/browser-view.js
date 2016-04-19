@@ -5,6 +5,7 @@ var argon_web_view_1 = require('argon-web-view');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var util_1 = require('./util');
+var placeholder_1 = require('ui/placeholder');
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
 var fs = require('file-system');
@@ -19,16 +20,15 @@ var BrowserView = (function (_super) {
         var realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.zHeap = [];
         this.realityLayer = this.addLayer();
-        this.realityLayer.isRealityLayer = true;
-        this.realityLayer.src = realityHtml.readTextSync();
-        this.backgroundColor = new color_1.Color("#555");
-        this.overview = {
-            active: false,
-            animating: false,
-            cleanup: [],
-        };
-        // Make a new layer to be used with the url bar.
-        this._setFocussedLayer(this.addLayer());
+        this.addLayer();
+        var placeholder = new placeholder_1.Placeholder();
+        placeholder.on(placeholder_1.Placeholder.creatingViewEvent, function (evt) {
+            evt.view = vuforia.ios || vuforia.android || null;
+        });
+        this.addChild(placeholder);
+        placeholder.horizontalAlignment = 'stretch';
+        placeholder.verticalAlignment = 'stretch';
+        this.videoView = placeholder;
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
@@ -262,20 +262,11 @@ var BrowserView = (function (_super) {
         });
         this.overview.cleanup = [];
     };
-    BrowserView.prototype.onLoaded = function () {
-        _super.prototype.onLoaded.call(this);
-        if (vuforia.ios) {
-            var pageUIViewController = this.page.ios;
-            var realityLayerUIView = this.realityLayer.ios;
-            this.videoViewController = vuforia.ios.videoViewController;
-            pageUIViewController.addChildViewController(this.videoViewController);
-            realityLayerUIView.addSubview(this.videoViewController.view);
-            realityLayerUIView.sendSubviewToBack(this.videoViewController.view);
-        }
-    };
     BrowserView.prototype.onLayout = function (left, top, right, bottom) {
         _super.prototype.onLayout.call(this, left, top, right, bottom);
-        // this.videoViewController.view.setNeedsLayout();
+        if (vuforia.ios) {
+            vuforia.ios.setNeedsLayout();
+        }
     };
     BrowserView.prototype._setURL = function (url) {
         if (this._url !== url) {
