@@ -28,12 +28,20 @@
 @private
     // OpenGL ES context
     EAGLContext *context;
+    
+    // Video background shader
+    GLuint vbShaderProgramID;
+    GLint vbVertexHandle;
+    GLint vbTexCoordHandle;
+    GLint vbTexSampler2DHandle;
+    GLint vbProjectionMatrixHandle;
 
     // The OpenGL ES names for the framebuffer and renderbuffers used to render
     // to this view
     GLuint defaultFramebuffer;
     GLuint colorRenderbuffer;
     GLuint depthRenderbuffer;
+    
 }
 
 @end

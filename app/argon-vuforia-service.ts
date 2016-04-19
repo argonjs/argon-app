@@ -146,6 +146,13 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         }
     }
     
+    private _viewerEnabled = false;
+    setViewerEnabled(enabled) {
+        this._viewerEnabled = enabled;
+        const device = VuforiaDevice.getInstance();
+        if (device) device.setViewerActive(enabled);
+    }
+    
     isAvailable() {
         return !!vuforia.api;
     }
@@ -185,6 +192,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
+            
+        this.setViewerEnabled(this._viewerEnabled);
             
         configureVideoBackground();
         

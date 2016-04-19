@@ -28,13 +28,13 @@
 
 #import <Vuforia/Vuforia.h>
 #import <Vuforia/State.h>
+#import <Vuforia/CameraDevice.h>
+#import <Vuforia/Device.h>
 #import <Vuforia/Tool.h>
 #import <Vuforia/Renderer.h>
-#import <Vuforia/TrackableResult.h>
-#import <Vuforia/ImageTargetResult.h>
-#import <Vuforia/TrackerManager.h>
-#import <Vuforia/ObjectTracker.h>
-#import <Vuforia/TargetFinder.h>
+#import <Vuforia/GLRenderer.h>
+#import <Vuforia/Mesh.h>
+#import <Vuforia/View.h>
 
 #import "VuforiaSession.h"
 #import "VuforiaVideoView.h"
@@ -45,9 +45,9 @@
 // OpenGL ES on iOS is not thread safe.  We ensure thread safety by following
 // this procedure:
 // 1) Create the OpenGL ES context on the main thread.
-// 2) Start the QCAR camera, which causes QCAR to locate our EAGLView and start
+// 2) Start the QCAR camera, which causes Vuforia to locate our EAGLView and start
 //    the render thread.
-// 3) QCAR calls our renderFrameQCAR method periodically on the render thread.
+// 3) QCAR calls our renderFrameVuforia method periodically on the render thread.
 //    The first time this happens, the defaultFramebuffer does not exist, so it
 //    is created with a call to createFramebuffer.  createFramebuffer is called
 //    on the main thread in order to safely allocate the OpenGL ES storage,
@@ -57,11 +57,61 @@
 //
 //******************************************************************************
 
+namespace{
+    
+    const float PROJECTION_NEAR_PLANE = .01f;
+    const float PROJECTION_FAR_PLANE = 3000.0f;
+    
+    // Apply a scaling transformation
+    void
+    scalePoseMatrix(float x, float y, float z, float* matrix)
+    {
+        if (matrix) {
+            // matrix * scale_matrix
+            matrix[0]  *= x;
+            matrix[1]  *= x;
+            matrix[2]  *= x;
+            matrix[3]  *= x;
+            
+            matrix[4]  *= y;
+            matrix[5]  *= y;
+            matrix[6]  *= y;
+            matrix[7]  *= y;
+            
+            matrix[8]  *= z;
+            matrix[9]  *= z;
+            matrix[10] *= z;
+            matrix[11] *= z;
+        }
+    }
+    
+    void
+    multiplyMatrix(float *matrixA, float *matrixB, float *matrixC)
+    {
+        int i, j, k;
+        float aTmp[16];
+        
+        for (i = 0; i < 4; i++) {
+            for (j = 0; j < 4; j++) {
+                aTmp[j * 4 + i] = 0.0;
+                
+                for (k = 0; k < 4; k++) {
+                    aTmp[j * 4 + i] += matrixA[k * 4 + i] * matrixB[j * 4 + k];
+                }
+            }
+        }
+        
+        for (i = 0; i < 16; i++) {
+            matrixC[i] = aTmp[i];
+        }
+    }
+
+}
 
 @interface VuforiaVideoView () <UIGLViewProtocol>
 
 // Lock to prevent concurrent access of the framebuffer on the main and
-// render threads (layoutSubViews and renderFrameQCAR methods)
+// render threads (layoutSubViews and renderFrameVuforia methods)
 @property (nonatomic, strong) NSLock *framebufferLock;
 
 @property (nonatomic, readwrite) BOOL mDoLayoutSubviews;
@@ -176,32 +226,196 @@
         [self doLayoutSubviews];
         self.mDoLayoutSubviews = NO;
     }
+    
 
+    Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
+    
     // [framebufferLock lock];
     [self setFramebuffer];
-
+    
+    mRenderer.begin();
 
     // Clear colour and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Render video background and retrieve tracking state
-    Vuforia::State state = Vuforia::Renderer::getInstance().begin();
-
-    Vuforia::Renderer::getInstance().drawVideoBackground();
-
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
+    
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    
+    const Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
+    Vuforia::ViewList& viewList = renderingPrimitives.getRenderingViews();
+    
+    // Iterate over the ViewList
+    for (int viewIdx = 0; viewIdx < viewList.getNumViews(); viewIdx++) {
+        Vuforia::VIEW vw = viewList.getView(viewIdx);
+        
+        // Any post processing is a special case that will be completed after
+        // the main render loop - so does not imply any rendering here
+        if (vw == Vuforia::VIEW_POSTPROCESS)
+        {
+            continue;
+        }
+        
+        // Set up the viewport
+        Vuforia::Vec4I viewport = renderingPrimitives.getViewport(vw);
+        glViewport(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
+        
+        //set scissor
+        glScissor(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
+        
+        Vuforia::Matrix44F projectionMatrix;
+        
+        Vuforia::Matrix34F projMatrix = renderingPrimitives.getProjectionMatrix(vw,
+                                                                                Vuforia::COORDINATE_SYSTEM_CAMERA);
+        
+        Vuforia::Matrix44F rawProjectionMatrixGL = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(
+                                                                                                        projMatrix,
+                                                                                                        PROJECTION_NEAR_PLANE,
+                                                                                                        PROJECTION_FAR_PLANE);
+        
+        // Apply the appropriate eye adjustment to the raw projection matrix, and assign to the global variable
+        Vuforia::Matrix44F eyeAdjustmentGL = Vuforia::Tool::convert2GLMatrix(renderingPrimitives.getEyeDisplayAdjustmentMatrix(vw));
+        
+        multiplyMatrix(&rawProjectionMatrixGL.data[0], &eyeAdjustmentGL.data[0], &projectionMatrix.data[0]);
+        
+        // Use texture unit 0 for the video background - this will hold the camera frame and we want to reuse for all views
+        // So need to use a different texture unit for the augmentation
+        int vbVideoTextureUnit = 0;
+        
+        // Bind the video bg texture and get the Texture ID from Vuforia
+        Vuforia::GLTextureUnit tex;
+        tex.mTextureUnit = vbVideoTextureUnit;
+        
+        if (vw != Vuforia::VIEW_RIGHTEYE )
+        {
+            if (! Vuforia::Renderer::getInstance().updateVideoBackgroundTexture(&tex))
+            {
+                NSLog(@"Unable to bind video background texture!!");
+                return;
+            }
+        }
+        [self renderVideoBackgroundWithViewId:vw textureUnit:vbVideoTextureUnit viewPort:viewport];
+        
+        glDisable(GL_SCISSOR_TEST);
+        
+    }
 
-    Vuforia::Renderer::getInstance().end();
+    mRenderer.end();
 
     [self presentFramebuffer];
     //[framebufferLock unlock];
 
 }
 
+- (void) renderVideoBackgroundWithViewId:(Vuforia::VIEW) viewId textureUnit:(int) vbVideoTextureUnit viewPort:(Vuforia::Vec4I) viewport
+{
+    const Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
+    
+    Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(
+                                                                            renderingPrimitives.getVideoBackgroundProjectionMatrix(viewId, Vuforia::COORDINATE_SYSTEM_CAMERA));
+    
+    // Apply the scene scale on video see-through eyewear, to scale the video background and augmentation
+    // so that the display lines up with the real world
+    // This should not be applied on optical see-through devices, as there is no video background,
+    // and the calibration ensures that the augmentation matches the real world
+    if (Vuforia::Device::getInstance().isViewerActive())
+    {
+        float sceneScaleFactor = [self getSceneScaleFactor];
+        scalePoseMatrix(sceneScaleFactor, sceneScaleFactor, 1.0f, vbProjectionMatrix.data);
+        
+        // Apply a scissor around the video background, so that the augmentation doesn't 'bleed' outside it
+        int videoWidth = viewport.data[2] * sceneScaleFactor;
+        int videoHeight = viewport.data[3] * sceneScaleFactor;
+        int videoX = (viewport.data[2] - videoWidth) / 2 + viewport.data[0];
+        int videoY = (viewport.data[3] - videoHeight) / 2 + viewport.data[1];
+        
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(videoX, videoY, videoWidth, videoHeight);
+        glDisable(GL_SCISSOR_TEST);
+    }
+    
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    
+    const Vuforia::Mesh& vbMesh = renderingPrimitives.getVideoBackgroundMesh(viewId);
+    // Load the shader and upload the vertex/texcoord/index data
+    glUseProgram(vbShaderProgramID);
+    glVertexAttribPointer(vbVertexHandle, 3, GL_FLOAT, false, 0, vbMesh.getPositionCoordinates());
+    glVertexAttribPointer(vbTexCoordHandle, 2, GL_FLOAT, false, 0, vbMesh.getUVCoordinates());
+    
+    glUniform1i(vbTexSampler2DHandle, vbVideoTextureUnit);
+    
+    // Render the video background with the custom shader
+    // First, we enable the vertex arrays
+    glEnableVertexAttribArray(vbVertexHandle);
+    glEnableVertexAttribArray(vbTexCoordHandle);
+    
+    // Pass the projection matrix to OpenGL
+    glUniformMatrix4fv(vbProjectionMatrixHandle, 1, GL_FALSE, vbProjectionMatrix.data);
+    
+    // Then, we issue the render call
+    glDrawElements(GL_TRIANGLES, vbMesh.getNumTriangles() * 3, GL_UNSIGNED_SHORT,
+                   vbMesh.getTriangles());
+    
+    // Finally, we disable the vertex arrays
+    glDisableVertexAttribArray(vbVertexHandle);
+    glDisableVertexAttribArray(vbTexCoordHandle);
+}
+
 //------------------------------------------------------------------------------
 #pragma mark - OpenGL ES management
 
+
+
+-(float) getSceneScaleFactor
+{
+//    static const float VIRTUAL_FOV_Y_DEGS = 85.0f;
+    
+    // Get the y-dimension of the physical camera field of view
+    Vuforia::Vec2F fovVector = Vuforia::CameraDevice::getInstance().getCameraCalibration().getFieldOfViewRads();
+    float cameraFovYRads = fovVector.data[1];
+    
+    // Get the y-dimension of the virtual camera field of view
+    Vuforia::ViewerParameters viewer = Vuforia::Device::getInstance().getSelectedViewer();
+    float viewerFOVy = viewer.getFieldOfView().data[2] + viewer.getFieldOfView().data[3];
+    NSLog(@"FOVY for selected viewer:%f", viewerFOVy);
+    float virtualFovYRads = viewerFOVy * M_PI / 180;
+    //    float virtualFovYRads = VIRTUAL_FOV_Y_DEGS * M_PI / 180;
+    
+    // The scene-scale factor represents the proportion of the viewport that is filled by
+    // the video background when projected onto the same plane.
+    // In order to calculate this, let 'd' be the distance between the cameras and the plane.
+    // The height of the projected image 'h' on this plane can then be calculated:
+    //   tan(fov/2) = h/2d
+    // which rearranges to:
+    //   2d = h/tan(fov/2)
+    // Since 'd' is the same for both cameras, we can combine the equations for the two cameras:
+    //   hPhysical/tan(fovPhysical/2) = hVirtual/tan(fovVirtual/2)
+    // Which rearranges to:
+    //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
+    // ... which is the scene-scale factor
+    return tan(cameraFovYRads / 2) / tan(virtualFovYRads / 2);
+}
+
+- (void)initShaders
+{
+    // Video background rendering
+    vbShaderProgramID = [VuforiaVideoView createProgramWithVertexShaderFileName:@"Background.vertsh"
+                                                                     fragmentShaderFileName:@"Background.fragsh"];
+    
+    if (0 < vbShaderProgramID) {
+        vbVertexHandle = glGetAttribLocation(vbShaderProgramID, "vertexPosition");
+        vbTexCoordHandle = glGetAttribLocation(vbShaderProgramID, "vertexTexCoord");
+        vbProjectionMatrixHandle = glGetUniformLocation(vbShaderProgramID, "projectionMatrix");
+        vbTexSampler2DHandle = glGetUniformLocation(vbShaderProgramID, "texSampler2D");
+    }
+    else {
+        NSLog(@"Could not initialise video background shader");
+    }
+}
 
 - (void)createFramebuffer
 {
@@ -287,6 +501,99 @@
     glBindRenderbuffer(GL_RENDERBUFFER, colorRenderbuffer);
 
     return [context presentRenderbuffer:GL_RENDERBUFFER];
+}
+
+
++ (GLuint)compileShader:(NSString*)shaderFileName withDefs:(NSString *) defs withType:(GLenum)shaderType {
+    NSString* shaderName = [[shaderFileName lastPathComponent] stringByDeletingPathExtension];
+    NSString* shaderFileType = [shaderFileName pathExtension];
+    
+    NSLog(@"debug: shaderName=(%@), shaderFileTYpe=(%@)", shaderName, shaderFileType);
+    
+    // 1
+    NSString* shaderPath = [[NSBundle mainBundle] pathForResource:shaderName ofType:shaderFileType];
+    NSLog(@"debug: shaderPath=(%@)", shaderPath);
+    NSError* error;
+    NSString* shaderString = [NSString stringWithContentsOfFile:shaderPath encoding:NSUTF8StringEncoding error:&error];
+    if (!shaderString) {
+        NSLog(@"Error loading shader (%@): %@", shaderFileName, error.localizedDescription);
+        return 0;
+    }
+    
+    // 2
+    GLuint shaderHandle = glCreateShader(shaderType);
+    NSLog(@"debug: shaderHandle=(%d)", shaderHandle);
+    
+    // 3
+    const char * shaderStringUTF8 = [shaderString UTF8String];
+    GLint shaderStringLength = (GLint)[shaderString length];
+    
+    if (defs == nil) {
+        glShaderSource(shaderHandle, 1, &shaderStringUTF8, &shaderStringLength);
+    } else {
+        const char* finalShader[2] = {[defs UTF8String],shaderStringUTF8};
+        GLint finalShaderSizes[2] = {(GLint)[defs length], shaderStringLength};
+        glShaderSource(shaderHandle, 2, finalShader, finalShaderSizes);
+    }
+    
+    // 4
+    glCompileShader(shaderHandle);
+    
+    // 5
+    GLint compileSuccess;
+    glGetShaderiv(shaderHandle, GL_COMPILE_STATUS, &compileSuccess);
+    if (compileSuccess == GL_FALSE) {
+        GLchar messages[256];
+        glGetShaderInfoLog(shaderHandle, sizeof(messages), 0, &messages[0]);
+        NSString *messageString = [NSString stringWithUTF8String:messages];
+        NSLog(@"Error compiling shader (%@): %@", shaderFileName, messageString);
+        return 0;
+    }
+    
+    return shaderHandle;
+    
+}
+
++ (int)createProgramWithVertexShaderFileName:(NSString*) vertexShaderFileName
+                      fragmentShaderFileName:(NSString *) fragmentShaderFileName {
+    return [VuforiaVideoView createProgramWithVertexShaderFileName:vertexShaderFileName
+                                                          withVertexShaderDefs:nil
+                                                        fragmentShaderFileName:fragmentShaderFileName
+                                                        withFragmentShaderDefs:nil];
+}
+
++ (int)createProgramWithVertexShaderFileName:(NSString*) vertexShaderFileName
+                        withVertexShaderDefs:(NSString *) vertexShaderDefs
+                      fragmentShaderFileName:(NSString *) fragmentShaderFileName
+                      withFragmentShaderDefs:(NSString *) fragmentShaderDefs {
+    GLuint vertexShader = [self compileShader:vertexShaderFileName withDefs:vertexShaderDefs withType:GL_VERTEX_SHADER];
+    GLuint fragmentShader = [self compileShader:fragmentShaderFileName withDefs:fragmentShaderDefs withType:GL_FRAGMENT_SHADER];
+    
+    if ((vertexShader == 0) || (fragmentShader == 0)) {
+        NSLog(@"Error: error compiling shaders vertexShader:%d fragmentShader=%d", vertexShader, fragmentShader);
+        return 0;
+    }
+    
+    GLuint programHandle = glCreateProgram();
+    
+    if (programHandle == 0) {
+        NSLog(@"Error: can't create programe");
+        return 0;
+    }
+    glAttachShader(programHandle, vertexShader);
+    glAttachShader(programHandle, fragmentShader);
+    glLinkProgram(programHandle);
+    
+    GLint linkSuccess;
+    glGetProgramiv(programHandle, GL_LINK_STATUS, &linkSuccess);
+    if (linkSuccess == GL_FALSE) {
+        GLchar messages[256];
+        glGetProgramInfoLog(programHandle, sizeof(messages), 0, &messages[0]);
+        NSString *messageString = [NSString stringWithUTF8String:messages];
+        NSLog(@"Error linkink shaders (%@) and (%@): %@", vertexShaderFileName, fragmentShaderFileName, messageString);
+        return 0;
+    }
+    return programHandle;
 }
 
 @end

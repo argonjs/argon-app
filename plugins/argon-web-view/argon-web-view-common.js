@@ -6,7 +6,6 @@ var ArgonWebView = (function (_super) {
     function ArgonWebView() {
         _super.apply(this, arguments);
         this.log = [];
-        this.isRealityLayer = false;
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {
         get: function () { },

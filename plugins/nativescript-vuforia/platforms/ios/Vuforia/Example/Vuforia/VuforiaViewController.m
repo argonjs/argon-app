@@ -12,6 +12,7 @@
 #import "VuforiaSession.h"
 #import "VuforiaRenderer.h"
 #import "VuforiaTracker.h"
+#import "VuforiaDevice.h"
 #import "VuforiaCameraDevice.h"
 
 @implementation VuforiaViewController
@@ -72,6 +73,8 @@
                 .sizeY = videoHeightRotated * ratio * contentScaleFactor
             };
             [VuforiaRenderer setVideoBackgroundConfig:videoConfig];
+            
+            [[VuforiaDevice getInstance] setViewerActive:YES];
             
             if (![camera start]) {
                 NSLog(@"Unable to start camera");

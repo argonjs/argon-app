@@ -30,6 +30,7 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
         this.stateUpdateEvent = new Argon.Event();
         this.scratchMatrix4 = new Argon.Cesium.Matrix4();
         this.scratchMatrix3 = new Argon.Cesium.Matrix3();
+        this._viewerEnabled = false;
         this.idDataSetMap = new Map();
         this.dataSetUrlMap = new WeakMap();
         vuforiaEntity.position.setValue({ x: 0, y: 0, z: 0 }, deviceService.entity);
@@ -125,6 +126,12 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
             return 'vuforia_trackable_' + trackable.getName();
         }
     };
+    NativeScriptVuforiaServiceDelegate.prototype.setViewerEnabled = function (enabled) {
+        this._viewerEnabled = enabled;
+        var device = VuforiaDevice.getInstance();
+        if (device)
+            device.setViewerActive(enabled);
+    };
     NativeScriptVuforiaServiceDelegate.prototype.isAvailable = function () {
         return !!vuforia.api;
     };
@@ -157,6 +164,7 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
             return false;
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
+        this.setViewerEnabled(this._viewerEnabled);
         configureVideoBackground();
         return cameraDevice.start();
     };

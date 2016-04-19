@@ -12,7 +12,6 @@ declare module "argon-web-view" {
         
         session: SessionPort;
         log: string[];
-        isRealityLayer: boolean;
 
         /**
          * Raised when a sessionConnect event occurs.
