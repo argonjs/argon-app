@@ -1,8 +1,10 @@
 
-import * as application from "application";
-import * as frames from "ui/frame"
-import * as Argon from "argon";
+import * as uri from 'urijs';
+import * as application from 'application';
+import * as frames from 'ui/frame';
+import * as Argon from 'argon';
 import * as vuforia from 'nativescript-vuforia';
+import * as http from 'http';
 
 import {systemBootDate, getInterfaceOrientation} from './argon-device-service'
 
@@ -135,7 +137,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
         
-        // vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        vuforia.api.onNextStateUpdate(stateUpdateCallback);
 	}
     
     _getIdForTrackable(trackable:vuforia.Trackable) : string {
@@ -147,6 +149,11 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     private _viewerEnabled = false;
+    
+    isViewerEnabled() {
+        return this._viewerEnabled;
+    }
+    
     setViewerEnabled(enabled) {
         this._viewerEnabled = enabled;
         const device = VuforiaDevice.getInstance();
@@ -175,18 +182,22 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             return Promise.reject(new Error("Unable to set the license key"))
         }
         
+        console.log("Vuforia initializing...")
         return vuforia.api.init().then((result)=>{
+            console.log("Vuforia Init Result: " + result);
             return <number>result;
         });
     }
     
-    deinit(): void {
+    deinit(): void {            
+        console.log("Vuforia deinitializing");
         vuforia.api.deinit();
     }
     
-    cameraDeviceInitAndStart(): boolean {
+    cameraDeviceInitAndStart(): boolean {        
         const cameraDevice = vuforia.api.getCameraDevice();
-        
+
+        console.log("Vuforia initializing camera device");
         if (!cameraDevice.init(vuforia.CameraDeviceDirection.Default))
             return false;
             
@@ -196,7 +207,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         this.setViewerEnabled(this._viewerEnabled);
             
         configureVideoBackground();
-        
+                
+        console.log("Vuforia starting camera device");
         return cameraDevice.start();
     }
     
@@ -204,17 +216,20 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         return vuforia.api.getCameraDevice().setFlashTorchMode(on);
     }
     
-    objectTrackerInit(): boolean {
+    objectTrackerInit(): boolean {        
+        console.log("Vuforia initializing object tracker");
         return vuforia.api.initObjectTracker();
     }
     
-    objectTrackerStart(): boolean {
+    objectTrackerStart(): boolean {        
+        console.log("Vuforia starting object tracker");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) return objectTracker.start();
         return false;
     }
     
-    objectTrackerStop(): boolean {
+    objectTrackerStop(): boolean {        
+        console.log("Vuforia stopping object tracker");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             objectTracker.stop();
@@ -226,7 +241,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     private idDataSetMap = new Map<string, vuforia.DataSet>();
     private dataSetUrlMap = new WeakMap<vuforia.DataSet, string>();
     
-    objectTrackerCreateDataSet(url?: string): string {
+    objectTrackerCreateDataSet(url?: string): string {        
+        console.log("Vuforia creating dataset...");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = objectTracker.createDataSet();
@@ -234,13 +250,15 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const id = Argon.Cesium.createGuid();
                 this.idDataSetMap.set(id, dataSet);
                 this.dataSetUrlMap.set(dataSet, url);
+                console.log("Vuforia created dataset " + id);
                 return id;
             }
         }
         return null;
     }
     
-    objectTrackerDestroyDataSet(id: string): boolean {
+    objectTrackerDestroyDataSet(id: string): boolean {       
+        console.log("Vuforia destroying dataset " + id);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -254,6 +272,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     objectTrackerActivateDataSet(id: string): boolean {
+        console.log("Vuforia activating dataset " + id);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -264,7 +283,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         return false;
     }
     
-    objectTrackerDeactivateDataSet(id: string): boolean {
+    objectTrackerDeactivateDataSet(id: string): boolean {        
+        console.log("Vuforia deactivating dataset " + id);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -279,7 +299,11 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
-            
+            console.log("Vuforia fetching dataset " + id + " at " + url);
+            http.request({
+                url,
+                method
+            })
         }
         return Promise.reject("Dataset is not associated with a url");
     }
@@ -320,12 +344,12 @@ function configureVideoBackground() {
         enabled:true,
         positionX:0,
         positionY:0,
-        sizeX: videoWidth * scale * contentScaleFactor,
-        sizeY: videoHeight * scale * contentScaleFactor,
+        sizeX: Math.round(videoWidth * scale * contentScaleFactor),
+        sizeY: Math.round(videoHeight * scale * contentScaleFactor),
         reflection: vuforia.VideoBackgroundReflection.Default
     }
     
-    console.log(`Setting Video Background Configuration
+    console.log(`Vuforia configuring video background...
         viewWidth: ${viewWidth} 
         viewHeight: ${viewHeight} 
         contentScaleFactor: ${contentScaleFactor}
@@ -341,3 +365,65 @@ function configureVideoBackground() {
 if (vuforia.api) application.on(application.orientationChangedEvent, ()=>{
     Promise.resolve().then(configureVideoBackground); // delay callback until the interface orientation is updated
 })
+
+
+function downloadDataSetFromUrl(xmlUrlString:string)
+{
+    const xmlUri = uri(xmlUrlString);
+    const datUri = xmlUri.clone().suffix('dat')
+    NSURL *datURL = [[xmlURL URLByDeletingPathExtension] URLByAppendingPathExtension:@"dat"];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    NSNumber *directoryHash = @([[xmlURL URLByDeletingLastPathComponent] hash]);
+    NSURL *directoryURL = [NSURL fileURLWithPath:NSTemporaryDirectory()];
+    directoryURL = [directoryURL URLByAppendingPathComponent:[directoryHash stringValue]];
+    [fileManager createDirectoryAtPath:[directoryURL path]
+           withIntermediateDirectories:YES
+                            attributes:nil
+                                 error:nil];
+    
+    __block NSString *datLocation = nil;
+    __block NSString *xmlLocation = nil;
+    __block BOOL datDone = NO;
+    __block BOOL xmlDone = NO;
+    
+    void (^checkComplete)(void) = ^{
+        if (!datDone || !xmlDone) return;
+        if (datLocation == nil || xmlLocation == nil)
+            return done(nil, [self NSErrorWithCode:-1]);
+        else return done(xmlLocation, nil);
+    };
+
+    [[[NSURLSession sharedSession] downloadTaskWithURL:datURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
+        if (error == nil && statusCode == 200) {
+            // rename the temp file to the original filename (to make vuforia happy)
+            NSString *fileName = [[[datURL URLByDeletingPathExtension] URLByAppendingPathExtension:@"dat"] lastPathComponent];
+            NSURL *newDatLocation = [directoryURL URLByAppendingPathComponent:fileName];
+            [fileManager removeItemAtURL:newDatLocation error:nil];
+            [fileManager moveItemAtURL:location toURL:newDatLocation error:&error];
+            if (error == nil) {
+                datLocation = [newDatLocation path];
+            }
+        }
+        datDone = YES;
+        checkComplete();
+    }] resume];
+    
+    [[[NSURLSession sharedSession] downloadTaskWithURL:xmlURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
+        if (error == nil && statusCode == 200) {
+            // rename the temp file to the original filename (to make vuforia happy)
+            NSString *fileName = [xmlURL lastPathComponent];
+            NSURL *newXMLLocation = [directoryURL URLByAppendingPathComponent:fileName];
+            [fileManager removeItemAtURL:newXMLLocation error:nil];
+            [fileManager moveItemAtURL:location toURL:newXMLLocation error:&error];
+            if (error == nil) {
+                xmlLocation = [newXMLLocation path];
+            }
+        }
+        xmlDone = YES;
+        checkComplete();
+    }] resume];
+}

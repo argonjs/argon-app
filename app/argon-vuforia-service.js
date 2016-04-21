@@ -116,7 +116,7 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
             });
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
-        // vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        vuforia.api.onNextStateUpdate(stateUpdateCallback);
     }
     NativeScriptVuforiaServiceDelegate.prototype._getIdForTrackable = function (trackable) {
         if (trackable instanceof vuforia.ObjectTarget) {
@@ -125,6 +125,9 @@ var NativeScriptVuforiaServiceDelegate = (function (_super) {
         else {
             return 'vuforia_trackable_' + trackable.getName();
         }
+    };
+    NativeScriptVuforiaServiceDelegate.prototype.isViewerEnabled = function () {
+        return this._viewerEnabled;
     };
     NativeScriptVuforiaServiceDelegate.prototype.setViewerEnabled = function (enabled) {
         this._viewerEnabled = enabled;

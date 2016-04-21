@@ -383,7 +383,6 @@ namespace{
     // Get the y-dimension of the virtual camera field of view
     Vuforia::ViewerParameters viewer = Vuforia::Device::getInstance().getSelectedViewer();
     float viewerFOVy = viewer.getFieldOfView().data[2] + viewer.getFieldOfView().data[3];
-    NSLog(@"FOVY for selected viewer:%f", viewerFOVy);
     float virtualFovYRads = viewerFOVy * M_PI / 180;
     //    float virtualFovYRads = VIRTUAL_FOV_Y_DEGS * M_PI / 180;
     

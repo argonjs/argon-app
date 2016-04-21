@@ -38,7 +38,7 @@ var ArgonWebView = (function (_super) {
             });
             remoteSession_1.closeEvent.addEventListener(function () {
                 if (_this.session === remoteSession_1) {
-                    _this._sessionMessagePort = null;
+                    _this._sessionMessagePort = undefined;
                     _this.session = null;
                 }
             });

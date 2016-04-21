@@ -43,7 +43,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
             remoteSession.closeEvent.addEventListener(()=>{
                 if (this.session === remoteSession) {
-                    this._sessionMessagePort = null;
+                    this._sessionMessagePort = undefined;
                     this.session = null;
                 }
             })
