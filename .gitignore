@@ -1,4 +1,5 @@
 /node_modules
 /platforms
 /hooks
+/typings
 .DS_Store

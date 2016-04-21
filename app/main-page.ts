@@ -12,20 +12,20 @@ import * as color from 'color';
 import * as platform from 'platform';
 import {Button} from "ui/button";
 import {View} from "ui/core/view";
+import {HtmlView} from 'ui/html-view'
+import {Color} from "color";
 
 import * as vuforia from 'nativescript-vuforia';
 
-
-import * as util from './util';
 import dialogs = require("ui/dialogs");
 import applicationSettings = require("application-settings");
+import {Util} from './util';
+import {ArgonWebView} from 'argon-web-view'
 import {BrowserView} from './browser-view'
 import {PropertyChangeData} from 'data/observable'
 
 import * as Argon from 'argon';
-import './argon-camera-service';
 import './argon-device-service';
-import './argon-viewport-service';
 import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 import * as historyView from './history-view';
@@ -38,12 +38,18 @@ let searchBar:searchbar.SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
-const container = new Argon.Container;
+const container = new Argon.DI.Container;
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+
 manager = Argon.init({container, config: {
-	role: Argon.Role.MANAGER,
-	defaultReality: {type: 'vuforia'}
+	role: Argon.Role.MANAGER
 }});
+
+manager.reality.setDefault({type:'vuforia'});
+
+manager.vuforia.init({
+	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+})
 
 export function pageLoaded(args) {
 	//This was added to fix the bug of bookmark back navigation is shown when going back
@@ -57,7 +63,7 @@ export function pageLoaded(args) {
 
 	// Set the icon for the menu button
 	const menuButton = <Button> page.getViewById("menuBtn");
-	menuButton.text = String.fromCharCode(0xe5d2);
+	menuButton.text = String.fromCharCode(0xe5d4);
 
 	// Set the icon for the layers button
 	const layerButton = <Button> page.getViewById("layerBtn");
@@ -86,7 +92,7 @@ export function searchBarLoaded(args) {
 			url.protocol("http");
 		}
 		console.log("Load url: " + url);
-		browserView.focussedLayer.src = url.toString();
+		browserView.focussedLayer.webView.src = url.toString();
 	});
 
 	if (application.ios) {
@@ -107,10 +113,41 @@ export function browserViewLoaded(args) {
 			}
 		}
 	});
-    
-    browserView.focussedLayer.on("loadFinished", (eventData: LoadEventData) => {
+
+    browserView.focussedLayer.webView.on("loadFinished", (eventData: LoadEventData) => {
         if (!eventData.error) {
             history.addPage(eventData.url);
+        }
+    });
+
+    // Setup the debug view
+    let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
+    debug.horizontalAlignment = 'stretch';
+    debug.verticalAlignment = 'stretch';
+    debug.backgroundColor = new Color(150, 255, 255, 255);
+    debug.visibility = "collapsed";
+    if (debug.ios) {
+        // (<UIView>debug.ios)["setUserInteractionEnabled"](false);
+    }
+
+    let layer = browserView.focussedLayer;
+    console.log("FOCUSSED LAYER: " + layer.webView.src);
+
+    const logChangeCallback = (args) => {
+        console.log("LOGS " + layer.webView.log);
+        debug.html = layer.webView.log.join("\n");
+    };
+    layer.webView.on("log", logChangeCallback)
+
+    browserView.on("propertyChange", (evt: PropertyChangeData) => {
+        if (evt.propertyName === "focussedLayer") {
+            console.log("CHANGE FOCUS");
+            if (layer) {
+                layer.webView.removeEventListener("log", logChangeCallback);
+            }
+            layer = browserView.focussedLayer;
+            console.log("FOCUSSED LAYER: " + layer.webView.src);
+            layer.webView.on("log", logChangeCallback)
         }
     });
 }
@@ -186,7 +223,7 @@ class IOSSearchBarController {
 					bookmark_url = "http://" + bookmark_url;
 				}
 				bookmark_url = bookmark_url.toLowerCase();
-				browserView.focussedLayer.src = bookmark_url;
+				browserView.focussedLayer.webView.src = bookmark_url;
 				applicationSettings.setString("url", "none");
 			}
 	}
@@ -255,7 +292,7 @@ export function newChannelClicked(args) {
 
 export function bookmarksClicked(args) {
     //code to open the bookmarks view goes here
-		var url_string = browserView.focussedLayer.src;
+		var url_string = browserView.focussedLayer.webView.src;
 		if(url_string != "") {
 			if(!checkExistingUrl(url_string)) {
 				dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
@@ -301,7 +338,7 @@ export function historyClicked(args) {
     frames.topmost().currentPage.showModal("history-view", null, () => {
         const url = historyView.getTappedUrl();
         if (url) {
-            browserView.focussedLayer.src = url;
+            browserView.focussedLayer.webView.src = url;
         }
     }, true);
 }
@@ -310,6 +347,19 @@ export function settingsClicked(args) {
     //code to open the settings view goes here
 }
 
+
 export function layerButtonClicked(args) {
 	browserView.toggleOverview();
+	args.object.page.getViewById("debug").visibility = "collapsed";
+}
+
+export function debugClicked(args) {
+	const debugView = args.object.page.getViewById("debug");
+	if (debugView.visibility == "visible") {
+		debugView.visibility = "collapsed";
+	} else {
+		debugView.visibility = "visible";
+		Util.bringToFront(debugView);
+	}
+	hideMenu(args.object.page.getViewById("menu"));
 }

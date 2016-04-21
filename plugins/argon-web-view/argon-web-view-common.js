@@ -6,7 +6,6 @@ var ArgonWebView = (function (_super) {
     function ArgonWebView() {
         _super.apply(this, arguments);
         this.log = [];
-        this.isRealityLayer = false;
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {
         get: function () { },
@@ -15,11 +14,12 @@ var ArgonWebView = (function (_super) {
     });
     ArgonWebView.prototype._handleArgonMessage = function (message) {
         var _this = this;
-        if (!this._sessionMessagePort) {
-            console.log('Connecting to argon.js application at ' + this.url);
+        if (typeof this._sessionMessagePort == 'undefined') {
+            console.log('Connecting to argon.js application at ' + this.src);
             var manager = Argon.ArgonSystem.instance;
             var messageChannel = manager.session.createMessageChannel();
             var remoteSession_1 = manager.session.addManagedSessionPort();
+            ArgonWebView.sessionUrlMap.set(remoteSession_1, this.src);
             this._sessionMessagePort = messageChannel.port2;
             this._sessionMessagePort.onmessage = function (msg) {
                 if (!_this.session)
@@ -48,7 +48,7 @@ var ArgonWebView = (function (_super) {
         this._sessionMessagePort.postMessage(JSON.parse(message));
     };
     ArgonWebView.prototype._handleLogMessage = function (message) {
-        var logMessage = this.url + ': ' + message;
+        var logMessage = this.src + ': ' + message;
         console.log(logMessage);
         this.log.push(logMessage);
         var args = {
@@ -58,6 +58,7 @@ var ArgonWebView = (function (_super) {
         };
         this.notify(args);
     };
+    ArgonWebView.sessionUrlMap = new WeakMap();
     ArgonWebView.sessionConnectEvent = 'sessionConnect';
     ArgonWebView.logEvent = 'log';
     return ArgonWebView;

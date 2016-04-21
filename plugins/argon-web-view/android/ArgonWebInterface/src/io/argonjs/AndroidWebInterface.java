@@ -7,10 +7,16 @@ import android.webkit.JavascriptInterface;
  */
 @SuppressWarnings({"unused", "synthetic-access"})
 public abstract class AndroidWebInterface {
-    @JavascriptInterface
-    public void emit(String event, String json) {
-        onArgonEvent(event, json);
+    private String id;
+
+    public AndroidWebInterface(String id) {
+        this.id = id;
     }
 
-    public abstract void onArgonEvent(String event, String json);
+    @JavascriptInterface
+    public void emit(String event, String json) {
+        onArgonEvent(id, event, json);
+    }
+
+    public abstract void onArgonEvent(String id, String event, String json);
 }

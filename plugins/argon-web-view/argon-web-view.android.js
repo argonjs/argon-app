@@ -16,17 +16,25 @@ var ArgonWebView = (function (_super) {
             var userAgent = settings.getUserAgentString();
             settings.setUserAgentString(userAgent + " Argon");
             settings.setJavaScriptEnabled(true);
+            // Remember a particular id for each webview
+            if (!_this.id) {
+                _this.id = Date.now().toString();
+            }
+            ArgonWebView.layersById[_this.id] = _this;
             // Inject Javascript Interface
             _this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
-                onArgonEvent: function (event, data) {
-                    if (event === "message") {
-                        _this._handleArgonMessage(data);
-                    }
-                    else if (event === "log") {
-                        _this._handleLogMessage(data);
+                onArgonEvent: function (id, event, data) {
+                    var self = ArgonWebView.layersById[id];
+                    if (self) {
+                        if (event === "message") {
+                            self._handleArgonMessage(data);
+                        }
+                        else if (event === "log") {
+                            self._handleLogMessage(data);
+                        }
                     }
                 },
-            }))(), "__argon_android__");
+            }))(new java.lang.String(_this.id)), "__argon_android__");
         });
         this.on(ArgonWebView.loadStartedEvent, function () {
             // Hook into the logging
@@ -66,6 +74,7 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype.bringToFront = function () {
         this.android.bringToFront();
     };
+    ArgonWebView.layersById = {};
     return ArgonWebView;
 }(common.ArgonWebView));
 exports.ArgonWebView = ArgonWebView;

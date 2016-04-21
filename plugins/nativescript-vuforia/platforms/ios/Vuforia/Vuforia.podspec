@@ -8,8 +8,8 @@
 
 Pod::Spec.new do |s|
   s.name             = "Vuforia"
-  s.version          = "0.1.0"
-  s.summary          = "A simple Obj-C wrapper for the VuforiaSDK"
+  s.version          = "5.5.9"
+  s.summary          = "An Obj-C wrapper for the VuforiaSDK"
 
 # This description is used to generate tags and improve search results.
 #   * Think: What does it do? Why did you write it? What is the focus?
@@ -27,8 +27,10 @@ Pod::Spec.new do |s|
   s.platform     = :ios, '8.0'
   s.requires_arc = true
 
-  s.source_files = 'Source/**/*', 'SDK/include/**/*'
-  s.header_dir = 'QCAR'
+  s.source_files = 'Source/**/*.{h,m,mm}', 'SDK/include/**/*'
+  s.resources = 'Source/VideoView/shaders/*'
+  
+  s.header_dir = 'Vuforia'
   
   s.vendored_libraries = 'SDK/lib/arm/libVuforia.a'
   

@@ -9,6 +9,7 @@
                 <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" />
                 <Button col="1" id="layerBtn" class="material-icon action-btn" tap="layerButtonClicked" />
                 <Button col="2" id="menuBtn" class="material-icon action-btn" tap="menuButtonClicked" />
+                <Label col="3" ios:width="5%" />
             </GridLayout>
             </ActionBar.titleView>
         </ActionBar>
@@ -19,6 +20,10 @@
             <Label class="menuItem" text="Bookmarks" tap="bookmarksClicked"/>
             <Label class="menuItem" text="History" tap="historyClicked"/>
             <Label class="menuItem" text="Settings" tap="settingsClicked"/>
+            <Label class="menuItem" text="Debug" tap="debugClicked"/>
         </StackLayout>
+        <HtmlView id="debug">
+
+        </HtmlView>
     </browserView:BrowserView>
 </Page>

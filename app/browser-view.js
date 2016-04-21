@@ -5,6 +5,7 @@ var argon_web_view_1 = require('argon-web-view');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var util_1 = require('./util');
+var placeholder_1 = require('ui/placeholder');
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
 var fs = require('file-system');
@@ -16,92 +17,119 @@ var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
         _super.call(this);
+        this.layerContainer = new grid_layout_1.GridLayout;
+        this.layers = [];
+        this._overviewEnabled = false;
+        this._scrollOffset = 0;
+        this._panStartOffset = 0;
         var realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
-        this.zHeap = [];
         this.realityLayer = this.addLayer();
-        this.realityLayer.isRealityLayer = true;
-        this.realityLayer.src = realityHtml.readTextSync();
+        this.realityLayer.webView.src = realityHtml.readTextSync();
+        if (vuforia.ios) {
+            this.realityLayer.webView.style.visibility = 'collapsed';
+        }
+        var videoView = new placeholder_1.Placeholder();
+        videoView.on(placeholder_1.Placeholder.creatingViewEvent, function (evt) {
+            evt.view = vuforia.ios || vuforia.android || null;
+        });
+        videoView.horizontalAlignment = 'stretch';
+        videoView.verticalAlignment = 'stretch';
+        this.realityLayer.container.addChild(videoView);
+        util_1.Util.bringToFront(this.realityLayer.webView);
+        util_1.Util.bringToFront(this.realityLayer.gestureCover);
+        this.layerContainer.horizontalAlignment = 'stretch';
+        this.layerContainer.verticalAlignment = 'stretch';
+        this.addChild(this.layerContainer);
         this.backgroundColor = new color_1.Color("#555");
-        this.overview = {
-            active: false,
-            animating: false,
-            cleanup: [],
-        };
         // Make a new layer to be used with the url bar.
         this._setFocussedLayer(this.addLayer());
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
+        var layer;
         // Put things in a grid layout to be able to decorate later.
         var container = new grid_layout_1.GridLayout();
         container.horizontalAlignment = 'stretch';
         container.verticalAlignment = 'stretch';
         // Make an argon-enabled webview
-        var layer = new argon_web_view_1.ArgonWebView;
-        layer.on('propertyChange', function (eventData) {
-            if (eventData.propertyName === 'url' && layer === _this.focussedLayer) {
+        var webView = new argon_web_view_1.ArgonWebView;
+        webView.on('propertyChange', function (eventData) {
+            if (eventData.propertyName === 'url' && webView === _this.focussedLayer.webView) {
                 _this._setURL(eventData.value);
             }
         });
-        layer.on('sessionConnect', function (eventData) {
+        webView.on('sessionConnect', function (eventData) {
             var session = eventData.session;
-            if (layer === _this.focussedLayer) {
+            if (webView === _this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
             }
         });
-        layer.horizontalAlignment = 'stretch';
-        layer.verticalAlignment = 'stretch';
-        // Keep track of how z it is
-        this.zHeap.push(this.zHeap.length);
-        container.addChild(layer);
-        this.addChild(container);
+        webView.horizontalAlignment = 'stretch';
+        webView.verticalAlignment = 'stretch';
+        // Cover the webview to detect gestures and disable interaction
+        var gestureCover = new grid_layout_1.GridLayout();
+        gestureCover.style.visibility = 'collapsed';
+        gestureCover.horizontalAlignment = 'stretch';
+        gestureCover.verticalAlignment = 'stretch';
+        gestureCover.on(gestures_1.GestureTypes.tap, function (event) {
+            _this._setFocussedLayer(layer);
+            if (layer !== _this.realityLayer) {
+                _this.layers.splice(_this.layers.indexOf(layer), 1);
+                _this.layers.push(layer);
+                util_1.Util.bringToFront(container);
+            }
+            _this.hideOverview();
+        });
+        container.addChild(webView);
+        container.addChild(gestureCover);
+        this.layerContainer.addChild(container);
+        layer = {
+            container: container,
+            webView: webView,
+            gestureCover: gestureCover
+        };
+        this.layers.push(layer);
         this._setFocussedLayer(layer);
         return layer;
     };
-    BrowserView.prototype.focusAndSyncHeap = function (index) {
-        var oldDepth = this.zHeap[index];
-        for (var i = 0; i < this.zHeap.length; i += 1) {
-            if (this.zHeap[i] > oldDepth) {
-                this.zHeap[i] -= 1;
-            }
+    BrowserView.prototype.handlePan = function (evt) {
+        if (evt.state === gestures_1.GestureStateTypes.began) {
+            this._panStartOffset = this._scrollOffset;
         }
-        this.zHeap[index] = this.zHeap.length - 1;
+        this._scrollOffset = this._panStartOffset + evt.deltaY;
+        this.updateLayerTransforms();
     };
-    BrowserView.prototype.getLayers = function () {
-        var layers = [];
-        for (var i = 0; i < this.getChildrenCount(); i += 1) {
-            var view = this.getChildAt(i);
-            if (view instanceof grid_layout_1.GridLayout) {
-                layers.push(view);
-            }
-        }
-        return layers;
-    };
-    BrowserView.overviewOffset = function (depth) {
+    BrowserView.prototype.calculateLayerTransform = function (index) {
+        var layerPosition = index * 200 + this._scrollOffset;
+        var normalizedPosition = layerPosition / this.getMeasuredHeight();
+        var theta = Math.min(Math.max(normalizedPosition + 0.2, 0), 0.85) * Math.PI;
+        var scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.2;
         return {
-            x: 0,
-            y: depth > 0 ? depth * depth * 200 : 0,
+            translate: {
+                x: 0,
+                y: layerPosition
+            },
+            scale: {
+                x: scaleFactor,
+                y: scaleFactor
+            }
         };
+    };
+    BrowserView.prototype.updateLayerTransforms = function () {
+        var _this = this;
+        if (!this._overviewEnabled)
+            return;
+        this.layers.forEach(function (layer, index) {
+            var transform = _this.calculateLayerTransform(index);
+            layer.container.scaleX = transform.scale.x;
+            layer.container.scaleY = transform.scale.y;
+            layer.container.translateX = transform.translate.x;
+            layer.container.translateY = transform.translate.y;
+        });
     };
     ;
-    BrowserView.overviewScale = function (depth) {
-        var factor = 1 + (depth - 1.5) * 0.15;
-        return {
-            x: factor,
-            y: factor,
-        };
-    };
-    ;
-    BrowserView.depths = function (index, max) {
-        var initial = (index + 1) / 2 - (max / 2) + 1;
-        return {
-            min: -2 + initial,
-            current: initial,
-            max: initial + max / 2,
-        };
-    };
     BrowserView.prototype.toggleOverview = function () {
-        if (this.overview.active) {
+        if (this._overviewEnabled) {
             this.hideOverview();
         }
         else {
@@ -110,172 +138,55 @@ var BrowserView = (function (_super) {
     };
     BrowserView.prototype.showOverview = function () {
         var _this = this;
-        // TODO: do not hardcode pixel values, use percents?
-        // Do not start if we're already doing this.
-        if (this.overview.animating || this.overview.active) {
-            return;
-        }
-        // Mark us as doing work.
-        this.overview.animating = true;
-        setTimeout(function () {
-            _this.overview.animating = false;
-        }, OVERVIEW_ANIMATION_DURATION);
-        // Mark as active
-        this.overview.active = true;
-        this.overview.cleanup.push(function () {
-            _this.overview.active = false;
-        });
-        // Store depths
-        var depths = [];
-        // Get all layers
-        var layers = this.getLayers();
-        // For transparent webviews, add a little bit of opacity
-        layers.forEach(function (layer) {
-            layer.animate({
+        this._overviewEnabled = true;
+        this.layers.forEach(function (layer, index) {
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = true;
+            layer.gestureCover.style.visibility = 'visible';
+            layer.gestureCover.on(gestures_1.GestureTypes.pan, _this.handlePan.bind(_this));
+            // For transparent webviews, add a little bit of opacity
+            layer.container.animate({
                 backgroundColor: new color_1.Color(128, 255, 255, 255),
                 duration: OVERVIEW_ANIMATION_DURATION,
             });
-        });
-        this.overview.cleanup.push(function () {
-            layers.forEach(function (layer) {
-                layer.animate({
-                    backgroundColor: new color_1.Color(0, 255, 255, 255),
-                    duration: OVERVIEW_ANIMATION_DURATION,
-                });
-            });
-        });
-        // Assign individual layers
-        for (var i = 0; i < layers.length; i += 1) {
-            depths.push(BrowserView.depths(this.zHeap[i], layers.length));
-        }
-        // Update for the first time & animate.
-        for (var i = 0; i < layers.length; i += 1) {
-            layers[i].animate({
-                translate: BrowserView.overviewOffset(depths[i].current),
-                scale: BrowserView.overviewScale(depths[i].current),
+            // Update for the first time & animate.
+            var _a = _this.calculateLayerTransform(index), translate = _a.translate, scale = _a.scale;
+            layer.container.animate({
+                translate: translate,
+                scale: scale,
                 duration: OVERVIEW_ANIMATION_DURATION,
                 curve: enums_1.AnimationCurve.easeOut,
             });
-        }
-        // Animation to hide the overview
-        this.overview.cleanup.push(function () {
-            layers.forEach(function (layer) {
-                layer.animate({
-                    translate: {
-                        x: 0,
-                        y: 0,
-                    },
-                    scale: {
-                        x: 1,
-                        y: 1,
-                    },
-                    duration: OVERVIEW_ANIMATION_DURATION,
-                    curve: enums_1.AnimationCurve.easeOut,
-                });
-            });
         });
-        // Update and render
-        var pastY = 0;
-        var touchHandle = function (y, action, view) {
-            // NOTE: relies on layer's internal structure.
-            var nextY = y + view.parent.translateY;
-            var deltaY = nextY - pastY;
-            pastY = nextY;
-            if (action === "up" || action === "down") {
-                return;
-            }
-            // "Re-render" all layers
-            for (var i = 0; i < layers.length; i += 1) {
-                // Calculate new positions
-                var depth = depths[i];
-                depth.current += deltaY * 0.005;
-                if (depth.current > depth.max) {
-                    depth.current = depth.max;
-                }
-                else if (depth.current < depth.min) {
-                    depth.current = depth.min;
-                }
-                var layer = layers[i];
-                var offset = BrowserView.overviewOffset(depth.current);
-                var scale = BrowserView.overviewScale(depth.current);
-                // Set those positions
-                layer.scaleX = scale.x;
-                layer.scaleY = scale.y;
-                layer.translateX = offset.x;
-                layer.translateY = offset.y;
-            }
-            ;
-        };
-        // Watch for panning, add gesture
-        var _loop_1 = function(i) {
-            var layer = layers[i];
-            // Cover the webview to detect gestures and disable interaction
-            var gestureCover = new grid_layout_1.GridLayout();
-            gestureCover.horizontalAlignment = 'stretch';
-            gestureCover.verticalAlignment = 'stretch';
-            gestureCover.on(gestures_1.GestureTypes.touch, function (event) {
-                touchHandle(event.getY(), event.action, event.view);
-            });
-            gestureCover.on(gestures_1.GestureTypes.tap, function (event) {
-                // Get the webview that was tapped
-                // NOTE: relies on layer's internal structure.
-                var container = event.view.parent;
-                var argonView = container.getChildAt(0);
-                _this._setFocussedLayer(argonView);
-                _this.focusAndSyncHeap(i);
-                util_1.Util.bringToFront(container);
-                _this.hideOverview();
-            });
-            layer.addChild(gestureCover);
-            // remove gesture cover and listeners
-            this_1.overview.cleanup.push(function () {
-                gestureCover.off(gestures_1.GestureTypes.touch);
-                gestureCover.off(gestures_1.GestureTypes.tap);
-                layer.removeChild(gestureCover);
-            });
-        };
-        var this_1 = this;
-        for (var i = 0; i < layers.length; i += 1) {
-            _loop_1(i);
-        }
         // Be able to drag on black
-        this.on(gestures_1.GestureTypes.touch, function (event) {
-            touchHandle(event.getY(), event.action, event.view);
-        });
-        this.overview.cleanup.push(function () {
-            _this.off(gestures_1.GestureTypes.pan);
-        });
+        this.layerContainer.on(gestures_1.GestureTypes.pan, this.handlePan.bind(this));
     };
     BrowserView.prototype.hideOverview = function () {
         var _this = this;
-        // Do not start if we're already doing this.
-        if (this.overview.animating || !this.overview.active) {
-            return;
-        }
-        // Mark us as doing work.
-        this.overview.animating = true;
-        setTimeout(function () {
-            _this.overview.animating = false;
-        }, OVERVIEW_ANIMATION_DURATION);
-        this.overview.cleanup.forEach(function (task) {
-            task();
+        this._overviewEnabled = false;
+        var animations = this.layers.map(function (layer, index) {
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = false;
+            layer.gestureCover.style.visibility = 'collapsed';
+            layer.gestureCover.off(gestures_1.GestureTypes.pan);
+            // For transparent webviews, add a little bit of opacity
+            layer.container.animate({
+                backgroundColor: new color_1.Color(0, 255, 255, 255),
+                duration: OVERVIEW_ANIMATION_DURATION,
+            });
+            // Update for the first time & animate.
+            return layer.container.animate({
+                translate: { x: 0, y: 0 },
+                scale: { x: 1, y: 1 },
+                duration: OVERVIEW_ANIMATION_DURATION,
+                curve: enums_1.AnimationCurve.easeOut,
+            });
         });
-        this.overview.cleanup = [];
-    };
-    BrowserView.prototype.onLoaded = function () {
-        _super.prototype.onLoaded.call(this);
-        if (vuforia.ios) {
-            var pageUIViewController = this.page.ios;
-            var realityLayerUIView = this.realityLayer.ios;
-            this.videoViewController = vuforia.ios.videoViewController;
-            pageUIViewController.addChildViewController(this.videoViewController);
-            realityLayerUIView.addSubview(this.videoViewController.view);
-            realityLayerUIView.sendSubviewToBack(this.videoViewController.view);
-        }
-    };
-    BrowserView.prototype.onLayout = function (left, top, right, bottom) {
-        _super.prototype.onLayout.call(this, left, top, right, bottom);
-        // this.videoViewController.view.setNeedsLayout();
+        Promise.all(animations).then(function () {
+            _this._scrollOffset = 0;
+        });
+        // Be able to drag on black
+        this.layerContainer.off(gestures_1.GestureTypes.pan);
     };
     BrowserView.prototype._setURL = function (url) {
         if (this._url !== url) {
@@ -294,8 +205,8 @@ var BrowserView = (function (_super) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.url);
-            Argon.ArgonSystem.instance.focus.setSession(layer.session);
+            this._setURL(layer.webView.src);
+            Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
         }
     };
     Object.defineProperty(BrowserView.prototype, "focussedLayer", {

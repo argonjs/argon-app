@@ -10,6 +10,8 @@ import * as trace from 'trace';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
+const processPool = WKProcessPool.new();
+
 export class ArgonWebView extends common.ArgonWebView implements WKScriptMessageHandler, WKNavigationDelegate {
 
     private _ios:WKWebView
@@ -23,7 +25,8 @@ export class ArgonWebView extends common.ArgonWebView implements WKScriptMessage
         // We want to replace the UIWebView created by superclass with WKWebView instance
         this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate // remove reference to UIWebView delegate created by super class
-
+        
+        configuration.processPool = processPool;
         configuration.userContentController = WKUserContentController.alloc().init();
         configuration.userContentController.addScriptMessageHandlerName(this, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this, "log");

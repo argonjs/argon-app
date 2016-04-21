@@ -2,14 +2,16 @@ import {View} from 'ui/core/view';
 import {Color} from 'color';
 import {GridLayout} from 'ui/layouts/grid-layout';
 import {ArgonWebView} from 'argon-web-view';
-import {PropertyChangeData} from 'data/observable';
 import {AnimationCurve} from 'ui/enums';
 import {
   GestureTypes,
-  TouchGestureEventData,
+  GestureStateTypes,
+  PanGestureEventData,
   GestureEventData,
 } from 'ui/gestures';
 import {Util} from './util';
+import {PropertyChangeData} from 'data/observable'
+import {Placeholder, CreateViewEventData} from 'ui/placeholder'
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 import * as fs from 'file-system';
@@ -19,123 +21,139 @@ const DEFAULT_REALITY_HTML = "default-reality.html";
 const APP_FOLDER = fs.knownFolders.currentApp().path;
 const DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
 
+export interface Layer {
+    webView:ArgonWebView,
+    container:GridLayout,
+    gestureCover:GridLayout
+}
+
 export class BrowserView extends GridLayout {
-    realityLayer:ArgonWebView;
-
-    private videoViewController:VuforiaVideoViewController;
+    realityLayer:Layer;
+    videoView:Placeholder;
+    
+    layerContainer = new GridLayout;
+    layers:Layer[] = [];
+        
     private _url:string;
-    private _focussedLayer:ArgonWebView;
-    private inOverview: boolean;
-
-    private overview: {
-      active: boolean,
-      animating: boolean,
-      cleanup: Array<() => void>,
-    };
-
-    private zHeap: Array<number>;
+    private _focussedLayer:Layer;
+    private _overviewEnabled = false;
+    private _scrollOffset = 0;
+    private _panStartOffset = 0;
 
     constructor() {
         super();
         const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
-        this.zHeap = [];
         this.realityLayer = this.addLayer();
-        this.realityLayer.isRealityLayer = true;
-        this.realityLayer.src = realityHtml.readTextSync();
+        this.realityLayer.webView.src = realityHtml.readTextSync();
+        if (vuforia.ios) {
+            this.realityLayer.webView.style.visibility = 'collapsed';
+        }
+        const videoView = new Placeholder();
+        videoView.on(Placeholder.creatingViewEvent, (evt:CreateViewEventData) => {
+            evt.view = vuforia.ios || vuforia.android || null;
+        })
+        videoView.horizontalAlignment = 'stretch';
+        videoView.verticalAlignment = 'stretch';
+        this.realityLayer.container.addChild(videoView);
+        Util.bringToFront(this.realityLayer.webView);
+        Util.bringToFront(this.realityLayer.gestureCover);
+        
+        this.layerContainer.horizontalAlignment = 'stretch';
+        this.layerContainer.verticalAlignment = 'stretch';
+        this.addChild(this.layerContainer);
         this.backgroundColor = new Color("#555");
-
-        this.overview = {
-          active: false,
-          animating: false,
-          cleanup: [],
-        };
-
         // Make a new layer to be used with the url bar.
         this._setFocussedLayer(this.addLayer());
     }
 
     addLayer() {
+        let layer;
         // Put things in a grid layout to be able to decorate later.
         const container = new GridLayout();
         container.horizontalAlignment = 'stretch';
         container.verticalAlignment = 'stretch';
-
         // Make an argon-enabled webview
-        const layer = new ArgonWebView;
-        layer.on('propertyChange', (eventData:PropertyChangeData) => {
-            if (eventData.propertyName === 'url' && layer === this.focussedLayer) {
+        const webView = new ArgonWebView;
+        webView.on('propertyChange', (eventData:PropertyChangeData) => {
+            if (eventData.propertyName === 'url' && webView === this.focussedLayer.webView) {
                 this._setURL(eventData.value);
             }
         });
-        layer.on('sessionConnect', (eventData) => {
-            const session = eventData.session;
-            if (layer === this.focussedLayer) {
+        webView.on('sessionConnect', (eventData) => {
+            var session = eventData.session;
+            if (webView === this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
             }
         });
-        layer.horizontalAlignment = 'stretch';
-        layer.verticalAlignment = 'stretch';
-
-        // Keep track of how z it is
-        this.zHeap.push(this.zHeap.length);
-
-        container.addChild(layer);
-        this.addChild(container);
+        webView.horizontalAlignment = 'stretch';
+        webView.verticalAlignment = 'stretch';
+        // Cover the webview to detect gestures and disable interaction
+        const gestureCover = new GridLayout();
+        gestureCover.style.visibility = 'collapsed';
+        gestureCover.horizontalAlignment = 'stretch';
+        gestureCover.verticalAlignment = 'stretch';
+        gestureCover.on(GestureTypes.tap, (event) => {
+            this._setFocussedLayer(layer);
+            if (layer !== this.realityLayer) {
+                this.layers.splice(this.layers.indexOf(layer), 1);
+                this.layers.push(layer);
+                Util.bringToFront(container);
+            }
+            this.hideOverview();
+        });
+        container.addChild(webView);
+        container.addChild(gestureCover);
+        this.layerContainer.addChild(container);
+        
+        layer = {
+            container: container,
+            webView: webView,
+            gestureCover: gestureCover
+        };
+        this.layers.push(layer);
         this._setFocussedLayer(layer);
         return layer;
     }
-
-    private focusAndSyncHeap(index: number) {
-      const oldDepth = this.zHeap[index];
-      for (let i = 0; i < this.zHeap.length; i += 1) {
-        if (this.zHeap[i] > oldDepth) {
-          this.zHeap[i] -= 1;
+    
+    handlePan(evt:PanGestureEventData) {
+        if (evt.state === GestureStateTypes.began) {
+            this._panStartOffset = this._scrollOffset;
         }
-      }
-      this.zHeap[index] = this.zHeap.length - 1;
+        this._scrollOffset = this._panStartOffset + evt.deltaY;
+        this.updateLayerTransforms();
     }
-
-    private getLayers(): Array<GridLayout> {
-      const layers = [];
-      for (let i = 0; i < this.getChildrenCount(); i += 1) {
-        const view = this.getChildAt(i);
-        if (view instanceof GridLayout) {
-          layers.push(view);
-        }
-      }
-      return layers;
-    }
-
-    private static overviewOffset(depth: number): {x: number, y: number} {
-      return {
-        x: 0,
-        y: depth > 0 ? depth * depth * 200 : 0,
-      };
-    };
-
-    private static overviewScale(depth: number): {x: number, y: number} {
-      const factor = 1 + (depth - 1.5) * 0.15;
-      return {
-        x: factor,
-        y: factor,
-      };
-    };
-
-    private static depths(index: number, max: number): {
-      min: number,
-      current: number,
-      max: number,
-    } {
-        const initial = (index + 1) / 2 - (max / 2) + 1;
+    
+    calculateLayerTransform(index) {
+        const layerPosition = index * 200 + this._scrollOffset;
+        const normalizedPosition = layerPosition / this.getMeasuredHeight();
+        const theta = Math.min(Math.max(normalizedPosition + 0.2, 0), 0.85) * Math.PI;
+        const scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.2;
         return {
-          min: -2 + initial,
-          current: initial,
-          max: initial + max / 2,
+            translate: {
+                x: 0,
+                y: layerPosition
+            },
+            scale: {
+                x: scaleFactor,
+                y: scaleFactor
+            }
         };
     }
+    
+    updateLayerTransforms() {
+        if (!this._overviewEnabled)
+            return;
+        this.layers.forEach((layer, index) => {
+            var transform = this.calculateLayerTransform(index);
+            layer.container.scaleX = transform.scale.x;
+            layer.container.scaleY = transform.scale.y;
+            layer.container.translateX = transform.translate.x;
+            layer.container.translateY = transform.translate.y;
+        });
+    };
 
     toggleOverview() {
-      if (this.overview.active) {
+      if (this._overviewEnabled) {
         this.hideOverview();
       } else {
         this.showOverview();
@@ -143,188 +161,55 @@ export class BrowserView extends GridLayout {
     }
 
     showOverview() {
-      // TODO: do not hardcode pixel values, use percents?
-      // Do not start if we're already doing this.
-      if (this.overview.animating || this.overview.active) {
-        return;
-      }
-      // Mark us as doing work.
-      this.overview.animating = true;
-      setTimeout(() => {
-        this.overview.animating = false;
-      }, OVERVIEW_ANIMATION_DURATION);
-
-      // Mark as active
-      this.overview.active = true;
-      this.overview.cleanup.push(() => {
-        this.overview.active = false;
-      });
-
-      // Store depths
-      const depths: Array<{
-        min: number,
-        current: number,
-        max: number,
-      }> = [];
-
-      // Get all layers
-      const layers = this.getLayers();
-
-      // For transparent webviews, add a little bit of opacity
-      layers.forEach((layer) => {
-        layer.animate({
-          backgroundColor: new Color(128, 255, 255, 255),
-          duration: OVERVIEW_ANIMATION_DURATION,
+        this._overviewEnabled = true;
+        this.layers.forEach((layer, index) => {
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = true;
+            layer.gestureCover.style.visibility = 'visible';
+            layer.gestureCover.on(GestureTypes.pan, this.handlePan.bind(this));
+            // For transparent webviews, add a little bit of opacity
+            layer.container.animate({
+                backgroundColor: new Color(128, 255, 255, 255),
+                duration: OVERVIEW_ANIMATION_DURATION,
+            });
+            // Update for the first time & animate.
+            const {translate, scale} = this.calculateLayerTransform(index);
+            layer.container.animate({
+                translate,
+                scale,
+                duration: OVERVIEW_ANIMATION_DURATION,
+                curve: AnimationCurve.easeOut,
+            });
         });
-      });
-      this.overview.cleanup.push(() => {
-        layers.forEach((layer) => {
-          layer.animate({
-            backgroundColor: new Color(0, 255, 255, 255),
-            duration: OVERVIEW_ANIMATION_DURATION,
-          });
-        });
-      });
-
-      // Assign individual layers
-      for (let i = 0; i < layers.length; i += 1) {
-        depths.push(BrowserView.depths(this.zHeap[i], layers.length));
-      }
-
-      // Update for the first time & animate.
-      for (let i = 0; i < layers.length; i += 1) {
-        layers[i].animate({
-          translate: BrowserView.overviewOffset(depths[i].current),
-          scale: BrowserView.overviewScale(depths[i].current),
-          duration: OVERVIEW_ANIMATION_DURATION,
-          curve: AnimationCurve.easeOut,
-        });
-      }
-
-      // Animation to hide the overview
-      this.overview.cleanup.push(() => {
-        layers.forEach((layer) => {
-          layer.animate({
-            translate: {
-              x: 0,
-              y: 0,
-            },
-            scale: {
-              x: 1,
-              y: 1,
-            },
-            duration: OVERVIEW_ANIMATION_DURATION,
-            curve: AnimationCurve.easeOut,
-          });
-        });
-      });
-
-      // Update and render
-      let pastY = 0;
-      const touchHandle = (y: number, action: string, view: View) => {
-        // NOTE: relies on layer's internal structure.
-        const nextY = y + view.parent.translateY;
-        const deltaY = nextY - pastY;
-        pastY = nextY;
-
-        if (action === "up" || action === "down") {
-          return;
-        }
-
-        // "Re-render" all layers
-        for (let i = 0; i < layers.length; i += 1) {
-          // Calculate new positions
-          const depth = depths[i];
-          depth.current += deltaY * 0.005;
-          if (depth.current > depth.max) {
-            depth.current = depth.max;
-          } else if (depth.current < depth.min) {
-            depth.current = depth.min;
-          }
-
-          const layer = layers[i];
-          const offset = BrowserView.overviewOffset(depth.current);
-          const scale = BrowserView.overviewScale(depth.current);
-
-          // Set those positions
-          layer.scaleX = scale.x;
-          layer.scaleY = scale.y;
-          layer.translateX = offset.x;
-          layer.translateY = offset.y;
-        };
-      };
-
-      // Watch for panning, add gesture
-      for (let i = 0; i < layers.length; i += 1) {
-        const layer = layers[i];
-        // Cover the webview to detect gestures and disable interaction
-        const gestureCover = new GridLayout();
-        gestureCover.horizontalAlignment = 'stretch';
-        gestureCover.verticalAlignment = 'stretch';
-        gestureCover.on(GestureTypes.touch, (event: TouchGestureEventData) => {
-          touchHandle(event.getY(), event.action, event.view);
-        });
-        gestureCover.on(GestureTypes.tap, (event: GestureEventData) => {
-          // Get the webview that was tapped
-          // NOTE: relies on layer's internal structure.
-          const container = <GridLayout> event.view.parent;
-          const argonView = <ArgonWebView> container.getChildAt(0);
-          this._setFocussedLayer(argonView);
-          this.focusAndSyncHeap(i);
-          Util.bringToFront(container);
-          this.hideOverview();
-        });
-        layer.addChild(gestureCover);
-
-        // remove gesture cover and listeners
-        this.overview.cleanup.push(() => {
-          gestureCover.off(GestureTypes.touch);
-          gestureCover.off(GestureTypes.tap);
-          layer.removeChild(gestureCover);
-        });
-      }
-
-      // Be able to drag on black
-      this.on(GestureTypes.touch, (event: TouchGestureEventData) => {
-        touchHandle(event.getY(), event.action, event.view);
-      });
-      this.overview.cleanup.push(() => {
-        this.off(GestureTypes.pan);
-      });
+        // Be able to drag on black
+        this.layerContainer.on(GestureTypes.pan, this.handlePan.bind(this));
     }
 
     hideOverview() {
-      // Do not start if we're already doing this.
-      if (this.overview.animating || !this.overview.active) {
-        return;
-      }
-      // Mark us as doing work.
-      this.overview.animating = true;
-      setTimeout(() => {
-        this.overview.animating = false;
-      }, OVERVIEW_ANIMATION_DURATION);
-
-      this.overview.cleanup.forEach((task) => {
-        task();
-      });
-      this.overview.cleanup = [];
-    }
-
-    onLoaded() {
-        super.onLoaded();
-        if (vuforia.ios) {
-            const pageUIViewController:UIViewController = this.page.ios;
-            const realityLayerUIView:UIView = this.realityLayer.ios;
-            this.videoViewController = vuforia.ios.videoViewController;
-            pageUIViewController.addChildViewController(this.videoViewController);
-            realityLayerUIView.addSubview(this.videoViewController.view);
-            realityLayerUIView.sendSubviewToBack(this.videoViewController.view);
-        }
-    }
-
-    onLayout(left:number, top:number, right:number, bottom:number) {
-        super.onLayout(left, top, right, bottom);
-        // this.videoViewController.view.setNeedsLayout();
+        this._overviewEnabled = false;
+        var animations = this.layers.map((layer, index) => {
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = false;
+            layer.gestureCover.style.visibility = 'collapsed';
+            layer.gestureCover.off(GestureTypes.pan);
+            // For transparent webviews, add a little bit of opacity
+            layer.container.animate({
+                backgroundColor: new Color(0, 255, 255, 255),
+                duration: OVERVIEW_ANIMATION_DURATION,
+            });
+            // Update for the first time & animate.
+            return layer.container.animate({
+                translate: { x: 0, y: 0 },
+                scale: { x: 1, y: 1 },
+                duration: OVERVIEW_ANIMATION_DURATION,
+                curve: AnimationCurve.easeOut,
+            });
+        });
+        Promise.all(animations).then(() => {
+            this._scrollOffset = 0;
+        });
+        // Be able to drag on black
+        this.layerContainer.off(GestureTypes.pan);
     }
 
     private _setURL(url:string) {
@@ -338,12 +223,12 @@ export class BrowserView extends GridLayout {
         return this._url;
     }
 
-    private _setFocussedLayer(layer:ArgonWebView) {
+    private _setFocussedLayer(layer:Layer) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.url);
-            Argon.ArgonSystem.instance.focus.setSession(layer.session);
+            this._setURL(layer.webView.src);
+            Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
         }
     }
 

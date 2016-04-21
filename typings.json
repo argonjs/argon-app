@@ -1,0 +1,6 @@
+{
+  "name": "argon-app",
+  "ambientDependencies": {
+    "urijs": "registry:dt/urijs#1.15.1+20160326065022"
+  }
+}

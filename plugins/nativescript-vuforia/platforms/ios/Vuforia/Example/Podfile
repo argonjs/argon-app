@@ -1,6 +1,6 @@
 source 'https://github.com/CocoaPods/Specs.git'
 use_frameworks!
 
-target 'Vuforia_Example', :exclusive => true do
+target 'Vuforia_Example' do
   pod "Vuforia", :path => "../"
 end
