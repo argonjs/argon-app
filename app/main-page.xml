@@ -4,7 +4,7 @@
     loaded="pageLoaded" backgroundColor="#00000000">
     <Page.actionBar>
         <ActionBar>
-            <ActionBar.titleView  margin="0px" padding="0px" >
+            <ActionBar.titleView margin="0px" padding="0px" >
             <GridLayout id="header" columns="*, auto, auto, auto" rows="auto" horizontalAlignment="stretch">
                 <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" />
                 <Button col="1" id="layerBtn" class="material-icon action-btn" tap="layerButtonClicked" />

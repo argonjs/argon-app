@@ -1,0 +1,19 @@
+<Page xmlns="http://schemas.nativescript.org/tns.xsd" loaded="pageLoaded">
+<Page.actionBar>
+    <ActionBar title="Bookmarks">
+        <ActionBar.actionItems>
+            <ActionItem text="x" tap="back" ios.position="right" />
+        </ActionBar.actionItems>
+    </ActionBar>
+
+</Page.actionBar>
+<ListView id="listView1" items="{{ myItems }}">
+    <ListView.itemTemplate>
+        <GridLayout padding="10" rows="50" backgroundColor="#FFFFFF">
+            <Label id="{{ name }}" tap="listViewItemTap" class="websiteurl" text="{{ name }}" horizontalAlignment="left" verticalAlignment="center" row="0" backgroundColor="#FFFFFF"/>
+            <Button id="{{ name }}" class="deletebutton" tap="deleteBookmark" text="x" horizontalAlignment="right" verticalAlignment="center" row="0" backgroundColor="#FFFFFF"/>
+        </GridLayout>
+    </ListView.itemTemplate>
+</ListView>
+
+</Page>

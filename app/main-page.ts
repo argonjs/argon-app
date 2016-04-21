@@ -17,6 +17,8 @@ import {Color} from "color";
 
 import * as vuforia from 'nativescript-vuforia';
 
+import dialogs = require("ui/dialogs");
+import applicationSettings = require("application-settings");
 import {Util} from './util';
 import {ArgonWebView} from 'argon-web-view'
 import {BrowserView} from './browser-view'
@@ -50,7 +52,10 @@ manager.vuforia.init({
 })
 
 export function pageLoaded(args) {
-
+	//This was added to fix the bug of bookmark back navigation is shown when going back
+	var controller = frames.topmost().ios.controller;
+  var navigationItem = controller.visibleViewController.navigationItem;
+	navigationItem.setHidesBackButtonAnimated(true, false);
 	const page:pages.Page = args.object;
 	page.backgroundColor = new color.Color("black");
 
@@ -81,7 +86,6 @@ export function actionBarLoaded(args) {
 
 export function searchBarLoaded(args) {
 	searchBar = args.object;
-
 	searchBar.on(searchbar.SearchBar.submitEvent, () => {
 		const url = URI(searchBar.text);
 		if (url.protocol() !== "http" || url.protocol() !== "https") {
@@ -95,6 +99,7 @@ export function searchBarLoaded(args) {
 		iosSearchBarController = new IOSSearchBarController(searchBar);
 	}
 }
+
 
 export function browserViewLoaded(args) {
 	browserView = args.object;
@@ -206,8 +211,21 @@ class IOSSearchBarController {
 			}
 		}
 
-		application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
-		application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+
+    	application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
+    	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+
+			//This part is for bookmark. It basically checks if the app just returning from bookmark. And load the url
+			if(applicationSettings.getString("url") != "none" && applicationSettings.getString("url") != null) {
+				let bookmark_url = applicationSettings.getString("url");
+				const protocolRegex = /^[^:]+(?=:\/\/)/;
+				if (!protocolRegex.test(bookmark_url)) {
+					bookmark_url = "http://" + bookmark_url;
+				}
+				bookmark_url = bookmark_url.toLowerCase();
+				browserView.focussedLayer.webView.src = bookmark_url;
+				applicationSettings.setString("url", "none");
+			}
 	}
 
 	private setPlaceholderText(text:string) {
@@ -274,6 +292,46 @@ export function newChannelClicked(args) {
 
 export function bookmarksClicked(args) {
     //code to open the bookmarks view goes here
+		var url_string = browserView.focussedLayer.webView.src;
+		if(url_string != "") {
+			if(!checkExistingUrl(url_string)) {
+				dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
+					if(r.result !== false) {
+						var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
+						modified_url = modified_url.replace("/", "");
+						modified_url = modified_url.replace("/","");
+						modified_url = modified_url.replace("http:","");
+						modified_url = modified_url.replace("https:","");
+						applicationSettings.setString("bookmarkurl", modified_url);
+						applicationSettings.setString("bookmarkname", r.text);
+						frames.topmost().navigate("bookmark");
+					}
+				});
+			} else {
+				frames.topmost().navigate("bookmark");
+			}
+		} else {
+			dialogs.alert("Url string for bookmark can't be empty").then(function() {});
+		}
+}
+
+//Helper function for bookmark. It checks if the url already existed in bookmark
+function checkExistingUrl(url_string) {
+	url_string = url_string.replace(/([^:]\/)\/+/g,"");
+	url_string = url_string.replace("/","");
+	url_string = url_string.replace("/","");
+	url_string = url_string.replace("http:","");
+	url_string = url_string.replace("https:","");
+	var url = [];
+	if(applicationSettings.getString("save_bookmark_url") != null) {
+		url = JSON.parse(applicationSettings.getString("save_bookmark_url"));
+	}
+	for(var i = 0 ; i < url.length; i++) {
+		if(url[i]["url"] == url_string) {
+			return true;
+		}
+	}
+	return false;
 }
 
 export function historyClicked(args) {
