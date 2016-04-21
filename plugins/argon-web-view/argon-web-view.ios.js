@@ -3,6 +3,7 @@ var common = require('./argon-web-view-common');
 var web_view_1 = require('ui/web-view');
 var trace = require('trace');
 var ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
+var processPool = WKProcessPool.new();
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
@@ -11,6 +12,7 @@ var ArgonWebView = (function (_super) {
         // We want to replace the UIWebView created by superclass with WKWebView instance
         this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate; // remove reference to UIWebView delegate created by super class
+        configuration.processPool = processPool;
         configuration.userContentController = WKUserContentController.alloc().init();
         configuration.userContentController.addScriptMessageHandlerName(this, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this, "log");

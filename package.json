@@ -1,11 +1,11 @@
 {
   "nativescript": {
     "id": "edu.gatech.ael.argon4",
-    "tns-android": {
-      "version": "1.5.1"
-    },
     "tns-ios": {
       "version": "1.7.0"
+    },
+    "tns-android": {
+      "version": "1.7.1"
     }
   },
   "dependencies": {
@@ -14,7 +14,8 @@
     "nativescript-geolocation": "0.0.7",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "openpgp": "^2.1.0",
-    "tns-core-modules": "^1.7.1"
+    "tns-core-modules": "^1.7.1",
+    "urijs": "^1.17.1"
   },
   "devDependencies": {
     "nativescript-dev-typescript": "^0.3.1",

@@ -17,7 +17,7 @@ https://github.com/argonjs/argon repo adjacent to this repo
 http://docs.nativescript.org/start/ns-setup-os-x (node.js and 
 Cocoapods is required). 
 
-2. Execute `tns install`
+2. Execute `tns install` in the `argon-app` directory
 
 3. Execute `tns run ios`, or execute `tns prepare ios` and open argonapp.xcworkspace (located at /argon-app/platforms/ios) in XCode
 
