@@ -17,12 +17,15 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public log:string[] = [];
 
     public _handleArgonMessage(message:string) {
-        if (typeof this._sessionMessagePort == 'undefined') {
-            console.log('Connecting to argon.js application at ' + this.src);
+        if (typeof this._sessionMessagePort == 'undefined') { 
+            // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
+            const sessionUrl = this.url;
+            
+            console.log('Connecting to argon.js application at ' + sessionUrl);
             const manager = Argon.ArgonSystem.instance;
             const messageChannel = manager.session.createMessageChannel();
             const remoteSession = manager.session.addManagedSessionPort();
-            ArgonWebView.sessionUrlMap.set(remoteSession, this.src);
+            ArgonWebView.sessionUrlMap.set(remoteSession, sessionUrl);
             
             this._sessionMessagePort = messageChannel.port2;
             this._sessionMessagePort.onmessage = (msg:Argon.MessageEventLike) => {
@@ -32,6 +35,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             }
 
             remoteSession.connectEvent.addEventListener(()=>{
+                remoteSession.info.name = sessionUrl;
                 this.session = remoteSession;
                 const args:def.SessionConnectEventData = {
                     eventName: ArgonWebView.sessionConnectEvent,
@@ -55,7 +59,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
-        const logMessage = this.src + ': ' + message;
+        const logMessage = this.url + ': ' + message;
         console.log(logMessage); 
         this.log.push(logMessage);
         const args:def.LogEventData = {
