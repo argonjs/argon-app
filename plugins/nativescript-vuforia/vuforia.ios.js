@@ -60,17 +60,21 @@ var API = (function (_super) {
         var _this = this;
         return new Promise(function (resolve, reject) {
             VuforiaSession.initDone(function (result) {
-                VuforiaSession.onSurfaceCreated();
-                setVuforiaRotation();
-                VuforiaSession.registerCallback(function (state) {
-                    _this._stateUpdateCallback(new State(state));
-                });
+                if (result === 100 /* SUCCESS */) {
+                    VuforiaSession.onSurfaceCreated();
+                    setVuforiaRotation();
+                    VuforiaSession.registerCallback(function (state) {
+                        _this._stateUpdateCallback(new State(state));
+                    });
+                    VuforiaSession.onResume();
+                }
                 resolve(result);
             });
         });
     };
     API.prototype.deinit = function () {
         VuforiaSession.deinit();
+        VuforiaSession.onPause();
     };
     API.prototype.getCameraDevice = function () {
         return this.cameraDevice;

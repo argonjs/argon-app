@@ -72,11 +72,14 @@ export class API extends common.APIBase {
     init() : Promise<def.InitResult> {
         return new Promise<def.InitResult>((resolve, reject) => {
             VuforiaSession.initDone((result)=>{
-				VuforiaSession.onSurfaceCreated();
-				setVuforiaRotation();
-                VuforiaSession.registerCallback((state)=>{
-                    this._stateUpdateCallback(new State(state));
-                });
+                if (result === VuforiaInitResult.SUCCESS) {
+                    VuforiaSession.onSurfaceCreated();
+                    setVuforiaRotation();
+                    VuforiaSession.registerCallback((state)=>{
+                        this._stateUpdateCallback(new State(state));
+                    });
+                    VuforiaSession.onResume();
+                }
                 resolve(<number>result);
             })
         })
@@ -84,6 +87,7 @@ export class API extends common.APIBase {
     
     deinit() : void {
         VuforiaSession.deinit();
+        VuforiaSession.onPause();
     }
     
     getCameraDevice() : CameraDevice {
