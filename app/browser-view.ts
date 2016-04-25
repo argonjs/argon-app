@@ -17,9 +17,7 @@ import * as Argon from 'argon';
 import * as fs from 'file-system';
 
 const OVERVIEW_ANIMATION_DURATION = 250;
-const DEFAULT_REALITY_HTML = "default-reality.html";
-const APP_FOLDER = fs.knownFolders.currentApp().path;
-const DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
+const DEFAULT_REALITY_HTML = "~/default-reality.html";
 
 export interface Layer {
     webView:ArgonWebView,
@@ -42,9 +40,8 @@ export class BrowserView extends GridLayout {
 
     constructor() {
         super();
-        const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.realityLayer = this.addLayer();
-        this.realityLayer.webView.src = realityHtml.readTextSync();
+        this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.ios) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
@@ -227,7 +224,8 @@ export class BrowserView extends GridLayout {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.webView.src);
+            this._setURL(layer.webView.url);
+            console.log("Set focussed layer: " + layer.webView.url);
             Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
         }
     }

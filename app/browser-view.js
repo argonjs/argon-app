@@ -8,11 +8,8 @@ var util_1 = require('./util');
 var placeholder_1 = require('ui/placeholder');
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
-var fs = require('file-system');
 var OVERVIEW_ANIMATION_DURATION = 250;
-var DEFAULT_REALITY_HTML = "default-reality.html";
-var APP_FOLDER = fs.knownFolders.currentApp().path;
-var DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
+var DEFAULT_REALITY_HTML = "~/default-reality.html";
 var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
@@ -22,9 +19,9 @@ var BrowserView = (function (_super) {
         this._overviewEnabled = false;
         this._scrollOffset = 0;
         this._panStartOffset = 0;
-        var realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
+        // const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.realityLayer = this.addLayer();
-        this.realityLayer.webView.src = realityHtml.readTextSync();
+        this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.ios) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
@@ -205,7 +202,8 @@ var BrowserView = (function (_super) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.webView.src);
+            this._setURL(layer.webView.url);
+            console.log("Set focussed layer: " + layer.webView.url);
             Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
         }
     };
