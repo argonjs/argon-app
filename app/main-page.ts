@@ -38,14 +38,22 @@ const container = new Argon.DI.Container;
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
 
 manager = Argon.init({container, config: {
-	role: Argon.Role.MANAGER
+	role: Argon.Role.MANAGER,
+	name: 'ArgonApp'
 }});
 
 manager.reality.setDefault({type:'vuforia'});
 
 manager.vuforia.init({
 	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+}).catch((err)=>{
+    console.log(err);
 });
+
+manager.focus.sessionFocusEvent.addEventListener(()=>{
+    const focussedSession = manager.focus.getSession();    
+    console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
+})
 
 const vuforiaDelegate:NativeScriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
@@ -185,7 +193,6 @@ export function browserViewLoaded(args) {
     }
 
     let layer = browserView.focussedLayer;
-    console.log("FOCUSSED LAYER: " + layer.webView.src);
 
     const logChangeCallback = (args) => {
         console.log("LOGS " + layer.webView.log);
@@ -195,7 +202,6 @@ export function browserViewLoaded(args) {
 
     browserView.on("propertyChange", (evt: PropertyChangeData) => {
         if (evt.propertyName === "focussedLayer") {
-            console.log("CHANGE FOCUS");
             if (layer) {
                 layer.webView.removeEventListener("log", logChangeCallback);
             }
