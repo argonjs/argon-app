@@ -245,7 +245,7 @@ export class ObjectTarget extends Trackable {
         return this.ios.getUniqueTargetId();
     }
     
-    getSize(): def.Vec3 { 
+    getSize(): def.Vec3 {
         return this.ios.getSize();
     }
 }

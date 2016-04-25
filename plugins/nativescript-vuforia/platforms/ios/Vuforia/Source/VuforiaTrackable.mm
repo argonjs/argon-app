@@ -158,6 +158,10 @@
     return (Vuforia::ObjectTarget*)self.cpp;
 }
 
+- (NSString*)getUniqueTargetId {
+    return @(self.objectTarget->getUniqueTargetId());
+}
+
 - (VuforiaVec3F)getSize {
     Vuforia::Vec3F size = self.objectTarget->getSize();
     return (VuforiaVec3F&)size;

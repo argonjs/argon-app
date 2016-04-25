@@ -47,6 +47,7 @@
 
 @interface VuforiaObjectTarget : VuforiaTrackable
 +(int)getClassType;
+-(NSString*)getUniqueTargetId;
 -(VuforiaVec3F)getSize;
 @end
 
