@@ -37,6 +37,7 @@
 #import <Vuforia/View.h>
 
 #import "VuforiaSession.h"
+#import "VuforiaCameraDevice.h"
 #import "VuforiaVideoView.h"
 
 //******************************************************************************
@@ -223,12 +224,13 @@ namespace{
 // *** Vuforia will call this method periodically on a background thread ***
 - (void)renderFrameVuforia
 {
+    if (![[VuforiaCameraDevice getInstance] isStarted]) return;
+    
     // test if the layout has changed
     if (self.mDoLayoutSubviews) {
         [self doLayoutSubviews];
         self.mDoLayoutSubviews = NO;
     }
-    
 
     Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
     

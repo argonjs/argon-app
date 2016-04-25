@@ -92,7 +92,8 @@
 
 
 @interface VuforiaFrame ()
-@property (nonatomic, assign) Vuforia::Frame cpp;
+//@property (nonatomic, assign) Vuforia::Frame cpp;
+@property (nonatomic, assign) Vuforia::State *cpp;
 @end
 
 @implementation VuforiaFrame
@@ -104,22 +105,22 @@
  *  the camera image was shot.
  */
 -(double)getTimeStamp {
-    return self.cpp.getTimeStamp();
+    return self.cpp->getFrame().getTimeStamp();
 }
 
 /// Index of the frame
 -(int)getIndex {
-    return self.cpp.getIndex();
+    return self.cpp->getFrame().getIndex();
 }
 
 /// Number of images in the images-array
 -(int)getNumImages {
-    return self.cpp.getNumImages();
+    return self.cpp->getFrame().getNumImages();
 }
 
 /// Read-only access to an image
 -(VuforiaImage*)getImage:(int)idx {
-    const Vuforia::Image* i = self.cpp.getImage(idx);
+    const Vuforia::Image* i = self.cpp->getFrame().getImage(idx);
     if (i != nil) {
         VuforiaImage* image = [[VuforiaImage alloc] init];
         image.cpp = i;
@@ -128,6 +129,9 @@
     return nil;
 }
 
+- (void)dealloc {
+    self.cpp = nil;
+}
 @end
 
 
@@ -146,7 +150,7 @@
 
 - (VuforiaFrame*) getFrame {
     static VuforiaFrame *frame = [[VuforiaFrame alloc] init];
-    frame.cpp = self.cpp->getFrame();
+    frame.cpp = self.cpp;
     return frame;
 }
 
