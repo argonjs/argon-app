@@ -28,10 +28,10 @@ export interface Layer {
 export class BrowserView extends GridLayout {
     realityLayer:Layer;
     videoView:Placeholder;
-    
+
     layerContainer = new GridLayout;
     layers:Layer[] = [];
-        
+
     private _url:string;
     private _focussedLayer:Layer;
     private _overviewEnabled = false;
@@ -54,7 +54,7 @@ export class BrowserView extends GridLayout {
         this.realityLayer.container.addChild(videoView);
         Util.bringToFront(this.realityLayer.webView);
         Util.bringToFront(this.realityLayer.gestureCover);
-        
+
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
         this.addChild(this.layerContainer);
@@ -69,6 +69,8 @@ export class BrowserView extends GridLayout {
         const container = new GridLayout();
         container.horizontalAlignment = 'stretch';
         container.verticalAlignment = 'stretch';
+        // Not running argon, make white.
+        container.backgroundColor = new Color(255, 255, 255, 255);
         // Make an argon-enabled webview
         const webView = new ArgonWebView;
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
@@ -76,11 +78,22 @@ export class BrowserView extends GridLayout {
                 this._setURL(eventData.value);
             }
         });
+        let whiteningTimeout;
         webView.on('sessionConnect', (eventData) => {
             var session = eventData.session;
             if (webView === this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
             }
+
+            // Make transparent
+            container.backgroundColor = new Color(0, 255, 255, 255);
+            clearTimeout(whiteningTimeout);
+        });
+        webView.on(ArgonWebView.loadFinishedEvent, () => {
+            whiteningTimeout = setTimeout(() => {
+                // Not running argon, make white.
+                container.backgroundColor = new Color(255, 255, 255, 255);
+            }, 500);
         });
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
@@ -101,7 +114,7 @@ export class BrowserView extends GridLayout {
         container.addChild(webView);
         container.addChild(gestureCover);
         this.layerContainer.addChild(container);
-        
+
         layer = {
             container: container,
             webView: webView,
@@ -111,7 +124,7 @@ export class BrowserView extends GridLayout {
         this._setFocussedLayer(layer);
         return layer;
     }
-    
+
     handlePan(evt:PanGestureEventData) {
         if (evt.state === GestureStateTypes.began) {
             this._panStartOffset = this._scrollOffset;
@@ -119,7 +132,7 @@ export class BrowserView extends GridLayout {
         this._scrollOffset = this._panStartOffset + evt.deltaY;
         this.updateLayerTransforms();
     }
-    
+
     calculateLayerTransform(index) {
         const layerPosition = index * 200 + this._scrollOffset;
         const normalizedPosition = layerPosition / this.getMeasuredHeight();
@@ -136,7 +149,7 @@ export class BrowserView extends GridLayout {
             }
         };
     }
-    
+
     updateLayerTransforms() {
         if (!this._overviewEnabled)
             return;
