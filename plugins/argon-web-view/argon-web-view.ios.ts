@@ -33,8 +33,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
         configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly(`
+            var _originalLog = console.log;
             console.log = function(message) {
                 webkit.messageHandlers.log.postMessage(message);
+                _originalLog.apply(console, arguments);
             }
         `, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
 
