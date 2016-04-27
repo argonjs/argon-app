@@ -127,7 +127,7 @@ export class API extends common.APIBase {
 	}
 }
 
-function createMatrix44(mat:VuforiaMatrix34) : def.Matrix44 {
+function createMatrix44(mat:VuforiaMatrix44) : def.Matrix44 {
     return  [
                 mat._0, 
                 mat._1,
@@ -141,10 +141,10 @@ function createMatrix44(mat:VuforiaMatrix34) : def.Matrix44 {
                 mat._9,
                 mat._10,
                 mat._11,
-                0,
-                0,
-                0,
-                1
+                mat._12,
+                mat._13,
+                mat._14,
+                mat._15
             ];
 }
 

@@ -23,6 +23,7 @@
 #import <Vuforia/MarkerResult.h>
 #import <Vuforia/Word.h>
 #import <Vuforia/WordResult.h>
+#import <Vuforia/Tool.h>
 
 @interface VuforiaTrackable ()
 @property (nonatomic, assign) BOOL isConst;
@@ -269,8 +270,9 @@
 };
 
 /// Returns the current pose matrix in row-major order
--(VuforiaMatrix34) getPose {
-    return (VuforiaMatrix34&)self.cpp->getPose();
+-(VuforiaMatrix44) getPose {
+    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getPose());
+    return (VuforiaMatrix44&)m;
 };
 
 -(double)getTimeStamp {

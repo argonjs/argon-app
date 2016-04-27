@@ -41,7 +41,6 @@ declare module "nativescript-vuforia" {
         getObjectTracker() : ObjectTracker;
         deinitObjectTracker() : boolean;
         onNextStateUpdate(cb:(state:State)=>void);
-		getSystemBootTime() : number;
     }
     
     interface Vec2 {

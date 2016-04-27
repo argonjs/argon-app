@@ -123,10 +123,10 @@ function createMatrix44(mat) {
         mat._9,
         mat._10,
         mat._11,
-        0,
-        0,
-        0,
-        1
+        mat._12,
+        mat._13,
+        mat._14,
+        mat._15
     ];
 }
 var Trackable = (function () {

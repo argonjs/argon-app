@@ -174,7 +174,7 @@ typedef NS_ENUM (NSInteger, VuforiaView)
 -(VuforiaVec4F)getNormalizedViewport:(VuforiaView)viewID;
 
 /// Returns the projection matrix to use for the given view and the specified coordinate system
--(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+-(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
 
 /// Returns an adjustment matrix needed to correct for the different position of display relative to the eye
 /**
@@ -182,10 +182,10 @@ typedef NS_ENUM (NSInteger, VuforiaView)
  * The adjustment matrix is in meters, if your scene is defined in another unit
  * you will need to adjust the matrix before use.
  */
--(VuforiaMatrix34)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID;
+-(VuforiaMatrix44)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID;
 
 /// Returns the projection matrix to use when projecting the video background
--(VuforiaMatrix34)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+-(VuforiaMatrix44)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
 
 /// Returns a simple mesh suitable for rendering a video background texture
 -(VuforiaMesh*)getVideoBackgroundMesh:(VuforiaView)viewID;
