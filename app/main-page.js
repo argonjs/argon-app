@@ -161,8 +161,9 @@ function browserViewLoaded(args) {
     }
     var layer = exports.browserView.focussedLayer;
     var logChangeCallback = function (args) {
-        console.log("LOGS " + layer.webView.log);
-        debug.html = layer.webView.log.join("\n");
+        while (layer.webView.log.length > 10)
+            layer.webView.log.shift();
+        debug.html = layer.webView.log.join("<br/>");
     };
     layer.webView.on("log", logChangeCallback);
     exports.browserView.on("propertyChange", function (evt) {
