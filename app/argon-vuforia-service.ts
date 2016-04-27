@@ -5,8 +5,9 @@ import * as frames from 'ui/frame';
 import * as Argon from 'argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as http from 'http';
+import * as file from 'file-system';
 
-import {systemBootDate, getInterfaceOrientation} from './argon-device-service'
+import {getInterfaceOrientation} from './argon-device-service'
 
 const Matrix3 = Argon.Cesium.Matrix3;
 const Matrix4 = Argon.Cesium.Matrix4;
@@ -20,8 +21,7 @@ const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO)
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI)
 const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI)
 
-const vuforiaEntity = new Argon.Cesium.Entity({
-    id:'VUFORIA',
+const vuforiaTrackerEntity = new Argon.Cesium.Entity({
     position: new Argon.Cesium.ConstantPositionProperty(),
     orientation: new Argon.Cesium.ConstantProperty()
 });
@@ -29,25 +29,32 @@ const vuforiaEntity = new Argon.Cesium.Entity({
 const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
 
 @Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
-export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
+export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
     
     public stateUpdateEvent = new Argon.Event<Argon.SerializedFrameState>();
     
+    private scratchDate = new Argon.Cesium.JulianDate();
+    private scratchCartesian = new Argon.Cesium.Cartesian3();
+    private scratchCartesian2 = new Argon.Cesium.Cartesian3();
+    private scratchQuaternion = new Argon.Cesium.Quaternion();
 	private scratchMatrix4 = new Argon.Cesium.Matrix4();
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
 	
 	constructor(private deviceService:Argon.DeviceService, private contextService:Argon.ContextService) {
         super();
         
-        vuforiaEntity.position.setValue({x:0,y:0,z:0}, deviceService.entity);
-        vuforiaEntity.orientation.setValue(Quaternion.multiply(x180, z90, <any>{}));
-        this.contextService.entities.add(vuforiaEntity);
+        vuforiaTrackerEntity.position.setValue({x:0,y:0,z:0}, deviceService.entity);
+        vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(x180, z90, <any>{}));
+        this.contextService.entities.add(vuforiaTrackerEntity);
         
         const stateUpdateCallback = (state:vuforia.State) => {
             
+            deviceService.update();
+            
             const vuforiaFrame = state.getFrame();
             const frameNumber = vuforiaFrame.getIndex();
-            const time = JulianDate.addSeconds(systemBootDate, vuforiaFrame.getTimeStamp(), <any>{});
+            const frameTimeStamp = vuforiaFrame.getTimeStamp();
+            const time = JulianDate.now();
             
             // update trackable results in context entity collection
             const numTrackableResults = state.getNumTrackableResults();
@@ -64,22 +71,26 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                     entity = new Argon.Cesium.Entity({
                         id,
                         name,
-                        position: new Argon.Cesium.SampledPositionProperty(vuforiaEntity),
+                        position: new Argon.Cesium.SampledPositionProperty(vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
                     contextService.entities.add(entity);
                 }
                 
-                const trackableTime = JulianDate.addSeconds(systemBootDate, trackableResult.getTimeStamp(), <any>{});
+                const trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
+                const trackableTime = trackableTimeDiff === 0 ? time : JulianDate.addSeconds(time, trackableTimeDiff, {});
                 
-                // get the position and orientation out of the pose matrix                
+                // get the position and orientation from the trackable pose (a row-major matrix)
                 const pose = trackableResult.getPose();
-                const position = Matrix4.getTranslation(pose, <Argon.Cesium.Cartesian3>{});
+                const position = Matrix4.getTranslation(pose, this.scratchCartesian);
                 const rotationMatrix = Matrix4.getRotation(pose, this.scratchMatrix3);
-                const orientation = Quaternion.fromRotationMatrix(rotationMatrix, <Argon.Cesium.Quaternion>{});
+                const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this.scratchQuaternion);
                 
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation);
+                
+                console.log(JSON.stringify(position));
+                console.log(JSON.stringify(orientation));
             }
             
             const device = vuforia.api.getDevice();
@@ -91,7 +102,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             
             for (let i=0; i < numViews; i++) {
                 const view = renderingViews.getView(i);
-                if (view === vuforia.View.PostProcess) return;
+                if (view === vuforia.View.PostProcess) continue;
                 
                 let type:Argon.SubviewType;
                 switch (view) {
@@ -105,26 +116,52 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                         type = Argon.SubviewType.OTHER; break;
                 }
                 
-                const rawProjectionMatrix = renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
-                const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-                const projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+                // Note: Vuforia provides a weird projection matrix with x and y rows reversed. Not sure why. :P
+                // if we can find documentation / explanation of this somewhere we should put a link here.
+                let projectionMatrix = <any>renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
+                const xColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 0, this.scratchCartesian);
+                const yColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 1, this.scratchCartesian2);
+                
+                if (device.isViewerActive()) {
+                    // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
+                    // then provide a means of passing an arbitrary scale factor to the video renderer.
+                    // We can then provide controls to zoom in/out the video reality using this scale factor. 
+                    var sceneScaleFactor = vuforia.ios.getSceneScaleFactor();
+                    Argon.Cesium.Cartesian4.multiplyByScalar(xColumn, sceneScaleFactor, xColumn);
+                    Argon.Cesium.Cartesian4.multiplyByScalar(yColumn, sceneScaleFactor, yColumn);
+                }
+                
+                Argon.Cesium.Matrix4.setColumn(projectionMatrix, 0, yColumn, projectionMatrix);
+                Argon.Cesium.Matrix4.setColumn(projectionMatrix, 1, xColumn, projectionMatrix);
+                
+                // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+                // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+                // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
+                
+                const viewport = renderingPrimitives.getViewport(view);
                 
                 subviews.push({
                     type,
-                    projectionMatrix
+                    projectionMatrix,
+                    viewport: {
+                        x: viewport.x,
+                        y: viewport.y,
+                        width: viewport.z,
+                        height: viewport.w
+                    }
                 });
             }
             
-            const frame = frames.topmost();
+            const page = frames.topmost().page;
             
             const view:Argon.SerializedViewParameters = {
                 viewport: {
                     x:0,
                     y:0,
-                    width: frame.getMeasuredWidth(),
-                    height: frame.getMeasuredHeight()
+                    width: page.getMeasuredWidth(),
+                    height: page.getMeasuredHeight()
                 },
-                pose: Argon.calculatePose(deviceService.interfaceEntity, time),
+                pose: Argon.getSerializedEntityPose(deviceService.entity, time),
                 subviews
             }
             
@@ -144,7 +181,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         if (trackable instanceof vuforia.ObjectTarget) {
             return 'vuforia_object_target_' + trackable.getUniqueTargetId();
         } else {
-            return 'vuforia_trackable_' + trackable.getName();
+            return 'vuforia_trackable_' + trackable.getId();
         }
     }
     
@@ -156,7 +193,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     
     setViewerEnabled(enabled) {
         this._viewerEnabled = enabled;
-        const device = VuforiaDevice.getInstance();
+        const device = vuforia.api.getDevice();
         if (device) device.setViewerActive(enabled);
     }
     
@@ -191,6 +228,9 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     
     deinit(): void {            
         console.log("Vuforia deinitializing");
+        vuforia.api.deinitObjectTracker();
+        vuforia.api.getCameraDevice().stop();
+        vuforia.api.getCameraDevice().deinit();
         vuforia.api.deinit();
     }
     
@@ -204,6 +244,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
             
+        vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR);
         this.setViewerEnabled(this._viewerEnabled);
             
         configureVideoBackground();
@@ -250,7 +291,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const id = Argon.Cesium.createGuid();
                 this.idDataSetMap.set(id, dataSet);
                 this.dataSetUrlMap.set(dataSet, url);
-                console.log("Vuforia created dataset " + id);
+                console.log(`Vuforia created dataset (${id})`);
                 return id;
             }
         }
@@ -258,7 +299,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     objectTrackerDestroyDataSet(id: string): boolean {       
-        console.log("Vuforia destroying dataset " + id);
+        console.log(`Vuforia destroying dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -272,7 +313,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     objectTrackerActivateDataSet(id: string): boolean {
-        console.log("Vuforia activating dataset " + id);
+        console.log(`Vuforia activating dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -284,7 +325,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     objectTrackerDeactivateDataSet(id: string): boolean {        
-        console.log("Vuforia deactivating dataset " + id);
+        console.log(`Vuforia deactivating dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -299,11 +340,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
-            console.log("Vuforia fetching dataset " + id + " at " + url);
-            http.request({
-                url,
-                method
-            })
+            console.log(`Vuforia fetching dataset (${id}) at ${url}`);
+            return _getDataSetLocation(url).then(()=>{});
         }
         return Promise.reject("Dataset is not associated with a url");
     }
@@ -312,7 +350,25 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
-            
+            console.log(`Vuforia loading dataset (${id}) at ${url}`);
+            return _getDataSetLocation(url).then((location)=>{
+                if (dataSet.load(location, vuforia.StorageType.Absolute)) {
+                    const numTrackables = dataSet.getNumTrackables();
+                    const trackables:Argon.VuforiaTrackables = {};
+                    for (let i=0; i < numTrackables; i++) {
+                        const trackable = dataSet.getTrackable(i);
+                        trackables[trackable.getName()] = {
+                            id: this._getIdForTrackable(trackable),
+                            size: trackable instanceof vuforia.ObjectTarget ? trackable.getSize() : {x:0,y:0,z:0}
+                        }
+                    }
+                    console.log("Vuforia loaded dataset file with trackables:\n" + JSON.stringify(trackables));
+                    return trackables;
+                } else {
+                    console.log(`Unable to load downloaded dataset at ${location} from ${url}`);
+                    return Promise.reject("Unable to load dataset");
+                }
+            })
         }
         return Promise.reject("Dataset is not associated with a url");
     }
@@ -366,64 +422,48 @@ if (vuforia.api) application.on(application.orientationChangedEvent, ()=>{
     Promise.resolve().then(configureVideoBackground); // delay callback until the interface orientation is updated
 })
 
-
-function downloadDataSetFromUrl(xmlUrlString:string)
-{
-    const xmlUri = uri(xmlUrlString);
-    const datUri = xmlUri.clone().suffix('dat')
-    NSURL *datURL = [[xmlURL URLByDeletingPathExtension] URLByAppendingPathExtension:@"dat"];
-
-    NSFileManager *fileManager = [NSFileManager defaultManager];
+// TODO: make this cross platform somehow
+export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
+    const xmlUrl = NSURL.URLWithString(xmlUrlString);
+    const datUrl = xmlUrl.URLByDeletingPathExtension.URLByAppendingPathExtension("dat");
     
-    NSNumber *directoryHash = @([[xmlURL URLByDeletingLastPathComponent] hash]);
-    NSURL *directoryURL = [NSURL fileURLWithPath:NSTemporaryDirectory()];
-    directoryURL = [directoryURL URLByAppendingPathComponent:[directoryHash stringValue]];
-    [fileManager createDirectoryAtPath:[directoryURL path]
-           withIntermediateDirectories:YES
-                            attributes:nil
-                                 error:nil];
+    const directoryPathUrl = xmlUrl.URLByDeletingLastPathComponent;
+    const directoryHash = directoryPathUrl.hash;
+    const tmpPath = file.knownFolders.temp().path;
+    const directoryHashPath = tmpPath + file.path.separator + directoryHash;
     
-    __block NSString *datLocation = nil;
-    __block NSString *xmlLocation = nil;
-    __block BOOL datDone = NO;
-    __block BOOL xmlDone = NO;
+    file.Folder.fromPath(directoryHashPath);
     
-    void (^checkComplete)(void) = ^{
-        if (!datDone || !xmlDone) return;
-        if (datLocation == nil || xmlLocation == nil)
-            return done(nil, [self NSErrorWithCode:-1]);
-        else return done(xmlLocation, nil);
-    };
-
-    [[[NSURLSession sharedSession] downloadTaskWithURL:datURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
-        if (error == nil && statusCode == 200) {
-            // rename the temp file to the original filename (to make vuforia happy)
-            NSString *fileName = [[[datURL URLByDeletingPathExtension] URLByAppendingPathExtension:@"dat"] lastPathComponent];
-            NSURL *newDatLocation = [directoryURL URLByAppendingPathComponent:fileName];
-            [fileManager removeItemAtURL:newDatLocation error:nil];
-            [fileManager moveItemAtURL:location toURL:newDatLocation error:&error];
-            if (error == nil) {
-                datLocation = [newDatLocation path];
-            }
+    const xmlDestPath = directoryHashPath + file.path.separator + xmlUrl.lastPathComponent;
+    const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
+    
+    function downloadIfNeeded(url:string, destPath:string) {
+        let lastModified:Date;
+        if (file.File.exists(destPath)) {
+            const f = file.File.fromPath(destPath);
+            lastModified = f.lastModified;
         }
-        datDone = YES;
-        checkComplete();
-    }] resume];
-    
-    [[[NSURLSession sharedSession] downloadTaskWithURL:xmlURL completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-        long statusCode = ((NSHTTPURLResponse*)response).statusCode;
-        if (error == nil && statusCode == 200) {
-            // rename the temp file to the original filename (to make vuforia happy)
-            NSString *fileName = [xmlURL lastPathComponent];
-            NSURL *newXMLLocation = [directoryURL URLByAppendingPathComponent:fileName];
-            [fileManager removeItemAtURL:newXMLLocation error:nil];
-            [fileManager moveItemAtURL:location toURL:newXMLLocation error:&error];
-            if (error == nil) {
-                xmlLocation = [newXMLLocation path];
+        return http.request({
+            url,
+            method:'GET',
+            headers: lastModified ? {
+                'If-Modified-Since': lastModified.toUTCString()
+            } : undefined
+        }).then((response)=>{
+            if (response.statusCode === 304) {
+                console.log(`Verified that cached version of file ${url} at ${destPath} is up-to-date.`)
+                return destPath;
+            } else if (response.statusCode >= 200 && response.statusCode < 300) {                
+                console.log(`Downloaded file ${url} to ${destPath}`)
+                return response.content.toFile(destPath).path;
+            } else {
+                throw new Error("Unable to download file " + url + "  (HTTP status code: " + response.statusCode + ")");
             }
-        }
-        xmlDone = YES;
-        checkComplete();
-    }] resume];
-}
+        })
+    }
+    
+    return Promise.all([
+        downloadIfNeeded(xmlUrl.absoluteString,xmlDestPath), 
+        downloadIfNeeded(datUrl.absoluteString,datDestPath)
+    ]).then(()=>xmlDestPath);
+} 
