@@ -19,7 +19,6 @@ var BrowserView = (function (_super) {
         this._overviewEnabled = false;
         this._scrollOffset = 0;
         this._panStartOffset = 0;
-        // const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.realityLayer = this.addLayer();
         this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.ios) {
