@@ -44,7 +44,9 @@ export function getIosMotionManager() {
     return iosMotionManager;
 }
 
-class NativescriptDeviceService extends Argon.DeviceService {
+var lastGPSPosition;
+
+export class NativescriptDeviceService extends Argon.DeviceService {
     
     private locationWatchId:number;
     
@@ -74,6 +76,11 @@ class NativescriptDeviceService extends Argon.DeviceService {
                     Argon.Cesium.Ellipsoid.WGS84,
                     scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
+            
+            
+            var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
+            if (lastGPSPosition !== gpsPos) console.log('gps position changed '+gpsPos);
+            lastGPSPosition = gpsPos;
         }, 
         (e)=>{
             console.log(e);

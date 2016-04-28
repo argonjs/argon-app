@@ -13,14 +13,13 @@ import {Color} from 'color';
 import {Observable, PropertyChangeData} from 'data/observable'
 
 import * as Argon from 'argon';
-import * as vuforia from 'nativescript-vuforia';
 
 import {Util} from './util';
 import {ArgonWebView} from 'argon-web-view';
 import {BrowserView} from './browser-view';
 
-import './argon-device-service';
-import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
+import {NativescriptDeviceService} from './argon-device-service';
+import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 import * as historyView from './history-view';
 import * as history from './shared/history';
@@ -35,7 +34,8 @@ let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
 
 const container = new Argon.DI.Container;
-container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
+container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
 
 manager = Argon.init({container, config: {
 	role: Argon.Role.MANAGER,
@@ -55,7 +55,7 @@ manager.focus.sessionFocusEvent.addEventListener(()=>{
     console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
 })
 
-const vuforiaDelegate:NativeScriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
+const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
 class ViewModel extends Observable {
 	menuOpen = false;
@@ -195,8 +195,8 @@ export function browserViewLoaded(args) {
     let layer = browserView.focussedLayer;
 
     const logChangeCallback = (args) => {
-		while (layer.webView.log.length > 10) layer.webView.log.shift()
-        debug.html = layer.webView.log.join("<br/>");
+		// while (layer.webView.log.length > 10) layer.webView.log.shift()
+        // debug.html = layer.webView.log.join("<br/>");
     };
     layer.webView.on("log", logChangeCallback)
 

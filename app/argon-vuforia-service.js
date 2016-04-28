@@ -5,6 +5,7 @@ var Argon = require('argon');
 var vuforia = require('nativescript-vuforia');
 var http = require('http');
 var file = require('file-system');
+var platform = require('platform');
 var argon_device_service_1 = require('./argon-device-service');
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
@@ -16,7 +17,10 @@ var zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO
 var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 var x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
-var vuforiaTrackerEntity = new Argon.Cesium.Entity({
+if (vuforia.ios) {
+    vuforia.ios.contentScaleFactor = platform.screen.mainScreen.scale;
+}
+exports.vuforiaTrackerEntity = new Argon.Cesium.Entity({
     position: new Argon.Cesium.ConstantPositionProperty(),
     orientation: new Argon.Cesium.ConstantProperty()
 });
@@ -38,9 +42,12 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this._viewerEnabled = false;
         this.idDataSetMap = new Map();
         this.dataSetUrlMap = new WeakMap();
-        vuforiaTrackerEntity.position.setValue({ x: 0, y: 0, z: 0 }, deviceService.entity);
-        vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(x180, z90, {}));
-        this.contextService.entities.add(vuforiaTrackerEntity);
+        exports.vuforiaTrackerEntity.position.setValue({ x: 0, y: 0, z: 0 }, deviceService.entity);
+        // vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(zNeg90,yNeg180,<any>{}));
+        // vuforiaTrackerEntity.orientation.setValue(yNeg180,<any>{});
+        // vuforiaTrackerEntity.orientation.setValue(z90,<any>{});
+        exports.vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
+        this.contextService.entities.add(exports.vuforiaTrackerEntity);
         var stateUpdateCallback = function (state) {
             deviceService.update();
             var vuforiaFrame = state.getFrame();
@@ -59,7 +66,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     entity = new Argon.Cesium.Entity({
                         id: id,
                         name: name_1,
-                        position: new Argon.Cesium.SampledPositionProperty(vuforiaTrackerEntity),
+                        position: new Argon.Cesium.SampledPositionProperty(exports.vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
                     contextService.entities.add(entity);
@@ -71,16 +78,27 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var position = Matrix4.getTranslation(pose, _this.scratchCartesian);
                 var rotationMatrix = Matrix4.getRotation(pose, _this.scratchMatrix3);
                 var orientation_1 = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
+                // flip axis
+                // position.z = -position.z;
+                // orientation.z = -orientation.z;
+                var px = position.x;
+                position.x = position.y;
+                position.y = px;
+                var ox = orientation_1.x;
+                orientation_1.x = -orientation_1.y;
+                orientation_1.y = -ox;
+                orientation_1.z = -orientation_1.z;
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation_1);
-                console.log(JSON.stringify(position));
-                console.log(JSON.stringify(orientation_1));
+                console.log(JSON.stringify(Argon.getEntityPositionInReferenceFrame(entity, time, deviceService.entity, {})));
+                console.log(JSON.stringify(Argon.getEntityOrientationInReferenceFrame(entity, time, deviceService.entity, {})));
             }
             var device = vuforia.api.getDevice();
             var renderingPrimitives = device.getRenderingPrimitives();
             var renderingViews = renderingPrimitives.getRenderingViews();
             var numViews = renderingViews.getNumViews();
             var subviews = [];
+            var contentScaleFactor = vuforia.ios.contentScaleFactor;
             for (var i = 0; i < numViews; i++) {
                 var view_1 = renderingViews.getView(i);
                 if (view_1 === 3 /* PostProcess */)
@@ -105,7 +123,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var projectionMatrix = renderingPrimitives.getProjectionMatrix(view_1, 1 /* Camera */);
                 var xColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 0, _this.scratchCartesian);
                 var yColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 1, _this.scratchCartesian2);
-                if (device.isViewerActive()) {
+                if (vuforia.ios && device.isViewerActive()) {
                     // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
                     // then provide a means of passing an arbitrary scale factor to the video renderer.
                     // We can then provide controls to zoom in/out the video reality using this scale factor. 
@@ -123,20 +141,20 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     type: type,
                     projectionMatrix: projectionMatrix,
                     viewport: {
-                        x: viewport.x,
-                        y: viewport.y,
-                        width: viewport.z,
-                        height: viewport.w
+                        x: viewport.x / contentScaleFactor,
+                        y: viewport.y / contentScaleFactor,
+                        width: viewport.z / contentScaleFactor,
+                        height: viewport.w / contentScaleFactor
                     }
                 });
             }
-            var page = frames.topmost().page;
+            var contentView = frames.topmost().currentPage.content;
             var view = {
                 viewport: {
                     x: 0,
                     y: 0,
-                    width: page.getMeasuredWidth(),
-                    height: page.getMeasuredHeight()
+                    width: contentView.getMeasuredWidth(),
+                    height: contentView.getMeasuredHeight()
                 },
                 pose: Argon.getSerializedEntityPose(deviceService.entity, time),
                 subviews: subviews

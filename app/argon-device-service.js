@@ -36,6 +36,7 @@ function getIosMotionManager() {
     return iosMotionManager;
 }
 exports.getIosMotionManager = getIosMotionManager;
+var lastGPSPosition;
 var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService() {
@@ -59,6 +60,10 @@ var NativescriptDeviceService = (function (_super) {
             // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
             Argon.Cesium.Ellipsoid.WGS84, scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
+            var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
+            if (lastGPSPosition !== gpsPos)
+                console.log('gps position changed ' + gpsPos);
+            lastGPSPosition = gpsPos;
         }, function (e) {
             console.log(e);
         }, {
@@ -113,6 +118,7 @@ var NativescriptDeviceService = (function (_super) {
     };
     return NativescriptDeviceService;
 }(Argon.DeviceService));
+exports.NativescriptDeviceService = NativescriptDeviceService;
 function getInterfaceOrientation() {
     if (application.ios) {
         var orientation_2 = UIApplication.sharedApplication().statusBarOrientation;

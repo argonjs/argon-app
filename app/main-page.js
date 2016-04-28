@@ -7,7 +7,7 @@ var color_1 = require('color');
 var observable_1 = require('data/observable');
 var Argon = require('argon');
 var util_1 = require('./util');
-require('./argon-device-service');
+var argon_device_service_1 = require('./argon-device-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
 var historyView = require('./history-view');
 var history = require('./shared/history');
@@ -16,7 +16,8 @@ var menu;
 var searchBar;
 var iosSearchBarController;
 var container = new Argon.DI.Container;
-container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativeScriptVuforiaServiceDelegate);
+container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
+container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
 exports.manager = Argon.init({ container: container, config: {
         role: Argon.Role.MANAGER,
         name: 'ArgonApp'
@@ -161,9 +162,8 @@ function browserViewLoaded(args) {
     }
     var layer = exports.browserView.focussedLayer;
     var logChangeCallback = function (args) {
-        while (layer.webView.log.length > 10)
-            layer.webView.log.shift();
-        debug.html = layer.webView.log.join("<br/>");
+        // while (layer.webView.log.length > 10) layer.webView.log.shift()
+        // debug.html = layer.webView.log.join("<br/>");
     };
     layer.webView.on("log", logChangeCallback);
     exports.browserView.on("propertyChange", function (evt) {
