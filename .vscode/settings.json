@@ -5,7 +5,7 @@
 		"**/node_modules": true
 	},
     "files.exclude": {
-        "**/*.js": true,
-		"**/*.js.map": true
+        "app/**/*.js": true,
+		"app/**/*.js.map": true
     }
 }

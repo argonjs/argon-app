@@ -2,7 +2,7 @@ import * as application from "application";
 import * as frames from 'ui/frame';
 import * as vuforia from 'nativescript-vuforia';
 import * as utils from 'utils/utils';
-import * as geolocation from 'nativescript-geolocation';
+import * as geolocation from 'speigg-nativescript-geolocation';
 import * as enums from 'ui/enums';
 import * as dialogs from 'ui/dialogs';
 
@@ -30,7 +30,7 @@ let iosMotionManager:CMMotionManager;
 export function getIosMotionManager() {
     if (iosMotionManager) return iosMotionManager;
 
-    console.log("Create ios motion manager.")
+    console.log("Creating ios motion manager.")
 
     iosMotionManager = CMMotionManager.alloc().init();
     iosMotionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
@@ -49,35 +49,44 @@ var lastGPSPosition;
 export class NativescriptDeviceService extends Argon.DeviceService {
     
     private locationWatchId:number;
+    private startedLocationServices: boolean;
     
     constructor() {
         super()
-         // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
-        // Making the module <any> for now to hide annoying typescript errors...
-        this.locationWatchId = (<any>geolocation).watchLocation((location:geolocation.Location)=>{
-            const locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
 
-            if (this.entity.position.referenceFrame != Argon.Cesium.ReferenceFrame.FIXED) {
-                this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
-                this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-                this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-            }
-            
+        this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
+        this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        
+        this.entity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
+        this.entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+    }
+    
+    ensureGeolocation() {
+        if (typeof this.locationWatchId !== 'undefined') return;
+        if (this.startedLocationServices) return;
+        
+        // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
+        // Casting the module as <any> here for now to hide annoying typescript errors...
+        this.locationWatchId = (<any>geolocation).watchLocation((location:geolocation.Location)=>{
+            // Note: iOS documentation states that the altitude value refers to height (meters) above sea level, but 
+            // if ios is reporting the standard gps defined altitude, then this theoretical "sea level" actually refers to 
+            // the WGS84 ellipsoid rather than traditional mean sea level (MSL) which is not a simple surface and varies 
+            // according to the local gravitational field. 
+            // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
+            // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
+            const locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
             const sampledPosition = this.entity.position as Argon.Cesium.SampledPositionProperty;
             const position =  Argon.Cesium.Cartesian3.fromDegrees(
                     location.longitude,
                     location.latitude,
-                    location.altitude, // Note: iOS documentation states that this value refers to height (meters) above sea level, but 
-                        // if ios is reporting the standard gps defined altitude, then this theoretical "sea level" actually refers to 
-                        // the WGS84 ellipsoid rather than traditional mean sea level (MSL) which is not a simple surface and varies 
-                        // according to the local gravitational field. 
-                        // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
-                        // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
+                    location.altitude,
                     Argon.Cesium.Ellipsoid.WGS84,
                     scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
             
-            
+            // make sure its actually working. TOOD: remove once verified...
             var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
             if (lastGPSPosition !== gpsPos) console.log('gps position changed '+gpsPos);
             lastGPSPosition = gpsPos;
@@ -88,6 +97,10 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0
         });
         
+        this.startedLocationServices = true;
+        
+        console.log("Creating location watcher. " + this.locationWatchId);
+        
         if (application.ios) {
             switch (CLLocationManager.authorizationStatus()) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedWhenInUse:
@@ -95,6 +108,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
                     CLLocationManager.new().requestWhenInUseAuthorization();
+                    break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
                 case CLAuthorizationStatus.kCLAuthorizationStatusRestricted:
                 default:
@@ -115,6 +129,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     }
     
     update() {
+        this.ensureGeolocation();
         
         const time = JulianDate.now();
         const position = this.entity.position.getValue(time);

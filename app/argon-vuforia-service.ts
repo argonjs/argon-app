@@ -52,7 +52,10 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         // vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(zNeg90,yNeg180,<any>{}));
         // vuforiaTrackerEntity.orientation.setValue(yNeg180,<any>{});
         // vuforiaTrackerEntity.orientation.setValue(z90,<any>{});
-        vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
+        
+        vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(y180, z90, <any>{}));
+        // vuforiaTrackerEntity.orientation.setValue(y180);
+        // vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
         this.contextService.entities.add(vuforiaTrackerEntity);
         
         const stateUpdateCallback = (state:vuforia.State) => {
@@ -95,15 +98,17 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const rotationMatrix = Matrix4.getRotation(pose, this.scratchMatrix3);
                 const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this.scratchQuaternion);
                 
-                // NOTE: WE DON"T KNOW WHY THIS WORKS
-                var px = position.x;
-                position.x = position.y;
-                position.y = px;
+                // Quaternion.inverse(orientation, orientation);
                 
-                var ox = orientation.x;
-                orientation.x = -orientation.y;
-                orientation.y = -ox;    
-                orientation.z = -orientation.z;
+                // NOTE: WE DON"T KNOW WHY THIS WORKS
+                // var px = position.x;
+                // position.x = position.y;
+                // position.y = px;
+                
+                // var ox = orientation.x;
+                // orientation.x = -orientation.y;
+                // orientation.y = -ox;    
+                // orientation.z = -orientation.z;
                 
                 
                 entity.position.addSample(trackableTime, position);
@@ -427,12 +432,8 @@ function configureVideoBackground() {
     }
     
     console.log(`Vuforia configuring video background...
-        viewWidth: ${viewWidth} 
-        viewHeight: ${viewHeight} 
-        contentScaleFactor: ${contentScaleFactor}
-        videoWidth: ${videoWidth} 
-        videoHeight: ${videoHeight} 
-        orientation: ${orientation} 
+        contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
+        viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
         config: ${JSON.stringify(config)}
     `);
     

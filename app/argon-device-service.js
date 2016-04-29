@@ -1,7 +1,7 @@
 "use strict";
 var application = require("application");
 var utils = require('utils/utils');
-var geolocation = require('nativescript-geolocation');
+var geolocation = require('speigg-nativescript-geolocation');
 var dialogs = require('ui/dialogs');
 var Argon = require("argon");
 var JulianDate = Argon.Cesium.JulianDate;
@@ -22,7 +22,7 @@ var iosMotionManager;
 function getIosMotionManager() {
     if (iosMotionManager)
         return iosMotionManager;
-    console.log("Create ios motion manager.");
+    console.log("Creating ios motion manager.");
     iosMotionManager = CMMotionManager.alloc().init();
     iosMotionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
     var effectiveReferenceFrame;
@@ -40,26 +40,34 @@ var lastGPSPosition;
 var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService() {
-        var _this = this;
         _super.call(this);
+        this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
+        this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
+        this.entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+    }
+    NativescriptDeviceService.prototype.ensureGeolocation = function () {
+        var _this = this;
+        if (typeof this.locationWatchId !== 'undefined')
+            return;
+        if (this.startedLocationServices)
+            return;
         // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
-        // Making the module <any> for now to hide annoying typescript errors...
+        // Casting the module as <any> here for now to hide annoying typescript errors...
         this.locationWatchId = geolocation.watchLocation(function (location) {
-            var locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
-            if (_this.entity.position.referenceFrame != Argon.Cesium.ReferenceFrame.FIXED) {
-                _this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
-                _this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-                _this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-            }
-            var sampledPosition = _this.entity.position;
-            var position = Argon.Cesium.Cartesian3.fromDegrees(location.longitude, location.latitude, location.altitude, // Note: iOS documentation states that this value refers to height (meters) above sea level, but 
+            // Note: iOS documentation states that the altitude value refers to height (meters) above sea level, but 
             // if ios is reporting the standard gps defined altitude, then this theoretical "sea level" actually refers to 
             // the WGS84 ellipsoid rather than traditional mean sea level (MSL) which is not a simple surface and varies 
             // according to the local gravitational field. 
             // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
             // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
-            Argon.Cesium.Ellipsoid.WGS84, scratchCartesian3);
+            var locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
+            var sampledPosition = _this.entity.position;
+            var position = Argon.Cesium.Cartesian3.fromDegrees(location.longitude, location.latitude, location.altitude, Argon.Cesium.Ellipsoid.WGS84, scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
+            // make sure its actually working. TOOD: remove once verified...
             var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
             if (lastGPSPosition !== gpsPos)
                 console.log('gps position changed ' + gpsPos);
@@ -69,6 +77,8 @@ var NativescriptDeviceService = (function (_super) {
         }, {
             desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0
         });
+        this.startedLocationServices = true;
+        console.log("Creating location watcher. " + this.locationWatchId);
         if (application.ios) {
             switch (CLLocationManager.authorizationStatus()) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedWhenInUse:
@@ -76,6 +86,7 @@ var NativescriptDeviceService = (function (_super) {
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
                     CLLocationManager.new().requestWhenInUseAuthorization();
+                    break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
                 case CLAuthorizationStatus.kCLAuthorizationStatusRestricted:
                 default:
@@ -92,8 +103,9 @@ var NativescriptDeviceService = (function (_super) {
                     });
             }
         }
-    }
+    };
     NativescriptDeviceService.prototype.update = function () {
+        this.ensureGeolocation();
         var time = JulianDate.now();
         var position = this.entity.position.getValue(time);
         if (application.ios) {

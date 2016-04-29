@@ -11,9 +11,9 @@
   "dependencies": {
     "argon": "file:../argon",
     "argon-web-view": "file:plugins/argon-web-view",
-    "nativescript-geolocation": "0.0.9",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "openpgp": "^2.1.0",
+    "speigg-nativescript-geolocation": "0.0.9",
     "tns-core-modules": "^1.7.1",
     "urijs": "^1.17.1",
     "url-parse": "^1.1.1"

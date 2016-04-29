@@ -46,7 +46,9 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         // vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(zNeg90,yNeg180,<any>{}));
         // vuforiaTrackerEntity.orientation.setValue(yNeg180,<any>{});
         // vuforiaTrackerEntity.orientation.setValue(z90,<any>{});
-        exports.vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
+        exports.vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(y180, z90, {}));
+        // vuforiaTrackerEntity.orientation.setValue(y180);
+        // vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
         this.contextService.entities.add(exports.vuforiaTrackerEntity);
         var stateUpdateCallback = function (state) {
             deviceService.update();
@@ -78,16 +80,15 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var position = Matrix4.getTranslation(pose, _this.scratchCartesian);
                 var rotationMatrix = Matrix4.getRotation(pose, _this.scratchMatrix3);
                 var orientation_1 = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
-                // flip axis
-                // position.z = -position.z;
+                // Quaternion.inverse(orientation, orientation);
+                // NOTE: WE DON"T KNOW WHY THIS WORKS
+                // var px = position.x;
+                // position.x = position.y;
+                // position.y = px;
+                // var ox = orientation.x;
+                // orientation.x = -orientation.y;
+                // orientation.y = -ox;    
                 // orientation.z = -orientation.z;
-                var px = position.x;
-                position.x = position.y;
-                position.y = px;
-                var ox = orientation_1.x;
-                orientation_1.x = -orientation_1.y;
-                orientation_1.y = -ox;
-                orientation_1.z = -orientation_1.z;
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation_1);
                 console.log(JSON.stringify(Argon.getEntityPositionInReferenceFrame(entity, time, deviceService.entity, {})));
@@ -373,7 +374,7 @@ function configureVideoBackground() {
         sizeY: Math.round(videoHeight * scale * contentScaleFactor),
         reflection: 0 /* Default */
     };
-    console.log("Vuforia configuring video background...\n        viewWidth: " + viewWidth + " \n        viewHeight: " + viewHeight + " \n        contentScaleFactor: " + contentScaleFactor + "\n        videoWidth: " + videoWidth + " \n        videoHeight: " + videoHeight + " \n        orientation: " + orientation + " \n        config: " + JSON.stringify(config) + "\n    ");
+    console.log("Vuforia configuring video background...\n        contentScaleFactor: " + contentScaleFactor + " orientation: " + orientation + " \n        viewWidth: " + viewWidth + " viewHeight: " + viewHeight + " videoWidth: " + videoWidth + " videoHeight: " + videoHeight + " \n        config: " + JSON.stringify(config) + "\n    ");
     vuforia.api.getRenderer().setVideoBackgroundConfig(config);
 }
 if (vuforia.api)
