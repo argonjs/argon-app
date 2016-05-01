@@ -7,6 +7,7 @@ var http = require('http');
 var file = require('file-system');
 var platform = require('platform');
 var argon_device_service_1 = require('./argon-device-service');
+exports.VIDEO_DELAY = -3 / 60;
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -17,13 +18,11 @@ var zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO
 var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 var x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
+var ONE = new Cartesian3(1, 1, 1);
+var vuforiaProjection2GLProjection = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.IDENTITY, { x: 1, y: -1, z: -1 });
 if (vuforia.ios) {
     vuforia.ios.contentScaleFactor = platform.screen.mainScreen.scale;
 }
-exports.vuforiaTrackerEntity = new Argon.Cesium.Entity({
-    position: new Argon.Cesium.ConstantPositionProperty(),
-    orientation: new Argon.Cesium.ConstantProperty()
-});
 var cameraDeviceMode = -1 /* Default */;
 var NativescriptVuforiaServiceDelegate = (function (_super) {
     __extends(NativescriptVuforiaServiceDelegate, _super);
@@ -39,23 +38,25 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this.scratchQuaternion = new Argon.Cesium.Quaternion();
         this.scratchMatrix4 = new Argon.Cesium.Matrix4();
         this.scratchMatrix3 = new Argon.Cesium.Matrix3();
+        this.vuforiaTrackerEntity = new Argon.Cesium.Entity({
+            position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.entity),
+            orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90, y180, {}))
+        });
         this._viewerEnabled = false;
         this.idDataSetMap = new Map();
         this.dataSetUrlMap = new WeakMap();
-        exports.vuforiaTrackerEntity.position.setValue({ x: 0, y: 0, z: 0 }, deviceService.entity);
-        // vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(zNeg90,yNeg180,<any>{}));
-        // vuforiaTrackerEntity.orientation.setValue(yNeg180,<any>{});
-        // vuforiaTrackerEntity.orientation.setValue(z90,<any>{});
-        exports.vuforiaTrackerEntity.orientation.setValue(Quaternion.multiply(y180, z90, {}));
-        // vuforiaTrackerEntity.orientation.setValue(y180);
-        // vuforiaTrackerEntity.orientation.setValue(Quaternion.IDENTITY);
-        this.contextService.entities.add(exports.vuforiaTrackerEntity);
         var stateUpdateCallback = function (state) {
+            var time = JulianDate.now();
+            // subtract a few ms, since the video frame represents a time slightly in the past.
+            // TODO: if we are using an optical see-through display, like hololens,
+            // we want to do the opposite, and do forward prediction (though ideally not here, 
+            // but in each app itself to we are as close as possible to the actual render time when
+            // we start the render)
+            JulianDate.addSeconds(time, exports.VIDEO_DELAY, time);
             deviceService.update();
             var vuforiaFrame = state.getFrame();
-            var frameNumber = vuforiaFrame.getIndex();
+            var index = vuforiaFrame.getIndex();
             var frameTimeStamp = vuforiaFrame.getTimeStamp();
-            var time = JulianDate.now();
             // update trackable results in context entity collection
             var numTrackableResults = state.getNumTrackableResults();
             for (var i = 0; i < numTrackableResults; i++) {
@@ -68,32 +69,34 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     entity = new Argon.Cesium.Entity({
                         id: id,
                         name: name_1,
-                        position: new Argon.Cesium.SampledPositionProperty(exports.vuforiaTrackerEntity),
+                        position: new Argon.Cesium.SampledPositionProperty(_this.vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
+                    entity.position.maxNumSamples = 10;
+                    entity.orientation.maxNumSamples = 10;
+                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
+                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
+                    entity.position.forwardExtrapolationDuration = 2 / 60;
+                    entity.orientation.forwardExtrapolationDuration = 2 / 60;
                     contextService.entities.add(entity);
                 }
+                var trackableTime = JulianDate.clone(time);
+                // add any time diff from vuforia
                 var trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
-                var trackableTime = trackableTimeDiff === 0 ? time : JulianDate.addSeconds(time, trackableTimeDiff, {});
-                // get the position and orientation from the trackable pose (a row-major matrix)
+                if (trackableTimeDiff !== 0)
+                    JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
                 var pose = trackableResult.getPose();
                 var position = Matrix4.getTranslation(pose, _this.scratchCartesian);
                 var rotationMatrix = Matrix4.getRotation(pose, _this.scratchMatrix3);
                 var orientation_1 = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
-                // Quaternion.inverse(orientation, orientation);
-                // NOTE: WE DON"T KNOW WHY THIS WORKS
-                // var px = position.x;
-                // position.x = position.y;
-                // position.y = px;
-                // var ox = orientation.x;
-                // orientation.x = -orientation.y;
-                // orientation.y = -ox;    
-                // orientation.z = -orientation.z;
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation_1);
-                console.log(JSON.stringify(Argon.getEntityPositionInReferenceFrame(entity, time, deviceService.entity, {})));
-                console.log(JSON.stringify(Argon.getEntityOrientationInReferenceFrame(entity, time, deviceService.entity, {})));
             }
+            // if no one is listening, don't bother calculating the view state or raising an event. 
+            // (this can happen when the vuforia video reality is not the current reality, though
+            // we still want to update the trackables above in case an app is depending on them)
+            if (_this.stateUpdateEvent.numberOfListeners === 0)
+                return;
             var device = vuforia.api.getDevice();
             var renderingPrimitives = device.getRenderingPrimitives();
             var renderingViews = renderingPrimitives.getRenderingViews();
@@ -119,37 +122,65 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                         type = Argon.SubviewType.OTHER;
                         break;
                 }
-                // Note: Vuforia provides a weird projection matrix with x and y rows reversed. Not sure why. :P
-                // if we can find documentation / explanation of this somewhere we should put a link here.
+                // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
+                // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
                 var projectionMatrix = renderingPrimitives.getProjectionMatrix(view_1, 1 /* Camera */);
-                var xColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 0, _this.scratchCartesian);
-                var yColumn = Argon.Cesium.Matrix4.getColumn(projectionMatrix, 1, _this.scratchCartesian2);
+                // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+                // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+                // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
+                // Undo the video rotation since we already encode the interface orientation in our view pose
+                // Note: the "base" rotation vuforia's video (at least on iOS) is the landscape right orientation,
+                // this is the orientation where the device is held in landscape with the home button on the right. 
+                // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
+                // So, we want to undo this rotation which vuforia applies for us.  
+                // TODO: calculate this matrix only when we have to (when the interface orientation changes)
+                var inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + argon_device_service_1.getInterfaceOrientation() * Math.PI / 180), _this.scratchQuaternion), ONE, _this.scratchMatrix4);
+                Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
+                // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
+                // by negating the appropriate rows. 
+                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
+                // flip y axis so it is positive
+                projectionMatrix[4] *= -1; // x
+                projectionMatrix[5] *= -1; // y
+                projectionMatrix[6] *= -1; // z
+                projectionMatrix[7] *= -1; // w
+                // flip z axis so it is negative
+                projectionMatrix[8] *= -1; // x
+                projectionMatrix[9] *= -1; // y
+                projectionMatrix[10] *= -1; // z
+                projectionMatrix[11] *= -1; // w
                 if (vuforia.ios && device.isViewerActive()) {
                     // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
                     // then provide a means of passing an arbitrary scale factor to the video renderer.
                     // We can then provide controls to zoom in/out the video reality using this scale factor. 
                     var sceneScaleFactor = vuforia.ios.getSceneScaleFactor();
-                    Argon.Cesium.Cartesian4.multiplyByScalar(xColumn, sceneScaleFactor, xColumn);
-                    Argon.Cesium.Cartesian4.multiplyByScalar(yColumn, sceneScaleFactor, yColumn);
+                    // scale x-axis
+                    projectionMatrix[0] *= sceneScaleFactor; // x
+                    projectionMatrix[1] *= sceneScaleFactor; // y
+                    projectionMatrix[2] *= sceneScaleFactor; // z
+                    projectionMatrix[3] *= sceneScaleFactor; // w
+                    // scale y-axis
+                    projectionMatrix[4] *= sceneScaleFactor; // x
+                    projectionMatrix[5] *= sceneScaleFactor; // y
+                    projectionMatrix[6] *= sceneScaleFactor; // z
+                    projectionMatrix[7] *= sceneScaleFactor; // w
                 }
-                Argon.Cesium.Matrix4.setColumn(projectionMatrix, 0, yColumn, projectionMatrix);
-                Argon.Cesium.Matrix4.setColumn(projectionMatrix, 1, xColumn, projectionMatrix);
-                // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-                // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
-                // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
                 var viewport = renderingPrimitives.getViewport(view_1);
                 subviews.push({
                     type: type,
                     projectionMatrix: projectionMatrix,
                     viewport: {
-                        x: viewport.x / contentScaleFactor,
-                        y: viewport.y / contentScaleFactor,
-                        width: viewport.z / contentScaleFactor,
-                        height: viewport.w / contentScaleFactor
+                        x: Math.round(viewport.x / contentScaleFactor),
+                        y: Math.round(viewport.y / contentScaleFactor),
+                        width: Math.round(viewport.z / contentScaleFactor),
+                        height: Math.round(viewport.w / contentScaleFactor)
                     }
                 });
             }
+            // We expect the video view (managed by the browser view) to be the 
+            // same size as the current page's content view.
             var contentView = frames.topmost().currentPage.content;
+            // construct the final view parameters for this frame
             var view = {
                 viewport: {
                     x: 0,
@@ -157,11 +188,12 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     width: contentView.getMeasuredWidth(),
                     height: contentView.getMeasuredHeight()
                 },
-                pose: Argon.getSerializedEntityPose(deviceService.entity, time),
+                pose: Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
                 subviews: subviews
             };
+            // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
-                frameNumber: frameNumber,
+                index: index,
                 time: time,
                 view: view
             });

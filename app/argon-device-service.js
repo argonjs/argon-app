@@ -44,15 +44,15 @@ var NativescriptDeviceService = (function (_super) {
         this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
         this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
         this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.position.maxNumSamples = 10;
         this.entity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
         this.entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
         this.entity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.entity.orientation.maxNumSamples = 10;
     }
     NativescriptDeviceService.prototype.ensureGeolocation = function () {
         var _this = this;
         if (typeof this.locationWatchId !== 'undefined')
-            return;
-        if (this.startedLocationServices)
             return;
         // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
         // Casting the module as <any> here for now to hide annoying typescript errors...
@@ -69,6 +69,7 @@ var NativescriptDeviceService = (function (_super) {
             sampledPosition.addSample(locationTime, position);
             // make sure its actually working. TOOD: remove once verified...
             var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
+            console.log('gps position received ' + gpsPos);
             if (lastGPSPosition !== gpsPos)
                 console.log('gps position changed ' + gpsPos);
             lastGPSPosition = gpsPos;
@@ -77,7 +78,6 @@ var NativescriptDeviceService = (function (_super) {
         }, {
             desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0
         });
-        this.startedLocationServices = true;
         console.log("Creating location watcher. " + this.locationWatchId);
         if (application.ios) {
             switch (CLLocationManager.authorizationStatus()) {
@@ -112,7 +112,13 @@ var NativescriptDeviceService = (function (_super) {
             var motion = getIosMotionManager().deviceMotion;
             if (motion && position) {
                 var motionQuaternion = motion.attitude.quaternion;
-                // Apple's orientation is reported in NWU, so convert to ENU
+                // Apple's orientation is reported in NWU, so we convert to ENU by applying a global rotation of
+                // 90 degrees about +z to the NWU orientation (or applying the NWU quaternion as a local rotation 
+                // to the starting orientation of 90 degress about +z). 
+                // Note: With quaternion multiplication the `*` symbol can be read as 'rotates'. 
+                // If the orientation (O) is on the right and the rotation (R) is on the left, 
+                // such that the multiplication order is R*O, then R is a global rotation being applied on O. 
+                // Likewise, the reverse, O*R, is a local rotation R applied to the orientation O. 
                 var orientation_1 = Quaternion.multiply(z90, motionQuaternion, scratchQuaternion);
                 // Finally, convert from local ENU to ECEF (Earth-Centered-Earth-Fixed)
                 var enu2ecef = Transforms.eastNorthUpToFixedFrame(position, undefined, scratchMatrix4);
