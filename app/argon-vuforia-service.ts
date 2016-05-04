@@ -10,7 +10,7 @@ import * as platform from 'platform';
 
 import {getInterfaceOrientation} from './argon-device-service'
 
-export const VIDEO_DELAY = -1/60;
+export const VIDEO_DELAY = -0.5/60;
 
 const Matrix3 = Argon.Cesium.Matrix3;
 const Matrix4 = Argon.Cesium.Matrix4;

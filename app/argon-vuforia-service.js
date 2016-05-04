@@ -7,7 +7,7 @@ var http = require('http');
 var file = require('file-system');
 var platform = require('platform');
 var argon_device_service_1 = require('./argon-device-service');
-exports.VIDEO_DELAY = -1 / 60;
+exports.VIDEO_DELAY = -0.5 / 60;
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -191,8 +191,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 pose: Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
                 subviews: subviews
             };
-            var t2 = JulianDate.now();
-            console.log(JulianDate.secondsDifference(t2, time));
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
                 index: index,
