@@ -67,16 +67,15 @@ var NativescriptDeviceService = (function (_super) {
             var sampledPosition = _this.entity.position;
             var position = Argon.Cesium.Cartesian3.fromDegrees(location.longitude, location.latitude, location.altitude, Argon.Cesium.Ellipsoid.WGS84, scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
-            // make sure its actually working. TOOD: remove once verified...
-            var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
-            console.log('gps position received ' + gpsPos);
-            if (lastGPSPosition !== gpsPos)
-                console.log('gps position changed ' + gpsPos);
-            lastGPSPosition = gpsPos;
+            // make sure its actually working
+            // var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
+            // if (lastGPSPosition !== gpsPos) console.log('gps position changed '+gpsPos);
+            // lastGPSPosition = gpsPos;
         }, function (e) {
             console.log(e);
         }, {
-            desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0
+            desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0,
+            updateDistance: application.ios ? kCLDistanceFilterNone : 0
         });
         console.log("Creating location watcher. " + this.locationWatchId);
         if (application.ios) {

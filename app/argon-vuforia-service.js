@@ -7,7 +7,7 @@ var http = require('http');
 var file = require('file-system');
 var platform = require('platform');
 var argon_device_service_1 = require('./argon-device-service');
-exports.VIDEO_DELAY = -3 / 60;
+exports.VIDEO_DELAY = -1 / 60;
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -19,11 +19,11 @@ var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 var x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 var ONE = new Cartesian3(1, 1, 1);
-var vuforiaProjection2GLProjection = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.IDENTITY, { x: 1, y: -1, z: -1 });
+var cameraDeviceMode = -3 /* OpimizeQuality */;
 if (vuforia.ios) {
-    vuforia.ios.contentScaleFactor = platform.screen.mainScreen.scale;
+    vuforia.ios.contentScaleFactor = cameraDeviceMode === -2 /* OptimizeSpeed */ ?
+        1 : platform.screen.mainScreen.scale;
 }
-var cameraDeviceMode = -1 /* Default */;
 var NativescriptVuforiaServiceDelegate = (function (_super) {
     __extends(NativescriptVuforiaServiceDelegate, _super);
     function NativescriptVuforiaServiceDelegate(deviceService, contextService) {
@@ -74,8 +74,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     });
                     entity.position.maxNumSamples = 10;
                     entity.orientation.maxNumSamples = 10;
-                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
-                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
+                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entity.position.forwardExtrapolationDuration = 2 / 60;
                     entity.orientation.forwardExtrapolationDuration = 2 / 60;
                     contextService.entities.add(entity);
@@ -191,6 +191,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 pose: Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
                 subviews: subviews
             };
+            var t2 = JulianDate.now();
+            console.log(JulianDate.secondsDifference(t2, time));
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
                 index: index,

@@ -10,7 +10,7 @@ import * as platform from 'platform';
 
 import {getInterfaceOrientation} from './argon-device-service'
 
-export const VIDEO_DELAY = -1/30;
+export const VIDEO_DELAY = -1/60;
 
 const Matrix3 = Argon.Cesium.Matrix3;
 const Matrix4 = Argon.Cesium.Matrix4;
@@ -26,17 +26,11 @@ const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 
 const ONE = new Cartesian3(1,1,1);
 
-const vuforiaProjection2GLProjection = Matrix4.fromTranslationQuaternionRotationScale(
-    Cartesian3.ZERO,
-    Quaternion.IDENTITY,
-    {x:1,y:-1,z:-1}
-);
-
+const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.ios) {
-    (<UIView>vuforia.ios).contentScaleFactor = platform.screen.mainScreen.scale;
+    (<UIView>vuforia.ios).contentScaleFactor = cameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
+        1 : platform.screen.mainScreen.scale;
 }
-
-const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
 
 @Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
@@ -66,14 +60,14 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // we want to do the opposite, and do forward prediction (though ideally not here, 
             // but in each app itself to we are as close as possible to the actual render time when
             // we start the render)
-            JulianDate.addSeconds(time, VIDEO_DELAY, time); 
+            JulianDate.addSeconds(time, VIDEO_DELAY, time);
             
             deviceService.update();
             
             const vuforiaFrame = state.getFrame();
             const index = vuforiaFrame.getIndex();
             const frameTimeStamp = vuforiaFrame.getTimeStamp();
-            
+                        
             // update trackable results in context entity collection
             const numTrackableResults = state.getNumTrackableResults();
             for (let i=0; i < numTrackableResults; i++) {
@@ -93,8 +87,8 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                     });
                     entity.position.maxNumSamples = 10;
                     entity.orientation.maxNumSamples = 10;
-                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
-                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.EXTRAPOLATE;
+                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entity.position.forwardExtrapolationDuration = 2/60;
                     entity.orientation.forwardExtrapolationDuration = 2/60;
                     contextService.entities.add(entity);

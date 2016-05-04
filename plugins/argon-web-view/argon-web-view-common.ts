@@ -23,7 +23,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             
             console.log('Connecting to argon.js application at ' + sessionUrl);
             const manager = Argon.ArgonSystem.instance;
-            const messageChannel = manager.session.createMessageChannel();
+            const messageChannel = manager.session.createSynchronousMessageChannel();
             const remoteSession = manager.session.addManagedSessionPort();
             ArgonWebView.sessionUrlMap.set(remoteSession, sessionUrl);
             

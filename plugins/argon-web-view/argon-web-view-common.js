@@ -19,7 +19,7 @@ var ArgonWebView = (function (_super) {
             var sessionUrl_1 = this.url;
             console.log('Connecting to argon.js application at ' + sessionUrl_1);
             var manager = Argon.ArgonSystem.instance;
-            var messageChannel = manager.session.createMessageChannel();
+            var messageChannel = manager.session.createSynchronousMessageChannel();
             var remoteSession_1 = manager.session.addManagedSessionPort();
             ArgonWebView.sessionUrlMap.set(remoteSession_1, sessionUrl_1);
             this._sessionMessagePort = messageChannel.port2;
