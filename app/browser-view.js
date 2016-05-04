@@ -19,7 +19,6 @@ var BrowserView = (function (_super) {
         this._overviewEnabled = false;
         this._scrollOffset = 0;
         this._panStartOffset = 0;
-        // const realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.realityLayer = this.addLayer();
         this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.ios) {
@@ -38,32 +37,37 @@ var BrowserView = (function (_super) {
         this.layerContainer.verticalAlignment = 'stretch';
         this.addChild(this.layerContainer);
         this.backgroundColor = new color_1.Color("#555");
-        // Make a new layer to be used with the url bar.
         this._setFocussedLayer(this.addLayer());
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
         var layer;
-        // Put things in a grid layout to be able to decorate later.
         var container = new grid_layout_1.GridLayout();
         container.horizontalAlignment = 'stretch';
         container.verticalAlignment = 'stretch';
-        // Make an argon-enabled webview
+        container.backgroundColor = new color_1.Color(255, 255, 255, 255);
         var webView = new argon_web_view_1.ArgonWebView;
         webView.on('propertyChange', function (eventData) {
             if (eventData.propertyName === 'url' && webView === _this.focussedLayer.webView) {
                 _this._setURL(eventData.value);
             }
         });
+        var whiteningTimeout;
         webView.on('sessionConnect', function (eventData) {
             var session = eventData.session;
             if (webView === _this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
             }
+            container.backgroundColor = new color_1.Color(0, 255, 255, 255);
+            clearTimeout(whiteningTimeout);
+        });
+        webView.on(argon_web_view_1.ArgonWebView.loadFinishedEvent, function () {
+            whiteningTimeout = setTimeout(function () {
+                container.backgroundColor = new color_1.Color(255, 255, 255, 255);
+            }, 500);
         });
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
-        // Cover the webview to detect gestures and disable interaction
         var gestureCover = new grid_layout_1.GridLayout();
         gestureCover.style.visibility = 'collapsed';
         gestureCover.horizontalAlignment = 'stretch';
@@ -141,12 +145,12 @@ var BrowserView = (function (_super) {
                 layer.webView.ios.layer.masksToBounds = true;
             layer.gestureCover.style.visibility = 'visible';
             layer.gestureCover.on(gestures_1.GestureTypes.pan, _this.handlePan.bind(_this));
-            // For transparent webviews, add a little bit of opacity
-            layer.container.animate({
-                backgroundColor: new color_1.Color(128, 255, 255, 255),
-                duration: OVERVIEW_ANIMATION_DURATION,
-            });
-            // Update for the first time & animate.
+            if (layer.webView.session) {
+                layer.container.animate({
+                    backgroundColor: new color_1.Color(128, 255, 255, 255),
+                    duration: OVERVIEW_ANIMATION_DURATION,
+                });
+            }
             var _a = _this.calculateLayerTransform(index), translate = _a.translate, scale = _a.scale;
             layer.container.animate({
                 translate: translate,
@@ -155,7 +159,6 @@ var BrowserView = (function (_super) {
                 curve: enums_1.AnimationCurve.easeOut,
             });
         });
-        // Be able to drag on black
         this.layerContainer.on(gestures_1.GestureTypes.pan, this.handlePan.bind(this));
     };
     BrowserView.prototype.hideOverview = function () {
@@ -166,12 +169,12 @@ var BrowserView = (function (_super) {
                 layer.webView.ios.layer.masksToBounds = false;
             layer.gestureCover.style.visibility = 'collapsed';
             layer.gestureCover.off(gestures_1.GestureTypes.pan);
-            // For transparent webviews, add a little bit of opacity
-            layer.container.animate({
-                backgroundColor: new color_1.Color(0, 255, 255, 255),
-                duration: OVERVIEW_ANIMATION_DURATION,
-            });
-            // Update for the first time & animate.
+            if (layer.webView.session) {
+                layer.container.animate({
+                    backgroundColor: new color_1.Color(0, 255, 255, 255),
+                    duration: OVERVIEW_ANIMATION_DURATION,
+                });
+            }
             return layer.container.animate({
                 translate: { x: 0, y: 0 },
                 scale: { x: 1, y: 1 },
@@ -182,7 +185,6 @@ var BrowserView = (function (_super) {
         Promise.all(animations).then(function () {
             _this._scrollOffset = 0;
         });
-        // Be able to drag on black
         this.layerContainer.off(gestures_1.GestureTypes.pan);
     };
     BrowserView.prototype._setURL = function (url) {

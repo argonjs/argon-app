@@ -178,10 +178,12 @@ export class BrowserView extends GridLayout {
             layer.gestureCover.style.visibility = 'visible';
             layer.gestureCover.on(GestureTypes.pan, this.handlePan.bind(this));
             // For transparent webviews, add a little bit of opacity
-            layer.container.animate({
-                backgroundColor: new Color(128, 255, 255, 255),
-                duration: OVERVIEW_ANIMATION_DURATION,
-            });
+            if (layer.webView.session) {
+                layer.container.animate({
+                    backgroundColor: new Color(128, 255, 255, 255),
+                    duration: OVERVIEW_ANIMATION_DURATION,
+                });
+            }
             // Update for the first time & animate.
             const {translate, scale} = this.calculateLayerTransform(index);
             layer.container.animate({
@@ -203,10 +205,12 @@ export class BrowserView extends GridLayout {
             layer.gestureCover.style.visibility = 'collapsed';
             layer.gestureCover.off(GestureTypes.pan);
             // For transparent webviews, add a little bit of opacity
-            layer.container.animate({
-                backgroundColor: new Color(0, 255, 255, 255),
-                duration: OVERVIEW_ANIMATION_DURATION,
-            });
+            if (layer.webView.session) {
+                layer.container.animate({
+                    backgroundColor: new Color(0, 255, 255, 255),
+                    duration: OVERVIEW_ANIMATION_DURATION,
+                });
+            }
             // Update for the first time & animate.
             return layer.container.animate({
                 translate: { x: 0, y: 0 },
