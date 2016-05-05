@@ -222,6 +222,10 @@ export function menuLoaded(args) {
 	menu.opacity = 0;
 }
 
+export function onReload(args) {
+	browserView.focussedLayer.webView.reload();
+}
+
 export function onOverview(args) {
 	browserView.toggleOverview();
 	viewModel.setDebugEnabled(false);

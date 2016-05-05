@@ -188,6 +188,10 @@ function menuLoaded(args) {
     menu.opacity = 0;
 }
 exports.menuLoaded = menuLoaded;
+function onReload(args) {
+    exports.browserView.focussedLayer.webView.reload();
+}
+exports.onReload = onReload;
 function onOverview(args) {
     exports.browserView.toggleOverview();
     viewModel.setDebugEnabled(false);

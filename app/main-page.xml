@@ -18,6 +18,9 @@
     </Page.actionBar>
     <browserView:BrowserView loaded="browserViewLoaded" horizontalAlignment="stretch" verticalAlignment="stretch">
         <StackLayout id="menu" loaded="menuLoaded" visibility="collapsed" horizontalAlignment="right" verticalAlignment="top" orientation="vertical">
+            <StackLayout class="menuItem" orientation="horizontal">
+                <Button id="reloadBtn" class="material-icon action-btn" text="refresh" tap="onReload"/>
+            </StackLayout>
             <Label class="menuItem" text="New Channel" tap="onNewChannel"/>
             <Label class="menuItem" text="Bookmarks" tap="onBookmarks"/>
             <Label class="menuItem" text="History" tap="onHistory"/>
