@@ -52,6 +52,8 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
 	constructor(private deviceService:Argon.DeviceService, private contextService:Argon.ContextService) {
         super();
         
+        if (!vuforia.api) return;
+        
         const stateUpdateCallback = (state:vuforia.State) => { 
             
             const time = JulianDate.now();

@@ -45,6 +45,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this._viewerEnabled = false;
         this.idDataSetMap = new Map();
         this.dataSetUrlMap = new WeakMap();
+        if (!vuforia.api)
+            return;
         var stateUpdateCallback = function (state) {
             var time = JulianDate.now();
             // subtract a few ms, since the video frame represents a time slightly in the past.
