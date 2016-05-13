@@ -9,12 +9,21 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public static sessionConnectEvent = 'sessionConnect';
     public static logEvent = 'log';
 
+    public abstract get title() : string;
+
     public abstract get progress() : number;
 
     public session:Argon.SessionPort;
     private _sessionMessagePort:Argon.MessagePortLike;
 
     public log:string[] = [];
+    
+    constructor() {
+        super();
+        this.on(WebView.loadFinishedEvent, ()=>{
+            this.notifyPropertyChange('title', this.title);
+        })
+    }
 
     public _handleArgonMessage(message:string) {
         if (typeof this._sessionMessagePort == 'undefined') { 

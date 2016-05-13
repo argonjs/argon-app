@@ -10,7 +10,8 @@ import {Button} from 'ui/button';
 import {View, getViewById} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
-import {Observable, PropertyChangeData} from 'data/observable'
+import {Observable, PropertyChangeData} from 'data/observable';
+import * as fs from 'file-system';
 
 import * as Argon from 'argon';
 
@@ -33,13 +34,22 @@ let searchBar:SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
+const pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
+
+const publicKeyPromise = pgpFolder.contains('public.key') ? 
+	pgpFolder.getFile('public.key').readText() : Promise.reject(null);
+const privateKeyPromise = pgpFolder.contains('private.key') ? 
+	pgpFolder.getFile('private.key').readText() : Promise.reject(null);
+
 const container = new Argon.DI.Container;
 container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
 
 manager = Argon.init({container, config: {
 	role: Argon.Role.MANAGER,
-	name: 'ArgonApp'
+	name: 'ArgonApp',
+	managerPublicKey: publicKeyPromise,
+	managerPrivateKey: privateKeyPromise
 }});
 
 manager.reality.setDefault({type:'vuforia'});

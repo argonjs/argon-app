@@ -50,6 +50,10 @@ export class ArgonWebView extends common.ArgonWebView  {
 		this._ios.backgroundColor = UIColor.clearColor();
 		this._ios.opaque = false;
     }
+    
+    get title() {
+        return this._ios.title;
+    }
 
     get progress() {
         return this._ios.estimatedProgress;

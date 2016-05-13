@@ -26,6 +26,13 @@ var ArgonWebView = (function (_super) {
         this._ios.backgroundColor = UIColor.clearColor();
         this._ios.opaque = false;
     }
+    Object.defineProperty(ArgonWebView.prototype, "title", {
+        get: function () {
+            return this._ios.title;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(ArgonWebView.prototype, "progress", {
         get: function () {
             return this._ios.estimatedProgress;

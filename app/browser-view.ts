@@ -1,8 +1,19 @@
 import {View} from 'ui/core/view';
+import {Page} from 'ui/page';
 import {Color} from 'color';
-import {GridLayout} from 'ui/layouts/grid-layout';
+import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
+import {StackLayout} from 'ui/layouts/stack-layout';
+import {Label} from 'ui/label';
+import {Button} from 'ui/button';
 import {ArgonWebView} from 'argon-web-view';
-import {AnimationCurve} from 'ui/enums';
+import {
+    AnimationCurve, 
+    VerticalAlignment, 
+    HorizontalAlignment, 
+    Orientation, 
+    TextAlignment,
+    Visibility
+} from 'ui/enums';
 import {
   GestureTypes,
   GestureStateTypes,
@@ -15,6 +26,9 @@ import {Placeholder, CreateViewEventData} from 'ui/placeholder'
 import * as vuforia from 'nativescript-vuforia';
 import * as Argon from 'argon';
 import * as fs from 'file-system';
+import * as frames from 'ui/frame'
+
+const TITLE_BAR_HEIGHT = 26;
 
 const OVERVIEW_ANIMATION_DURATION = 250;
 const DEFAULT_REALITY_HTML = "~/default-reality.html";
@@ -22,7 +36,9 @@ const DEFAULT_REALITY_HTML = "~/default-reality.html";
 export interface Layer {
     webView:ArgonWebView,
     container:GridLayout,
-    gestureCover:GridLayout
+    gestureCover:GridLayout,
+    titleBar:View,
+    label: Label,
 }
 
 export class BrowserView extends GridLayout {
@@ -54,6 +70,7 @@ export class BrowserView extends GridLayout {
         this.realityLayer.container.addChild(videoView);
         Util.bringToFront(this.realityLayer.webView);
         Util.bringToFront(this.realityLayer.gestureCover);
+        Util.bringToFront(this.realityLayer.titleBar);
         
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
@@ -64,11 +81,13 @@ export class BrowserView extends GridLayout {
     }
 
     addLayer() {
-        let layer;
+        let layer:Layer;
+        
         // Put things in a grid layout to be able to decorate later.
         const container = new GridLayout();
         container.horizontalAlignment = 'stretch';
         container.verticalAlignment = 'stretch';
+        
         // Make an argon-enabled webview
         const webView = new ArgonWebView;
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
@@ -84,6 +103,7 @@ export class BrowserView extends GridLayout {
         });
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
+        
         // Cover the webview to detect gestures and disable interaction
         const gestureCover = new GridLayout();
         gestureCover.style.visibility = 'collapsed';
@@ -98,18 +118,76 @@ export class BrowserView extends GridLayout {
             }
             this.hideOverview();
         });
+        
+        const titleBar = new GridLayout();
+        titleBar.addRow(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.addColumn(new ItemSpec(1, 'star'));
+        titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.verticalAlignment = VerticalAlignment.top;
+        titleBar.horizontalAlignment = HorizontalAlignment.stretch;
+        titleBar.backgroundColor = new Color(240, 255, 255, 255);
+        titleBar.visibility = Visibility.collapse;
+        
+        const closeButton = new Button();
+        closeButton.horizontalAlignment = HorizontalAlignment.stretch;
+        closeButton.verticalAlignment = VerticalAlignment.stretch;
+        closeButton.text = 'close';
+        closeButton.className = 'material-icon';
+        closeButton.color = new Color('black');
+        GridLayout.setRow(closeButton, 0);
+        GridLayout.setColumn(closeButton, 0);
+        
+        closeButton.on('tap', ()=>{
+            this.removeLayer(layer);
+        })
+        
+        const label = new Label();
+        label.horizontalAlignment = HorizontalAlignment.stretch;
+        label.verticalAlignment = VerticalAlignment.stretch;
+        label.textAlignment = TextAlignment.center;
+        label.color = new Color('black');
+        label.fontSize = 14;
+        GridLayout.setRow(label, 0);
+        GridLayout.setColumn(label, 1);
+        
+        titleBar.addChild(closeButton);
+        titleBar.addChild(label);
+        
+        label.bind({
+            sourceProperty: 'title',
+            targetProperty: 'text'
+        }, webView);
+        
         container.addChild(webView);
         container.addChild(gestureCover);
+        container.addChild(titleBar);
         this.layerContainer.addChild(container);
+        
         
         layer = {
             container: container,
             webView: webView,
-            gestureCover: gestureCover
+            gestureCover: gestureCover,
+            titleBar: titleBar,
+            label
         };
         this.layers.push(layer);
         this._setFocussedLayer(layer);
         return layer;
+    }
+    
+    removeLayerAtIndex(index:number) {
+        const layer = this.layers[index];
+        if (typeof layer === 'undefined') 
+            throw new Error('Expected layer at index ' + index);
+        this.layers.splice(index, 1);
+        this.layerContainer.removeChild(layer.container); // for now
+    }
+    
+    removeLayer(layer:Layer) {
+        const index = this.layers.indexOf(layer);
+        this.removeLayerAtIndex(index);
     }
     
     handlePan(evt:PanGestureEventData) {
@@ -117,14 +195,14 @@ export class BrowserView extends GridLayout {
             this._panStartOffset = this._scrollOffset;
         }
         this._scrollOffset = this._panStartOffset + evt.deltaY;
-        this.updateLayerTransforms();
+        this.updateLayerTransforms(); 
     }
     
     calculateLayerTransform(index) {
-        const layerPosition = index * 200 + this._scrollOffset;
+        const layerPosition = index * 150 + this._scrollOffset;
         const normalizedPosition = layerPosition / this.getMeasuredHeight();
-        const theta = Math.min(Math.max(normalizedPosition + 0.2, 0), 0.85) * Math.PI;
-        const scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.2;
+        const theta = Math.min(Math.max(normalizedPosition, 0), 0.85) * Math.PI;
+        const scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.25;
         return {
             translate: {
                 x: 0,
@@ -169,6 +247,12 @@ export class BrowserView extends GridLayout {
                 backgroundColor: new Color(128, 255, 255, 255),
                 duration: OVERVIEW_ANIMATION_DURATION,
             });
+            // Show titlebars
+            layer.titleBar.visibility = Visibility.visible;
+            layer.titleBar.animate({
+                opacity: 1,
+                duration: OVERVIEW_ANIMATION_DURATION
+            })
             // Update for the first time & animate.
             const {translate, scale} = this.calculateLayerTransform(index);
             layer.container.animate({
@@ -194,6 +278,13 @@ export class BrowserView extends GridLayout {
                 backgroundColor: new Color(0, 255, 255, 255),
                 duration: OVERVIEW_ANIMATION_DURATION,
             });
+            // Hide titlebars
+            layer.titleBar.animate({
+                opacity: 0,
+                duration: OVERVIEW_ANIMATION_DURATION
+            }).then(()=>{
+                layer.titleBar.visibility = Visibility.collapse;
+            })
             // Update for the first time & animate.
             return layer.container.animate({
                 translate: { x: 0, y: 0 },
