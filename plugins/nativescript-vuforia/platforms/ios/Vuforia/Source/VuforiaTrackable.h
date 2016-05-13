@@ -47,6 +47,7 @@
 
 @interface VuforiaObjectTarget : VuforiaTrackable
 +(int)getClassType;
+-(NSString*)getUniqueTargetId;
 -(VuforiaVec3F)getSize;
 @end
 
@@ -86,7 +87,7 @@ typedef NS_ENUM (NSInteger, VuforiaTrackableResultStatus) {
 /// Returns the corresponding Trackable that this result represents
 -(VuforiaTrackable*)getTrackable;
 /// Returns the current pose matrix in row-major order
--(const VuforiaMatrix34)getPose;
+-(const VuforiaMatrix44)getPose;
 /// A time stamp that defines when the trackable result was generated
 -(double)getTimeStamp;
 @end

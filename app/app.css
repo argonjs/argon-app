@@ -1,9 +1,10 @@
 ﻿.menuItem {
     padding: 15px 40px 15px 15px;
+    color: #545454;
 }
 
 #menu {
-    background-color: #BBFFFFFF;
+    background-color: #CCFFFFFF;
 }
 
 .action-btn {

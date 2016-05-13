@@ -1,10 +1,16 @@
 
-import * as application from "application";
-import * as frames from "ui/frame"
-import * as Argon from "argon";
+import * as uri from 'urijs';
+import * as application from 'application';
+import * as frames from 'ui/frame';
+import * as Argon from 'argon';
 import * as vuforia from 'nativescript-vuforia';
+import * as http from 'http';
+import * as file from 'file-system';
+import * as platform from 'platform';
 
-import {systemBootDate, getInterfaceOrientation} from './argon-device-service'
+import {getInterfaceOrientation} from './argon-device-service'
+
+export const VIDEO_DELAY = -0.5/60;
 
 const Matrix3 = Argon.Cesium.Matrix3;
 const Matrix4 = Argon.Cesium.Matrix4;
@@ -13,40 +19,57 @@ const Quaternion = Argon.Cesium.Quaternion;
 const JulianDate = Argon.Cesium.JulianDate;
 const CesiumMath = Argon.Cesium.CesiumMath;
 
-const zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO)
-const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO)
-const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI)
-const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI)
+const zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO);
+const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
+const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
+const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 
-const vuforiaEntity = new Argon.Cesium.Entity({
-    id:'VUFORIA',
-    position: new Argon.Cesium.ConstantPositionProperty(),
-    orientation: new Argon.Cesium.ConstantProperty()
-});
+const ONE = new Cartesian3(1,1,1);
 
-const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
+const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
+if (vuforia.ios) {
+    (<UIView>vuforia.ios).contentScaleFactor = cameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
+        1 : platform.screen.mainScreen.scale;
+}
 
 @Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
-export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
+export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
     
     public stateUpdateEvent = new Argon.Event<Argon.SerializedFrameState>();
     
+    private scratchDate = new Argon.Cesium.JulianDate();
+    private scratchCartesian = new Argon.Cesium.Cartesian3();
+    private scratchCartesian2 = new Argon.Cesium.Cartesian3();
+    private scratchQuaternion = new Argon.Cesium.Quaternion();
 	private scratchMatrix4 = new Argon.Cesium.Matrix4();
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
+    
+    private vuforiaTrackerEntity = new Argon.Cesium.Entity({
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.entity),
+        orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
+    });
 	
 	constructor(private deviceService:Argon.DeviceService, private contextService:Argon.ContextService) {
         super();
         
-        vuforiaEntity.position.setValue({x:0,y:0,z:0}, deviceService.entity);
-        vuforiaEntity.orientation.setValue(Quaternion.multiply(x180, z90, <any>{}));
-        this.contextService.entities.add(vuforiaEntity);
+        if (!vuforia.api) return;
         
-        const stateUpdateCallback = (state:vuforia.State) => {
+        const stateUpdateCallback = (state:vuforia.State) => { 
+            
+            const time = JulianDate.now();
+            // subtract a few ms, since the video frame represents a time slightly in the past.
+            // TODO: if we are using an optical see-through display, like hololens,
+            // we want to do the opposite, and do forward prediction (though ideally not here, 
+            // but in each app itself to we are as close as possible to the actual render time when
+            // we start the render)
+            JulianDate.addSeconds(time, VIDEO_DELAY, time);
+            
+            deviceService.update();
             
             const vuforiaFrame = state.getFrame();
-            const frameNumber = vuforiaFrame.getIndex();
-            const time = JulianDate.addSeconds(systemBootDate, vuforiaFrame.getTimeStamp(), <any>{});
-            
+            const index = vuforiaFrame.getIndex();
+            const frameTimeStamp = vuforiaFrame.getTimeStamp();
+                        
             // update trackable results in context entity collection
             const numTrackableResults = state.getNumTrackableResults();
             for (let i=0; i < numTrackableResults; i++) {
@@ -54,31 +77,44 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const trackable = trackableResult.getTrackable();
                 const name = trackable.getName();
                 
-                let id = this._getIdForTrackable(trackable);
-                
+                const id = this._getIdForTrackable(trackable);
                 let entity = contextService.entities.getById(id);
                 
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
                         id,
                         name,
-                        position: new Argon.Cesium.SampledPositionProperty(vuforiaEntity),
+                        position: new Argon.Cesium.SampledPositionProperty(this.vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
+                    entity.position.maxNumSamples = 10;
+                    entity.orientation.maxNumSamples = 10;
+                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entity.position.forwardExtrapolationDuration = 2/60;
+                    entity.orientation.forwardExtrapolationDuration = 2/60;
                     contextService.entities.add(entity);
                 }
                 
-                const trackableTime = JulianDate.addSeconds(systemBootDate, trackableResult.getTimeStamp(), <any>{});
+                const trackableTime = JulianDate.clone(time); 
                 
-                // get the position and orientation out of the pose matrix                
+                // add any time diff from vuforia
+                const trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
+                if (trackableTimeDiff !== 0) JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
+                
                 const pose = trackableResult.getPose();
-                const position = Matrix4.getTranslation(pose, <Argon.Cesium.Cartesian3>{});
+                const position = Matrix4.getTranslation(pose, this.scratchCartesian);
                 const rotationMatrix = Matrix4.getRotation(pose, this.scratchMatrix3);
-                const orientation = Quaternion.fromRotationMatrix(rotationMatrix, <Argon.Cesium.Quaternion>{});
+                const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this.scratchQuaternion);
                 
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation);
             }
+            
+            // if no one is listening, don't bother calculating the view state or raising an event. 
+            // (this can happen when the vuforia video reality is not the current reality, though
+            // we still want to update the trackables above in case an app is depending on them)
+            if (this.stateUpdateEvent.numberOfListeners === 0) return;
             
             const device = vuforia.api.getDevice();
             const renderingPrimitives = device.getRenderingPrimitives();
@@ -86,10 +122,11 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             const numViews = renderingViews.getNumViews()
             
             const subviews = <Array<Argon.SerializedSubview>>[];
+            const contentScaleFactor = (<UIView>vuforia.ios).contentScaleFactor;
             
             for (let i=0; i < numViews; i++) {
                 const view = renderingViews.getView(i);
-                if (view === vuforia.View.PostProcess) return;
+                if (view === vuforia.View.PostProcess) continue;
                 
                 let type:Argon.SubviewType;
                 switch (view) {
@@ -103,31 +140,93 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                         type = Argon.SubviewType.OTHER; break;
                 }
                 
-                const rawProjectionMatrix = renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
-                const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-                const projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+                // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
+                // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
+                let projectionMatrix = <any>renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
+                
+                // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+                // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+                // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
+                
+                // Undo the video rotation since we already encode the interface orientation in our view pose
+                // Note: the "base" rotation vuforia's video (at least on iOS) is the landscape right orientation,
+                // this is the orientation where the device is held in landscape with the home button on the right. 
+                // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
+                // So, we want to undo this rotation which vuforia applies for us.  
+                // TODO: calculate this matrix only when we have to (when the interface orientation changes)
+                const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
+                    Cartesian3.ZERO,
+                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + getInterfaceOrientation()*Math.PI/180), this.scratchQuaternion),
+                    ONE,
+                    this.scratchMatrix4
+                );
+                Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
+                
+                // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
+                // by negating the appropriate rows. 
+                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
+
+                // flip y axis so it is positive
+                projectionMatrix[4] *= -1; // x
+                projectionMatrix[5] *= -1; // y
+                projectionMatrix[6] *= -1; // z
+                projectionMatrix[7] *= -1; // w
+                // flip z axis so it is negative
+                projectionMatrix[8] *= -1;  // x
+                projectionMatrix[9] *= -1;  // y
+                projectionMatrix[10] *= -1; // z
+                projectionMatrix[11] *= -1; // w
+                
+                if (vuforia.ios && device.isViewerActive()) {
+                    // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
+                    // then provide a means of passing an arbitrary scale factor to the video renderer.
+                    // We can then provide controls to zoom in/out the video reality using this scale factor. 
+                    var sceneScaleFactor = vuforia.ios.getSceneScaleFactor();
+                    // scale x-axis
+                    projectionMatrix[0] *= sceneScaleFactor; // x
+                    projectionMatrix[1] *= sceneScaleFactor; // y
+                    projectionMatrix[2] *= sceneScaleFactor; // z
+                    projectionMatrix[3] *= sceneScaleFactor; // w
+                    // scale y-axis
+                    projectionMatrix[4] *= sceneScaleFactor; // x
+                    projectionMatrix[5] *= sceneScaleFactor; // y
+                    projectionMatrix[6] *= sceneScaleFactor; // z
+                    projectionMatrix[7] *= sceneScaleFactor; // w
+                }
+                
+                const viewport = renderingPrimitives.getViewport(view);
                 
                 subviews.push({
                     type,
-                    projectionMatrix
+                    projectionMatrix,
+                    viewport: {
+                        x: Math.round(viewport.x / contentScaleFactor),
+                        y: Math.round(viewport.y / contentScaleFactor),
+                        width: Math.round(viewport.z / contentScaleFactor),
+                        height: Math.round(viewport.w / contentScaleFactor)
+                    }
                 });
             }
             
-            const frame = frames.topmost();
+            // We expect the video view (managed by the browser view) to be the 
+            // same size as the current page's content view.
+            const contentView = frames.topmost().currentPage.content;
             
+            // construct the final view parameters for this frame
             const view:Argon.SerializedViewParameters = {
                 viewport: {
                     x:0,
                     y:0,
-                    width: frame.getMeasuredWidth(),
-                    height: frame.getMeasuredHeight()
+                    width: contentView.getMeasuredWidth(),
+                    height: contentView.getMeasuredHeight()
                 },
-                pose: Argon.calculatePose(deviceService.interfaceEntity, time),
+                pose: Argon.getSerializedEntityPose(this.deviceService.interfaceEntity, time),
                 subviews
             }
             
+            // raise the event to let the vuforia service know we are ready!
             this.stateUpdateEvent.raiseEvent({
-                frameNumber,
+                index,
                 time,
                 view
             });
@@ -135,21 +234,26 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
         
-        // vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        vuforia.api.onNextStateUpdate(stateUpdateCallback);
 	}
     
     _getIdForTrackable(trackable:vuforia.Trackable) : string {
         if (trackable instanceof vuforia.ObjectTarget) {
             return 'vuforia_object_target_' + trackable.getUniqueTargetId();
         } else {
-            return 'vuforia_trackable_' + trackable.getName();
+            return 'vuforia_trackable_' + trackable.getId();
         }
     }
     
     private _viewerEnabled = false;
+    
+    isViewerEnabled() {
+        return this._viewerEnabled;
+    }
+    
     setViewerEnabled(enabled) {
         this._viewerEnabled = enabled;
-        const device = VuforiaDevice.getInstance();
+        const device = vuforia.api.getDevice();
         if (device) device.setViewerActive(enabled);
     }
     
@@ -175,28 +279,37 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             return Promise.reject(new Error("Unable to set the license key"))
         }
         
+        console.log("Vuforia initializing...")
         return vuforia.api.init().then((result)=>{
+            console.log("Vuforia Init Result: " + result);
             return <number>result;
         });
     }
     
-    deinit(): void {
+    deinit(): void {            
+        console.log("Vuforia deinitializing");
+        vuforia.api.deinitObjectTracker();
+        vuforia.api.getCameraDevice().stop();
+        vuforia.api.getCameraDevice().deinit();
         vuforia.api.deinit();
     }
     
-    cameraDeviceInitAndStart(): boolean {
+    cameraDeviceInitAndStart(): boolean {        
         const cameraDevice = vuforia.api.getCameraDevice();
-        
+
+        console.log("Vuforia initializing camera device");
         if (!cameraDevice.init(vuforia.CameraDeviceDirection.Default))
             return false;
             
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
             
+        vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR);
         this.setViewerEnabled(this._viewerEnabled);
             
         configureVideoBackground();
-        
+                
+        console.log("Vuforia starting camera device");
         return cameraDevice.start();
     }
     
@@ -204,17 +317,20 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         return vuforia.api.getCameraDevice().setFlashTorchMode(on);
     }
     
-    objectTrackerInit(): boolean {
+    objectTrackerInit(): boolean {        
+        console.log("Vuforia initializing object tracker");
         return vuforia.api.initObjectTracker();
     }
     
-    objectTrackerStart(): boolean {
+    objectTrackerStart(): boolean {        
+        console.log("Vuforia starting object tracker");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) return objectTracker.start();
         return false;
     }
     
-    objectTrackerStop(): boolean {
+    objectTrackerStop(): boolean {        
+        console.log("Vuforia stopping object tracker");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             objectTracker.stop();
@@ -226,7 +342,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     private idDataSetMap = new Map<string, vuforia.DataSet>();
     private dataSetUrlMap = new WeakMap<vuforia.DataSet, string>();
     
-    objectTrackerCreateDataSet(url?: string): string {
+    objectTrackerCreateDataSet(url?: string): string {        
+        console.log("Vuforia creating dataset...");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = objectTracker.createDataSet();
@@ -234,13 +351,15 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const id = Argon.Cesium.createGuid();
                 this.idDataSetMap.set(id, dataSet);
                 this.dataSetUrlMap.set(dataSet, url);
+                console.log(`Vuforia created dataset (${id})`);
                 return id;
             }
         }
         return null;
     }
     
-    objectTrackerDestroyDataSet(id: string): boolean {
+    objectTrackerDestroyDataSet(id: string): boolean {       
+        console.log(`Vuforia destroying dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -254,6 +373,7 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     objectTrackerActivateDataSet(id: string): boolean {
+        console.log(`Vuforia activating dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -264,7 +384,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         return false;
     }
     
-    objectTrackerDeactivateDataSet(id: string): boolean {
+    objectTrackerDeactivateDataSet(id: string): boolean {        
+        console.log(`Vuforia deactivating dataset (${id})`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
             const dataSet = this.idDataSetMap.get(id);
@@ -279,7 +400,8 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
-            
+            console.log(`Vuforia fetching dataset (${id}) at ${url}`);
+            return _getDataSetLocation(url).then(()=>{});
         }
         return Promise.reject("Dataset is not associated with a url");
     }
@@ -288,7 +410,25 @@ export class NativeScriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
-            
+            console.log(`Vuforia loading dataset (${id}) at ${url}`);
+            return _getDataSetLocation(url).then((location)=>{
+                if (dataSet.load(location, vuforia.StorageType.Absolute)) {
+                    const numTrackables = dataSet.getNumTrackables();
+                    const trackables:Argon.VuforiaTrackables = {};
+                    for (let i=0; i < numTrackables; i++) {
+                        const trackable = dataSet.getTrackable(i);
+                        trackables[trackable.getName()] = {
+                            id: this._getIdForTrackable(trackable),
+                            size: trackable instanceof vuforia.ObjectTarget ? trackable.getSize() : {x:0,y:0,z:0}
+                        }
+                    }
+                    console.log("Vuforia loaded dataset file with trackables:\n" + JSON.stringify(trackables));
+                    return trackables;
+                } else {
+                    console.log(`Unable to load downloaded dataset at ${location} from ${url}`);
+                    return Promise.reject("Unable to load dataset");
+                }
+            })
         }
         return Promise.reject("Dataset is not associated with a url");
     }
@@ -320,18 +460,14 @@ function configureVideoBackground() {
         enabled:true,
         positionX:0,
         positionY:0,
-        sizeX: videoWidth * scale * contentScaleFactor,
-        sizeY: videoHeight * scale * contentScaleFactor,
+        sizeX: Math.round(videoWidth * scale * contentScaleFactor),
+        sizeY: Math.round(videoHeight * scale * contentScaleFactor),
         reflection: vuforia.VideoBackgroundReflection.Default
     }
     
-    console.log(`Setting Video Background Configuration
-        viewWidth: ${viewWidth} 
-        viewHeight: ${viewHeight} 
-        contentScaleFactor: ${contentScaleFactor}
-        videoWidth: ${videoWidth} 
-        videoHeight: ${videoHeight} 
-        orientation: ${orientation} 
+    console.log(`Vuforia configuring video background...
+        contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
+        viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
         config: ${JSON.stringify(config)}
     `);
     
@@ -341,3 +477,49 @@ function configureVideoBackground() {
 if (vuforia.api) application.on(application.orientationChangedEvent, ()=>{
     Promise.resolve().then(configureVideoBackground); // delay callback until the interface orientation is updated
 })
+
+// TODO: make this cross platform somehow
+export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
+    const xmlUrl = NSURL.URLWithString(xmlUrlString);
+    const datUrl = xmlUrl.URLByDeletingPathExtension.URLByAppendingPathExtension("dat");
+    
+    const directoryPathUrl = xmlUrl.URLByDeletingLastPathComponent;
+    const directoryHash = directoryPathUrl.hash;
+    const tmpPath = file.knownFolders.temp().path;
+    const directoryHashPath = tmpPath + file.path.separator + directoryHash;
+    
+    file.Folder.fromPath(directoryHashPath);
+    
+    const xmlDestPath = directoryHashPath + file.path.separator + xmlUrl.lastPathComponent;
+    const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
+    
+    function downloadIfNeeded(url:string, destPath:string) {
+        let lastModified:Date;
+        if (file.File.exists(destPath)) {
+            const f = file.File.fromPath(destPath);
+            lastModified = f.lastModified;
+        }
+        return http.request({
+            url,
+            method:'GET',
+            headers: lastModified ? {
+                'If-Modified-Since': lastModified.toUTCString()
+            } : undefined
+        }).then((response)=>{
+            if (response.statusCode === 304) {
+                console.log(`Verified that cached version of file ${url} at ${destPath} is up-to-date.`)
+                return destPath;
+            } else if (response.statusCode >= 200 && response.statusCode < 300) {                
+                console.log(`Downloaded file ${url} to ${destPath}`)
+                return response.content.toFile(destPath).path;
+            } else {
+                throw new Error("Unable to download file " + url + "  (HTTP status code: " + response.statusCode + ")");
+            }
+        })
+    }
+    
+    return Promise.all([
+        downloadIfNeeded(xmlUrl.absoluteString,xmlDestPath), 
+        downloadIfNeeded(datUrl.absoluteString,datDestPath)
+    ]).then(()=>xmlDestPath);
+} 

@@ -12,6 +12,8 @@ declare module "argon-web-view" {
         
         session: SessionPort;
         log: string[];
+        
+        title: string;
 
         /**
          * Raised when a sessionConnect event occurs.

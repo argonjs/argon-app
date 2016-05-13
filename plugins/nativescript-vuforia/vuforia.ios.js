@@ -2,9 +2,10 @@
 var common = require('./vuforia-common');
 var application = require('application');
 global.moduleMerge(common, exports);
-exports.ios = (VuforiaVideoView ? VuforiaVideoView.new() : undefined);
+var VUFORIA_AVAILABLE = typeof VuforiaSession !== 'undefined';
+exports.ios = (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
 application.on(application.suspendEvent, function () {
-    if (VuforiaSession) {
+    if (VUFORIA_AVAILABLE) {
         VuforiaSession.onPause();
         exports.ios.finishOpenGLESCommands();
         exports.ios.freeOpenGLESResources();
@@ -36,11 +37,15 @@ function setVuforiaRotation() {
 // doesn't seem to work: ? 
 //application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarOrientationNotification, setVuforiaRotation);
 application.on(application.orientationChangedEvent, function () {
-    Promise.resolve().then(setVuforiaRotation); // delay until the interface orientation actually changes
+    if (VUFORIA_AVAILABLE) {
+        Promise.resolve().then(setVuforiaRotation); // delay until the interface orientation actually changes
+    }
 });
 application.on(application.resumeEvent, function () {
-    VuforiaSession && VuforiaSession.onResume();
-    setVuforiaRotation();
+    if (VUFORIA_AVAILABLE) {
+        VuforiaSession.onResume();
+        setVuforiaRotation();
+    }
 });
 var API = (function (_super) {
     __extends(API, _super);
@@ -60,17 +65,21 @@ var API = (function (_super) {
         var _this = this;
         return new Promise(function (resolve, reject) {
             VuforiaSession.initDone(function (result) {
-                VuforiaSession.onSurfaceCreated();
-                setVuforiaRotation();
-                VuforiaSession.registerCallback(function (state) {
-                    _this._stateUpdateCallback(new State(state));
-                });
+                if (result === 100 /* SUCCESS */) {
+                    VuforiaSession.onSurfaceCreated();
+                    setVuforiaRotation();
+                    VuforiaSession.registerCallback(function (state) {
+                        _this._stateUpdateCallback(new State(state));
+                    });
+                    VuforiaSession.onResume();
+                }
                 resolve(result);
             });
         });
     };
     API.prototype.deinit = function () {
         VuforiaSession.deinit();
+        VuforiaSession.onPause();
     };
     API.prototype.getCameraDevice = function () {
         return this.cameraDevice;
@@ -119,10 +128,10 @@ function createMatrix44(mat) {
         mat._9,
         mat._10,
         mat._11,
-        0,
-        0,
-        0,
-        1
+        mat._12,
+        mat._13,
+        mat._14,
+        mat._15
     ];
 }
 var Trackable = (function () {
@@ -753,5 +762,5 @@ var ObjectTracker = (function (_super) {
     return ObjectTracker;
 }(Tracker));
 exports.ObjectTracker = ObjectTracker;
-exports.api = VuforiaSession ? new API() : undefined;
+exports.api = VUFORIA_AVAILABLE ? new API() : undefined;
 //# sourceMappingURL=vuforia.ios.js.map

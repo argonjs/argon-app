@@ -61,6 +61,8 @@ typedef struct _VuforiaVideoMode {
 /// Returns the CameraDevice singleton instance.
 +(VuforiaCameraDevice*)getInstance;
 
+-(BOOL)isStarted;
+
 /// Initializes the camera.
 -(BOOL)initCamera:(VuforiaCameraDeviceDirection)camera;
 

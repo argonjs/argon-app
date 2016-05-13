@@ -1,73 +1,153 @@
 import * as URI from "urijs";
 
 import * as application from 'application';
-import * as pages from 'ui/page';
-import * as views from 'ui/core/view';
 import * as frames from 'ui/frame';
-import * as searchbar from 'ui/search-bar';
-import * as actionbar from 'ui/action-bar';
+import {SearchBar} from 'ui/search-bar';
+import {Page} from 'ui/page';
 import {CreateViewEventData} from 'ui/placeholder';
 import {LoadEventData} from 'ui/web-view';
-import * as color from 'color';
-import * as platform from 'platform';
-import {Button} from "ui/button";
-import {View} from "ui/core/view";
+import {Button} from 'ui/button';
+import {View, getViewById} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
-import {Color} from "color";
+import {Color} from 'color';
+import {Observable, PropertyChangeData} from 'data/observable';
+import * as fs from 'file-system';
 
-import * as vuforia from 'nativescript-vuforia';
+import * as Argon from 'argon';
 
 import dialogs = require("ui/dialogs");
 import applicationSettings = require("application-settings");
 import {Util} from './util';
-import {ArgonWebView} from 'argon-web-view'
-import {BrowserView} from './browser-view'
-import {PropertyChangeData} from 'data/observable'
+import {ArgonWebView} from 'argon-web-view';
+import {BrowserView} from './browser-view';
 
-import * as Argon from 'argon';
-import './argon-device-service';
-import {NativeScriptVuforiaServiceDelegate} from './argon-vuforia-service';
+import {NativescriptDeviceService} from './argon-device-service';
+import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
 import * as historyView from './history-view';
 import * as history from './shared/history';
 
 export let manager:Argon.ArgonSystem;
 export let browserView:BrowserView;
-let actionBar:actionbar.ActionBar;
-let searchBar:searchbar.SearchBar;
+
+let page:Page;
+let menu:View;
+let searchBar:SearchBar;
 
 let iosSearchBarController:IOSSearchBarController;
 
+const pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
+
+const publicKeyPromise = pgpFolder.contains('public.key') ? 
+	pgpFolder.getFile('public.key').readText() : Promise.reject(null);
+const privateKeyPromise = pgpFolder.contains('private.key') ? 
+	pgpFolder.getFile('private.key').readText() : Promise.reject(null);
+
 const container = new Argon.DI.Container;
-container.registerSingleton(Argon.VuforiaServiceDelegate, NativeScriptVuforiaServiceDelegate);
+container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
+container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
 
 manager = Argon.init({container, config: {
-	role: Argon.Role.MANAGER
+	role: Argon.Role.MANAGER,
+	name: 'ArgonApp',
+	managerPublicKey: publicKeyPromise,
+	managerPrivateKey: privateKeyPromise
 }});
 
 manager.reality.setDefault({type:'vuforia'});
 
 manager.vuforia.init({
 	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+}).catch((err)=>{
+    console.log(err);
+});
+
+manager.focus.sessionFocusEvent.addEventListener(()=>{
+    const focussedSession = manager.focus.getSession();    
+    console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
+})
+
+const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
+
+class ViewModel extends Observable {
+	menuOpen = false;
+	debugEnabled = false;
+	viewerEnabled = false;
+	toggleMenu() {
+		this.set('menuOpen', !this.menuOpen);
+	}
+	hideMenu() {
+		this.set('menuOpen', false);
+	}
+	toggleDebug() {
+		this.set('debugEnabled', !this.debugEnabled);
+	}
+	toggleViewer() {
+		this.set('viewerEnabled', !this.viewerEnabled);
+	}
+	setDebugEnabled(enabled:boolean) {
+		this.set('debugEnabled', enabled);
+	}
+	setViewerEnabled(enabled:boolean) {
+		this.set('viewerEnabled', enabled);
+	}
+}
+
+const viewModel = new ViewModel;
+
+viewModel.on('propertyChange', (evt:PropertyChangeData)=>{
+	if (evt.propertyName === 'viewerEnabled') {
+		vuforiaDelegate.setViewerEnabled(evt.value);
+	}
+	if (evt.propertyName === 'menuOpen') {
+		if (evt.value) {
+			browserView.hideOverview();
+			menu.visibility = "visible";
+			menu.animate({
+				scale: {
+					x: 1,
+					y: 1,
+				},
+				duration: 150,
+				opacity: 1,
+			});
+			Util.bringToFront(menu);
+		} else {
+			menu.animate({
+				scale: {
+					x: 0,
+					y: 0,
+				},
+				duration: 150,
+				opacity: 0,
+			}).then(() => {
+				menu.visibility = "collapsed";
+			});
+		}
+	}
 })
 
 export function pageLoaded(args) {
+	
+	page = args.object;
+	
+	page.bindingContext = viewModel;
+	
+	page.backgroundColor = new Color("black");
+	
 	//This was added to fix the bug of bookmark back navigation is shown when going back
 	var controller = frames.topmost().ios.controller;
-  var navigationItem = controller.visibleViewController.navigationItem;
+  	var navigationItem = controller.visibleViewController.navigationItem;
 	navigationItem.setHidesBackButtonAnimated(true, false);
-	const page:pages.Page = args.object;
-	page.backgroundColor = new color.Color("black");
-
-	actionBar = page.actionBar;
+	page.backgroundColor = new Color("black");
 
 	// Set the icon for the menu button
 	const menuButton = <Button> page.getViewById("menuBtn");
 	menuButton.text = String.fromCharCode(0xe5d4);
 
-	// Set the icon for the layers button
-	const layerButton = <Button> page.getViewById("layerBtn");
-	layerButton.text = String.fromCharCode(0xe53b);
+	// Set the icon for the overview button
+	const overviewButton = <Button> page.getViewById("overviewBtn");
+	overviewButton.text = String.fromCharCode(0xe53b);
 
 	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
 	if (page.ios) {
@@ -80,18 +160,16 @@ export function pageLoaded(args) {
 	}
 }
 
-export function actionBarLoaded(args) {
-	actionBar = args.object
-}
-
 export function searchBarLoaded(args) {
 	searchBar = args.object;
-	searchBar.on(searchbar.SearchBar.submitEvent, () => {
+
+	searchBar.on(SearchBar.submitEvent, () => {
 		const url = URI(searchBar.text);
 		if (url.protocol() !== "http" || url.protocol() !== "https") {
 			url.protocol("http");
 		}
 		console.log("Load url: " + url);
+		setSearchBarText(url.toString());
 		browserView.focussedLayer.webView.src = url.toString();
 	});
 
@@ -100,17 +178,19 @@ export function searchBarLoaded(args) {
 	}
 }
 
+function setSearchBarText(url:string) {
+	if (iosSearchBarController) {
+		iosSearchBarController.setText(url);
+	} else {
+		searchBar.text = url;
+	}
+}
 
 export function browserViewLoaded(args) {
 	browserView = args.object;
 	browserView.on('propertyChange', (eventData:PropertyChangeData) => {
 		if (eventData.propertyName === 'url') {
-			const url = eventData.value;
-			if (iosSearchBarController) {
-				iosSearchBarController.setText(url);
-			} else {
-				searchBar.text = url;
-			}
+			setSearchBarText(eventData.value)
 		}
 	});
 
@@ -127,21 +207,19 @@ export function browserViewLoaded(args) {
     debug.backgroundColor = new Color(150, 255, 255, 255);
     debug.visibility = "collapsed";
     if (debug.ios) {
-        // (<UIView>debug.ios)["setUserInteractionEnabled"](false);
+        (<UIView>debug.ios).userInteractionEnabled = false;
     }
 
     let layer = browserView.focussedLayer;
-    console.log("FOCUSSED LAYER: " + layer.webView.src);
 
     const logChangeCallback = (args) => {
-        console.log("LOGS " + layer.webView.log);
-        debug.html = layer.webView.log.join("\n");
+		// while (layer.webView.log.length > 10) layer.webView.log.shift()
+        // debug.html = layer.webView.log.join("<br/>");
     };
     layer.webView.on("log", logChangeCallback)
 
     browserView.on("propertyChange", (evt: PropertyChangeData) => {
         if (evt.propertyName === "focussedLayer") {
-            console.log("CHANGE FOCUS");
             if (layer) {
                 layer.webView.removeEventListener("log", logChangeCallback);
             }
@@ -154,7 +232,7 @@ export function browserViewLoaded(args) {
 
 // initialize some properties of the menu so that animations will render correctly
 export function menuLoaded(args) {
-	let menu:views.View = args.object;
+	menu = args.object;
 	menu.originX = 1;
 	menu.originY = 0;
 	menu.scaleX = 0;
@@ -162,12 +240,60 @@ export function menuLoaded(args) {
 	menu.opacity = 0;
 }
 
+export function onReload(args) {
+	browserView.focussedLayer.webView.reload();
+}
+
+export function onOverview(args) {
+	browserView.toggleOverview();
+	viewModel.setDebugEnabled(false);
+	viewModel.hideMenu();
+}
+
+export function onMenu(args) {
+	viewModel.toggleMenu();
+}
+
+export function onNewChannel(args) {
+	browserView.addLayer();
+	viewModel.hideMenu();
+}
+
+export function onBookmarks(args) {
+    //code to open the bookmarks view goes here
+	viewModel.hideMenu();
+}
+
+export function onHistory(args) {
+    frames.topmost().currentPage.showModal("history-view", null, () => {
+        const url = historyView.getTappedUrl();
+        if (url) {
+            browserView.focussedLayer.webView.src = url;
+        }
+    }, true);
+	viewModel.hideMenu();
+}
+
+export function onSettings(args) {
+    //code to open the settings view goes here
+	viewModel.hideMenu();
+}
+
+export function onViewerToggle(args) {
+	viewModel.toggleViewer();
+	viewModel.hideMenu();
+}
+
+export function onDebugToggle(args) {
+	viewModel.toggleDebug();
+}
+
 class IOSSearchBarController {
 
 	private uiSearchBar:UISearchBar;
 	private textField:UITextField;
 
-	constructor(public searchBar:searchbar.SearchBar) {
+	constructor(public searchBar:SearchBar) {
 		this.uiSearchBar = searchBar.ios;
 		this.textField = this.uiSearchBar.valueForKey("searchField");
 
@@ -181,15 +307,12 @@ class IOSSearchBarController {
 		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
 
 		const textFieldEditHandler = () => {
+			viewModel.hideMenu();
 			if (this.uiSearchBar.isFirstResponder()) {
 				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
 				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
 				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
-
-				const items = actionBar.actionItems.getItems();
-				for (const item of items) {
-					item.visibility = 'collapse'
-				}
+				
 				setTimeout(()=>{
 					if (this.uiSearchBar.text === "") {
 						this.uiSearchBar.text = browserView.url;
@@ -201,12 +324,7 @@ class IOSSearchBarController {
 				this.setPlaceholderText(this.uiSearchBar.text);
 				this.uiSearchBar.text = "";
 				Promise.resolve().then(()=>{
-					this.setPlaceholderText(browserView.url);
 					this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
-					const items = actionBar.actionItems.getItems();
-					for (const item of items) {
-						item.visibility = 'visible'
-					}
 				});
 			}
 		}
@@ -246,7 +364,7 @@ class IOSSearchBarController {
 }
 
 export function menuButtonClicked(args) {
-	let menu = views.getViewById(frames.topmost().currentPage, "menu");
+	let menu = getViewById(frames.topmost().currentPage, "menu");
 	if (menu.visibility == "visible") {
 		hideMenu(menu);
 	} else {

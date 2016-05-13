@@ -1,6 +1,8 @@
 "use strict";
 var color_1 = require('color');
 var grid_layout_1 = require('ui/layouts/grid-layout');
+var label_1 = require('ui/label');
+var button_1 = require('ui/button');
 var argon_web_view_1 = require('argon-web-view');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
@@ -8,11 +10,9 @@ var util_1 = require('./util');
 var placeholder_1 = require('ui/placeholder');
 var vuforia = require('nativescript-vuforia');
 var Argon = require('argon');
-var fs = require('file-system');
+var TITLE_BAR_HEIGHT = 26;
 var OVERVIEW_ANIMATION_DURATION = 250;
-var DEFAULT_REALITY_HTML = "default-reality.html";
-var APP_FOLDER = fs.knownFolders.currentApp().path;
-var DEFAULT_REALITY_PATH = fs.path.join(APP_FOLDER, DEFAULT_REALITY_HTML);
+var DEFAULT_REALITY_HTML = "~/default-reality.html";
 var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
@@ -22,9 +22,8 @@ var BrowserView = (function (_super) {
         this._overviewEnabled = false;
         this._scrollOffset = 0;
         this._panStartOffset = 0;
-        var realityHtml = fs.File.fromPath(DEFAULT_REALITY_PATH);
         this.realityLayer = this.addLayer();
-        this.realityLayer.webView.src = realityHtml.readTextSync();
+        this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.ios) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
@@ -37,6 +36,7 @@ var BrowserView = (function (_super) {
         this.realityLayer.container.addChild(videoView);
         util_1.Util.bringToFront(this.realityLayer.webView);
         util_1.Util.bringToFront(this.realityLayer.gestureCover);
+        util_1.Util.bringToFront(this.realityLayer.titleBar);
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
         this.addChild(this.layerContainer);
@@ -80,17 +80,65 @@ var BrowserView = (function (_super) {
             }
             _this.hideOverview();
         });
+        var titleBar = new grid_layout_1.GridLayout();
+        titleBar.addRow(new grid_layout_1.ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.addColumn(new grid_layout_1.ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.addColumn(new grid_layout_1.ItemSpec(1, 'star'));
+        titleBar.addColumn(new grid_layout_1.ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
+        titleBar.verticalAlignment = enums_1.VerticalAlignment.top;
+        titleBar.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
+        titleBar.backgroundColor = new color_1.Color(240, 255, 255, 255);
+        titleBar.visibility = enums_1.Visibility.collapse;
+        var closeButton = new button_1.Button();
+        closeButton.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
+        closeButton.verticalAlignment = enums_1.VerticalAlignment.stretch;
+        closeButton.text = 'close';
+        closeButton.className = 'material-icon';
+        closeButton.color = new color_1.Color('black');
+        grid_layout_1.GridLayout.setRow(closeButton, 0);
+        grid_layout_1.GridLayout.setColumn(closeButton, 0);
+        closeButton.on('tap', function () {
+            _this.removeLayer(layer);
+        });
+        var label = new label_1.Label();
+        label.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
+        label.verticalAlignment = enums_1.VerticalAlignment.stretch;
+        label.textAlignment = enums_1.TextAlignment.center;
+        label.color = new color_1.Color('black');
+        label.fontSize = 14;
+        grid_layout_1.GridLayout.setRow(label, 0);
+        grid_layout_1.GridLayout.setColumn(label, 1);
+        titleBar.addChild(closeButton);
+        titleBar.addChild(label);
+        label.bind({
+            sourceProperty: 'title',
+            targetProperty: 'text'
+        }, webView);
         container.addChild(webView);
         container.addChild(gestureCover);
+        container.addChild(titleBar);
         this.layerContainer.addChild(container);
         layer = {
             container: container,
             webView: webView,
-            gestureCover: gestureCover
+            gestureCover: gestureCover,
+            titleBar: titleBar,
+            label: label
         };
         this.layers.push(layer);
         this._setFocussedLayer(layer);
         return layer;
+    };
+    BrowserView.prototype.removeLayerAtIndex = function (index) {
+        var layer = this.layers[index];
+        if (typeof layer === 'undefined')
+            throw new Error('Expected layer at index ' + index);
+        this.layers.splice(index, 1);
+        this.layerContainer.removeChild(layer.container); // for now
+    };
+    BrowserView.prototype.removeLayer = function (layer) {
+        var index = this.layers.indexOf(layer);
+        this.removeLayerAtIndex(index);
     };
     BrowserView.prototype.handlePan = function (evt) {
         if (evt.state === gestures_1.GestureStateTypes.began) {
@@ -100,10 +148,10 @@ var BrowserView = (function (_super) {
         this.updateLayerTransforms();
     };
     BrowserView.prototype.calculateLayerTransform = function (index) {
-        var layerPosition = index * 200 + this._scrollOffset;
+        var layerPosition = index * 150 + this._scrollOffset;
         var normalizedPosition = layerPosition / this.getMeasuredHeight();
-        var theta = Math.min(Math.max(normalizedPosition + 0.2, 0), 0.85) * Math.PI;
-        var scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.2;
+        var theta = Math.min(Math.max(normalizedPosition, 0), 0.85) * Math.PI;
+        var scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.25;
         return {
             translate: {
                 x: 0,
@@ -149,6 +197,12 @@ var BrowserView = (function (_super) {
                 backgroundColor: new color_1.Color(128, 255, 255, 255),
                 duration: OVERVIEW_ANIMATION_DURATION,
             });
+            // Show titlebars
+            layer.titleBar.visibility = enums_1.Visibility.visible;
+            layer.titleBar.animate({
+                opacity: 1,
+                duration: OVERVIEW_ANIMATION_DURATION
+            });
             // Update for the first time & animate.
             var _a = _this.calculateLayerTransform(index), translate = _a.translate, scale = _a.scale;
             layer.container.animate({
@@ -173,6 +227,13 @@ var BrowserView = (function (_super) {
             layer.container.animate({
                 backgroundColor: new color_1.Color(0, 255, 255, 255),
                 duration: OVERVIEW_ANIMATION_DURATION,
+            });
+            // Hide titlebars
+            layer.titleBar.animate({
+                opacity: 0,
+                duration: OVERVIEW_ANIMATION_DURATION
+            }).then(function () {
+                layer.titleBar.visibility = enums_1.Visibility.collapse;
             });
             // Update for the first time & animate.
             return layer.container.animate({
@@ -205,7 +266,8 @@ var BrowserView = (function (_super) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.webView.src);
+            this._setURL(layer.webView.url);
+            console.log("Set focussed layer: " + layer.webView.url);
             Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
         }
     };
