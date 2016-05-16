@@ -111,7 +111,6 @@ viewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 				duration: 150,
 				opacity: 1,
 			});
-			Util.bringToFront(menu);
 		} else {
 			menu.animate({
 				scale: {
@@ -238,6 +237,7 @@ export function menuLoaded(args) {
 	menu.scaleX = 0;
 	menu.scaleY = 0;
 	menu.opacity = 0;
+	menu.parent.requestLayout();
 }
 
 export function onReload(args) {
@@ -260,7 +260,27 @@ export function onNewChannel(args) {
 }
 
 export function onBookmarks(args) {
-    //code to open the bookmarks view goes here
+	var url_string = browserView.focussedLayer.webView.src;
+	if(url_string != "") {
+		if(!checkExistingUrl(url_string)) {
+			dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
+				if(r.result !== false) {
+					var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
+					modified_url = modified_url.replace("/", "");
+					modified_url = modified_url.replace("/","");
+					modified_url = modified_url.replace("http:","");
+					modified_url = modified_url.replace("https:","");
+					applicationSettings.setString("bookmarkurl", modified_url);
+					applicationSettings.setString("bookmarkname", r.text);
+					frames.topmost().navigate("bookmark");
+				}
+			});
+		} else {
+			frames.topmost().navigate("bookmark");
+		}
+	} else {
+		dialogs.alert("Url string for bookmark can't be empty").then(function() {});
+	}
 	viewModel.hideMenu();
 }
 
@@ -363,74 +383,8 @@ class IOSSearchBarController {
 	}
 }
 
-export function menuButtonClicked(args) {
-	let menu = getViewById(frames.topmost().currentPage, "menu");
-	if (menu.visibility == "visible") {
-		hideMenu(menu);
-	} else {
-		showMenu(menu);
-	}
-}
-
-function hideMenu(menu: View) {
-	menu.animate({
-		scale: {
-			x: 0,
-			y: 0,
-		},
-		duration: 150,
-		opacity: 0,
-	}).then(() => {
-		menu.visibility = "collapsed";
-	});
-}
-
-function showMenu(menu: View) {
-	browserView.hideOverview();
-	menu.visibility = "visible";
-	menu.animate({
-		scale: {
-			x: 1,
-			y: 1,
-		},
-		duration: 150,
-		opacity: 1,
-	});
-	Util.bringToFront(menu);
-}
-
 export function onTap() {
 	console.log('tapped')
-}
-
-export function newChannelClicked(args) {
-	browserView.addLayer();
-	hideMenu(args.object.page.getViewById("menu"));
-}
-
-export function bookmarksClicked(args) {
-    //code to open the bookmarks view goes here
-		var url_string = browserView.focussedLayer.webView.src;
-		if(url_string != "") {
-			if(!checkExistingUrl(url_string)) {
-				dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
-					if(r.result !== false) {
-						var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
-						modified_url = modified_url.replace("/", "");
-						modified_url = modified_url.replace("/","");
-						modified_url = modified_url.replace("http:","");
-						modified_url = modified_url.replace("https:","");
-						applicationSettings.setString("bookmarkurl", modified_url);
-						applicationSettings.setString("bookmarkname", r.text);
-						frames.topmost().navigate("bookmark");
-					}
-				});
-			} else {
-				frames.topmost().navigate("bookmark");
-			}
-		} else {
-			dialogs.alert("Url string for bookmark can't be empty").then(function() {});
-		}
 }
 
 //Helper function for bookmark. It checks if the url already existed in bookmark
@@ -450,34 +404,4 @@ function checkExistingUrl(url_string) {
 		}
 	}
 	return false;
-}
-
-export function historyClicked(args) {
-    frames.topmost().currentPage.showModal("history-view", null, () => {
-        const url = historyView.getTappedUrl();
-        if (url) {
-            browserView.focussedLayer.webView.src = url;
-        }
-    }, true);
-}
-
-export function settingsClicked(args) {
-    //code to open the settings view goes here
-}
-
-
-export function layerButtonClicked(args) {
-	browserView.toggleOverview();
-	args.object.page.getViewById("debug").visibility = "collapsed";
-}
-
-export function debugClicked(args) {
-	const debugView = args.object.page.getViewById("debug");
-	if (debugView.visibility == "visible") {
-		debugView.visibility = "collapsed";
-	} else {
-		debugView.visibility = "visible";
-		Util.bringToFront(debugView);
-	}
-	hideMenu(args.object.page.getViewById("menu"));
 }

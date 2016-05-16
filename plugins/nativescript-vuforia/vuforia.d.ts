@@ -1,11 +1,9 @@
 declare module "nativescript-vuforia" {
     
+    import views = require('ui/core/view')
+    
     export const api:API;
-    
-    // native objects
-    
-    export const ios:any; // VuforiaVideoView
-    export const android:any;
+    export const videoView:views.View;
     
     // api
     

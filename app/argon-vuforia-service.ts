@@ -27,8 +27,8 @@ const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 const ONE = new Cartesian3(1,1,1);
 
 const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.ios) {
-    (<UIView>vuforia.ios).contentScaleFactor = cameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
+if (vuforia.videoView.ios) {
+    (<UIView>vuforia.videoView.ios).contentScaleFactor = cameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
         1 : platform.screen.mainScreen.scale;
 }
 
@@ -122,7 +122,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             const numViews = renderingViews.getNumViews()
             
             const subviews = <Array<Argon.SerializedSubview>>[];
-            const contentScaleFactor = (<UIView>vuforia.ios).contentScaleFactor;
+            const contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor;
             
             for (let i=0; i < numViews; i++) {
                 const view = renderingViews.getView(i);
@@ -177,11 +177,11 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 projectionMatrix[10] *= -1; // z
                 projectionMatrix[11] *= -1; // w
                 
-                if (vuforia.ios && device.isViewerActive()) {
+                if (vuforia.videoView.ios && device.isViewerActive()) {
                     // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
                     // then provide a means of passing an arbitrary scale factor to the video renderer.
                     // We can then provide controls to zoom in/out the video reality using this scale factor. 
-                    var sceneScaleFactor = vuforia.ios.getSceneScaleFactor();
+                    var sceneScaleFactor = vuforia.videoView.ios.getSceneScaleFactor();
                     // scale x-axis
                     projectionMatrix[0] *= sceneScaleFactor; // x
                     projectionMatrix[1] *= sceneScaleFactor; // y
@@ -438,7 +438,7 @@ function configureVideoBackground() {
     const frame = frames.topmost();
     const viewWidth = frame.getMeasuredWidth();
     const viewHeight = frame.getMeasuredHeight();
-    const contentScaleFactor = vuforia.ios ? vuforia.ios.contentScaleFactor : 1;
+    const contentScaleFactor = vuforia.videoView.ios ? vuforia.videoView.ios.contentScaleFactor : 1;
     
     const videoMode = vuforia.api.getCameraDevice().getVideoMode(cameraDeviceMode);
     let videoWidth = videoMode.width;

@@ -1,4 +1,5 @@
 import {View} from 'ui/core/view';
+import {ScrollView} from 'ui/scroll-view'
 import {Page} from 'ui/page';
 import {Color} from 'color';
 import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
@@ -28,7 +29,8 @@ import * as Argon from 'argon';
 import * as fs from 'file-system';
 import * as frames from 'ui/frame'
 
-const TITLE_BAR_HEIGHT = 26;
+const TITLE_BAR_HEIGHT = 30;
+const OVERVIEW_VERTICAL_PADDING = 150;
 
 const OVERVIEW_ANIMATION_DURATION = 250;
 const DEFAULT_REALITY_HTML = "~/default-reality.html";
@@ -36,15 +38,17 @@ const DEFAULT_REALITY_HTML = "~/default-reality.html";
 export interface Layer {
     webView:ArgonWebView,
     container:GridLayout,
-    gestureCover:GridLayout,
+    touchOverlay:GridLayout,
     titleBar:View,
     label: Label,
+    visualIndex: number
 }
 
 export class BrowserView extends GridLayout {
     realityLayer:Layer;
-    videoView:Placeholder;
     
+    videoView:View = vuforia.videoView;
+    scrollView = new ScrollView;
     layerContainer = new GridLayout;
     layers:Layer[] = [];
         
@@ -53,29 +57,35 @@ export class BrowserView extends GridLayout {
     private _overviewEnabled = false;
     private _scrollOffset = 0;
     private _panStartOffset = 0;
+    
+    private _intervalId:number;
 
     constructor() {
         super();
         this.realityLayer = this.addLayer();
         this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
-        if (vuforia.ios) {
+        if (vuforia.api) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
-        const videoView = new Placeholder();
-        videoView.on(Placeholder.creatingViewEvent, (evt:CreateViewEventData) => {
-            evt.view = vuforia.ios || vuforia.android || null;
-        })
-        videoView.horizontalAlignment = 'stretch';
-        videoView.verticalAlignment = 'stretch';
-        this.realityLayer.container.addChild(videoView);
+        
+        this.videoView.horizontalAlignment = 'stretch';
+        this.videoView.verticalAlignment = 'stretch';
+        this.realityLayer.container.addChild(this.videoView);
         Util.bringToFront(this.realityLayer.webView);
-        Util.bringToFront(this.realityLayer.gestureCover);
+        Util.bringToFront(this.realityLayer.touchOverlay);
         Util.bringToFront(this.realityLayer.titleBar);
         
         this.layerContainer.horizontalAlignment = 'stretch';
-        this.layerContainer.verticalAlignment = 'stretch';
-        this.addChild(this.layerContainer);
+        this.layerContainer.verticalAlignment = 'top';
+        
+        this.scrollView.horizontalAlignment = 'stretch';
+        this.scrollView.verticalAlignment = 'stretch';
+        this.scrollView.content = this.layerContainer;
+        this.addChild(this.scrollView);
         this.backgroundColor = new Color("#555");
+        
+        this.scrollView.on(ScrollView.scrollEvent, this._animate.bind(this));
+        
         // Make a new layer to be used with the url bar.
         this._setFocussedLayer(this.addLayer());
     }
@@ -85,8 +95,8 @@ export class BrowserView extends GridLayout {
         
         // Put things in a grid layout to be able to decorate later.
         const container = new GridLayout();
-        container.horizontalAlignment = 'stretch';
-        container.verticalAlignment = 'stretch';
+        container.horizontalAlignment = 'left';
+        container.verticalAlignment = 'top';
         
         // Make an argon-enabled webview
         const webView = new ArgonWebView;
@@ -105,11 +115,11 @@ export class BrowserView extends GridLayout {
         webView.verticalAlignment = 'stretch';
         
         // Cover the webview to detect gestures and disable interaction
-        const gestureCover = new GridLayout();
-        gestureCover.style.visibility = 'collapsed';
-        gestureCover.horizontalAlignment = 'stretch';
-        gestureCover.verticalAlignment = 'stretch';
-        gestureCover.on(GestureTypes.tap, (event) => {
+        const touchOverlay = new GridLayout();
+        touchOverlay.style.visibility = 'collapsed';
+        touchOverlay.horizontalAlignment = 'stretch';
+        touchOverlay.verticalAlignment = 'stretch';
+        touchOverlay.on(GestureTypes.tap, (event) => {
             this._setFocussedLayer(layer);
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
@@ -134,6 +144,7 @@ export class BrowserView extends GridLayout {
         closeButton.verticalAlignment = VerticalAlignment.stretch;
         closeButton.text = 'close';
         closeButton.className = 'material-icon';
+        closeButton.style.fontSize = 16;
         closeButton.color = new Color('black');
         GridLayout.setRow(closeButton, 0);
         GridLayout.setColumn(closeButton, 0);
@@ -160,17 +171,17 @@ export class BrowserView extends GridLayout {
         }, webView);
         
         container.addChild(webView);
-        container.addChild(gestureCover);
+        container.addChild(touchOverlay);
         container.addChild(titleBar);
         this.layerContainer.addChild(container);
         
-        
         layer = {
-            container: container,
-            webView: webView,
-            gestureCover: gestureCover,
-            titleBar: titleBar,
-            label
+            container,
+            webView,
+            touchOverlay,
+            titleBar,
+            label,
+            visualIndex: this.layers.length
         };
         this.layers.push(layer);
         this._setFocussedLayer(layer);
@@ -190,23 +201,33 @@ export class BrowserView extends GridLayout {
         this.removeLayerAtIndex(index);
     }
     
-    handlePan(evt:PanGestureEventData) {
-        if (evt.state === GestureStateTypes.began) {
-            this._panStartOffset = this._scrollOffset;
-        }
-        this._scrollOffset = this._panStartOffset + evt.deltaY;
-        this.updateLayerTransforms(); 
+    onLayout(left, top, right, bottom) {
+        super.onLayout(left, top, right, bottom);
+        if (this._overviewEnabled) return;
+        var width = this.getMeasuredWidth();
+        var height = this.getMeasuredHeight();
+        
+        this.scrollView.layout(0, 0, width, height);
+        this.layerContainer.layout(0, 0, width, height);
+        
+        this.layers.forEach((layer)=>{
+            layer.container.layout(0,0,width,height);
+            layer.webView.layout(0,0,width,height);
+        })
+        
+        this.videoView.layout(0, 0, width, height);
+        console.log('DID LAYOUT');
     }
     
-    calculateLayerTransform(index) {
-        const layerPosition = index * 150 + this._scrollOffset;
+    private _calculateTargetTransform(index) {
+        const layerPosition = index * OVERVIEW_VERTICAL_PADDING - this.scrollView.verticalOffset;
         const normalizedPosition = layerPosition / this.getMeasuredHeight();
         const theta = Math.min(Math.max(normalizedPosition, 0), 0.85) * Math.PI;
         const scaleFactor = 1 - (Math.cos(theta) / 2 + 0.5) * 0.25;
         return {
             translate: {
                 x: 0,
-                y: layerPosition
+                y: index * OVERVIEW_VERTICAL_PADDING
             },
             scale: {
                 x: scaleFactor,
@@ -215,17 +236,33 @@ export class BrowserView extends GridLayout {
         };
     }
     
-    updateLayerTransforms() {
+    private _lastTime = Date.now();
+    private _animate() {
         if (!this._overviewEnabled)
             return;
+            
+        const now = Date.now();
+        const deltaT = Math.min(now - this._lastTime, 30) / 1000;
+        this._lastTime = now;
+        
+        this.layerContainer.width = this.getMeasuredWidth();
+        this.layerContainer.height = this.getMeasuredHeight() + OVERVIEW_VERTICAL_PADDING * (this.layers.length-1);
+        
         this.layers.forEach((layer, index) => {
-            var transform = this.calculateLayerTransform(index);
+            layer.visualIndex = this._lerp(layer.visualIndex, index, deltaT*4);
+            const transform = this._calculateTargetTransform(layer.visualIndex);
+            layer.container.width = this.getMeasuredWidth();
+            layer.container.height = this.getMeasuredHeight();
             layer.container.scaleX = transform.scale.x;
             layer.container.scaleY = transform.scale.y;
             layer.container.translateX = transform.translate.x;
             layer.container.translateY = transform.translate.y;
         });
-    };
+    }
+    
+    private _lerp(a,b,t) {
+        return a + (b-a)*t
+    }
 
     toggleOverview() {
       if (this._overviewEnabled) {
@@ -236,12 +273,12 @@ export class BrowserView extends GridLayout {
     }
 
     showOverview() {
+        if (this._overviewEnabled) return;
         this._overviewEnabled = true;
         this.layers.forEach((layer, index) => {
             if (layer.webView.ios)
                 layer.webView.ios.layer.masksToBounds = true;
-            layer.gestureCover.style.visibility = 'visible';
-            layer.gestureCover.on(GestureTypes.pan, this.handlePan.bind(this));
+            layer.touchOverlay.style.visibility = 'visible';
             // For transparent webviews, add a little bit of opacity
             layer.container.animate({
                 backgroundColor: new Color(128, 255, 255, 255),
@@ -254,7 +291,7 @@ export class BrowserView extends GridLayout {
                 duration: OVERVIEW_ANIMATION_DURATION
             })
             // Update for the first time & animate.
-            const {translate, scale} = this.calculateLayerTransform(index);
+            const {translate, scale} = this._calculateTargetTransform(index);
             layer.container.animate({
                 translate,
                 scale,
@@ -262,17 +299,20 @@ export class BrowserView extends GridLayout {
                 curve: AnimationCurve.easeOut,
             });
         });
-        // Be able to drag on black
-        this.layerContainer.on(GestureTypes.pan, this.handlePan.bind(this));
+        
+        this.scrollView.scrollToVerticalOffset(0, true);
+        
+        // animate the views
+        this._intervalId = setInterval(this._animate.bind(this), 20);
     }
 
     hideOverview() {
+        if (!this._overviewEnabled) return;
         this._overviewEnabled = false;
         var animations = this.layers.map((layer, index) => {
             if (layer.webView.ios)
                 layer.webView.ios.layer.masksToBounds = false;
-            layer.gestureCover.style.visibility = 'collapsed';
-            layer.gestureCover.off(GestureTypes.pan);
+            layer.touchOverlay.style.visibility = 'collapsed';
             // For transparent webviews, add a little bit of opacity
             layer.container.animate({
                 backgroundColor: new Color(0, 255, 255, 255),
@@ -286,6 +326,7 @@ export class BrowserView extends GridLayout {
                 layer.titleBar.visibility = Visibility.collapse;
             })
             // Update for the first time & animate.
+            layer.visualIndex = index;
             return layer.container.animate({
                 translate: { x: 0, y: 0 },
                 scale: { x: 1, y: 1 },
@@ -294,10 +335,19 @@ export class BrowserView extends GridLayout {
             });
         });
         Promise.all(animations).then(() => {
-            this._scrollOffset = 0;
+            this.layerContainer.height = this.getMeasuredHeight();
+            this.scrollView.scrollToVerticalOffset(0, false);
         });
-        // Be able to drag on black
-        this.layerContainer.off(GestureTypes.pan);
+        
+        
+        this.scrollView.scrollToVerticalOffset(0, true);
+        setTimeout(()=>{
+            this.scrollView.scrollToVerticalOffset(0, true);
+        }, 30);
+        
+        // stop animating the views
+        clearInterval(this._intervalId);
+        this._intervalId = null;
     }
 
     private _setURL(url:string) {

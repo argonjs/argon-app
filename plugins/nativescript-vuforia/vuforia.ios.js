@@ -1,21 +1,48 @@
 "use strict";
 var common = require('./vuforia-common');
 var application = require('application');
+var placeholder = require('ui/placeholder');
 global.moduleMerge(common, exports);
 var VUFORIA_AVAILABLE = typeof VuforiaSession !== 'undefined';
-exports.ios = (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
+var iosVideoView = (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
+exports.videoView = new placeholder.Placeholder();
+exports.videoView.on(placeholder.Placeholder.creatingViewEvent, function (evt) {
+    evt.view = iosVideoView;
+});
+exports.videoView.onLoaded = function () {
+    if (VUFORIA_AVAILABLE)
+        VuforiaSession.onSurfaceCreated();
+};
+exports.videoView.onLayout = function (left, top, right, bottom) {
+    if (VUFORIA_AVAILABLE)
+        configureVuforiaSurface();
+};
 application.on(application.suspendEvent, function () {
     if (VUFORIA_AVAILABLE) {
+        console.log('Pausing Vuforia');
         VuforiaSession.onPause();
-        exports.ios.finishOpenGLESCommands();
-        exports.ios.freeOpenGLESResources();
+        iosVideoView.finishOpenGLESCommands();
+        iosVideoView.freeOpenGLESResources();
     }
 });
-function setVuforiaRotation() {
-    var contentScaleFactor = exports.ios.contentScaleFactor;
+application.on(application.orientationChangedEvent, function () {
+    if (VUFORIA_AVAILABLE) {
+        Promise.resolve().then(configureVuforiaSurface); // delay until the interface orientation actually changes
+    }
+});
+application.on(application.resumeEvent, function () {
+    if (VUFORIA_AVAILABLE) {
+        console.log('Resuming Vuforia');
+        VuforiaSession.onResume();
+        VuforiaSession.onSurfaceCreated();
+        configureVuforiaSurface();
+    }
+});
+function configureVuforiaSurface() {
+    var contentScaleFactor = iosVideoView.contentScaleFactor;
     VuforiaSession.onSurfaceChanged({
-        x: exports.ios.frame.size.width * contentScaleFactor,
-        y: exports.ios.frame.size.height * contentScaleFactor
+        x: iosVideoView.frame.size.width * contentScaleFactor,
+        y: iosVideoView.frame.size.height * contentScaleFactor
     });
     VuforiaSession.setRotation(128 /* IOS_90 */);
     var orientation = UIApplication.sharedApplication().statusBarOrientation;
@@ -34,19 +61,6 @@ function setVuforiaRotation() {
             break;
     }
 }
-// doesn't seem to work: ? 
-//application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarOrientationNotification, setVuforiaRotation);
-application.on(application.orientationChangedEvent, function () {
-    if (VUFORIA_AVAILABLE) {
-        Promise.resolve().then(setVuforiaRotation); // delay until the interface orientation actually changes
-    }
-});
-application.on(application.resumeEvent, function () {
-    if (VUFORIA_AVAILABLE) {
-        VuforiaSession.onResume();
-        setVuforiaRotation();
-    }
-});
 var API = (function (_super) {
     __extends(API, _super);
     function API() {
@@ -67,7 +81,7 @@ var API = (function (_super) {
             VuforiaSession.initDone(function (result) {
                 if (result === 100 /* SUCCESS */) {
                     VuforiaSession.onSurfaceCreated();
-                    setVuforiaRotation();
+                    configureVuforiaSurface();
                     VuforiaSession.registerCallback(function (state) {
                         _this._stateUpdateCallback(new State(state));
                     });

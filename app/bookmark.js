@@ -14,7 +14,9 @@ var listView1;
 function pageLoaded(args) {
     "use strict";
     var controller = frames.topmost().ios.controller;
+    // get the view controller navigation item
     var navigationItem = controller.visibleViewController.navigationItem;
+    // hide back button
     navigationItem.setHidesBackButtonAnimated(true, false);
     var page = args.object;
     page.bindingContext = { myItems: arr };
