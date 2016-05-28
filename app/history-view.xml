@@ -1,9 +1,0 @@
-<Page shownModally="onShownModally">
-    <StackLayout>
-        <GridLayout columns="*, auto" rows="auto">
-            <Label col="0" text="History" horizontalAlignment="stretch"/>
-            <Label col="1" text="X" horizontalAlignment="right" tap="exitButtonClicked"/>
-        </GridLayout>
-        <ListView items="{{ history }}" loaded="historyViewLoaded" itemTap="historyClicked"/>
-    </StackLayout>
-</Page>

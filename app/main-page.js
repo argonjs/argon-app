@@ -1,20 +1,16 @@
 "use strict";
 var URI = require("urijs");
 var application = require('application');
-var frames = require('ui/frame');
 var search_bar_1 = require('ui/search-bar');
 var color_1 = require('color');
-var observable_1 = require('data/observable');
 var fs = require('file-system');
+var enums_1 = require('ui/enums');
+var gestures_1 = require('ui/gestures');
 var Argon = require('argon');
-var dialogs = require("ui/dialogs");
-var applicationSettings = require("application-settings");
+var bookmarks_1 = require('./components/common/bookmarks');
+var AppViewModel_1 = require('./components/common/AppViewModel');
 var argon_device_service_1 = require('./argon-device-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
-var historyView = require('./history-view');
-var history = require('./shared/history');
-var page;
-var menu;
 var searchBar;
 var iosSearchBarController;
 var pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
@@ -27,9 +23,7 @@ container.registerSingleton(Argon.DeviceService, argon_device_service_1.Nativesc
 container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
 exports.manager = Argon.init({ container: container, config: {
         role: Argon.Role.MANAGER,
-        name: 'ArgonApp',
-        managerPublicKey: publicKeyPromise,
-        managerPrivateKey: privateKeyPromise
+        name: 'ArgonApp'
     } });
 exports.manager.reality.setDefault({ type: 'vuforia' });
 exports.manager.vuforia.init({
@@ -42,92 +36,184 @@ exports.manager.focus.sessionFocusEvent.addEventListener(function () {
     console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
 });
 var vuforiaDelegate = container.get(Argon.VuforiaServiceDelegate);
-var ViewModel = (function (_super) {
-    __extends(ViewModel, _super);
-    function ViewModel() {
-        _super.apply(this, arguments);
-        this.menuOpen = false;
-        this.debugEnabled = false;
-        this.viewerEnabled = false;
+AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
+    if (evt.propertyName === 'currentUrl') {
+        setSearchBarText(evt.value);
     }
-    ViewModel.prototype.toggleMenu = function () {
-        this.set('menuOpen', !this.menuOpen);
-    };
-    ViewModel.prototype.hideMenu = function () {
-        this.set('menuOpen', false);
-    };
-    ViewModel.prototype.toggleDebug = function () {
-        this.set('debugEnabled', !this.debugEnabled);
-    };
-    ViewModel.prototype.toggleViewer = function () {
-        this.set('viewerEnabled', !this.viewerEnabled);
-    };
-    ViewModel.prototype.setDebugEnabled = function (enabled) {
-        this.set('debugEnabled', enabled);
-    };
-    ViewModel.prototype.setViewerEnabled = function (enabled) {
-        this.set('viewerEnabled', enabled);
-    };
-    return ViewModel;
-}(observable_1.Observable));
-var viewModel = new ViewModel;
-viewModel.on('propertyChange', function (evt) {
-    if (evt.propertyName === 'viewerEnabled') {
+    else if (evt.propertyName === 'viewerEnabled') {
         vuforiaDelegate.setViewerEnabled(evt.value);
     }
-    if (evt.propertyName === 'menuOpen') {
+    else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {
-            exports.browserView.hideOverview();
-            menu.visibility = "visible";
-            menu.animate({
+            AppViewModel_1.appViewModel.hideOverview();
+            exports.menuView.visibility = "visible";
+            exports.menuView.animate({
                 scale: {
                     x: 1,
                     y: 1,
                 },
                 duration: 150,
                 opacity: 1,
+                curve: enums_1.AnimationCurve.easeInOut
             });
         }
         else {
-            menu.animate({
+            exports.menuView.animate({
                 scale: {
                     x: 0,
                     y: 0,
                 },
                 duration: 150,
                 opacity: 0,
+                curve: enums_1.AnimationCurve.easeInOut
             }).then(function () {
-                menu.visibility = "collapsed";
+                exports.menuView.visibility = "collapse";
             });
         }
     }
+    else if (evt.propertyName === 'overviewOpen') {
+        if (evt.value) {
+            exports.browserView.showOverview();
+            AppViewModel_1.appViewModel.hideBookmarks();
+            searchBar.animate({
+                translate: { x: -100, y: 0 },
+                opacity: 0,
+                curve: enums_1.AnimationCurve.easeInOut
+            }).then(function () {
+                searchBar.visibility = 'collapse';
+            });
+            var addButton = exports.headerView.getViewById('addButton');
+            addButton.visibility = 'visible';
+            addButton.opacity = 0;
+            addButton.translateX = -10;
+            addButton.animate({
+                translate: { x: 0, y: 0 },
+                opacity: 1
+            });
+        }
+        else {
+            exports.browserView.hideOverview();
+            if (!exports.browserView.url)
+                AppViewModel_1.appViewModel.showBookmarks();
+            searchBar.visibility = 'visible';
+            searchBar.animate({
+                translate: { x: 0, y: 0 },
+                opacity: 1,
+                curve: enums_1.AnimationCurve.easeInOut
+            });
+            var addButton_1 = exports.headerView.getViewById('addButton');
+            addButton_1.animate({
+                translate: { x: -10, y: 0 },
+                opacity: 0
+            }).then(function () {
+                addButton_1.visibility = 'collapse';
+            });
+        }
+    }
+    else if (evt.propertyName === 'bookmarksOpen') {
+        if (evt.value) {
+            exports.bookmarksView.visibility = 'visible';
+            exports.bookmarksView.scaleX = 0.9;
+            exports.bookmarksView.scaleY = 0.9;
+            exports.bookmarksView.animate({
+                scale: {
+                    x: 1,
+                    y: 1
+                },
+                opacity: 1,
+                curve: enums_1.AnimationCurve.easeInOut
+            });
+        }
+        else {
+            exports.bookmarksView.animate({
+                scale: {
+                    x: 1,
+                    y: 1
+                },
+                opacity: 0,
+                curve: enums_1.AnimationCurve.easeInOut
+            }).then(function () {
+                exports.bookmarksView.visibility = 'collapse';
+                exports.bookmarksView.scaleX = 0.9;
+                exports.bookmarksView.scaleY = 0.9;
+            });
+            blurSearchBar();
+        }
+    }
+    else if (evt.propertyName === 'cancelButtonShown') {
+        if (evt.value) {
+            var overviewButton_1 = exports.headerView.getViewById('overviewButton');
+            overviewButton_1.animate({
+                opacity: 0
+            }).then(function () {
+                overviewButton_1.visibility = 'collapse';
+            });
+            var menuButton_1 = exports.headerView.getViewById('menuButton');
+            menuButton_1.animate({
+                opacity: 0
+            }).then(function () {
+                menuButton_1.visibility = 'collapse';
+            });
+            var cancelButton = exports.headerView.getViewById('cancelButton');
+            cancelButton.visibility = 'visible';
+            cancelButton.animate({
+                opacity: 1
+            });
+            exports.bookmarksView.on(gestures_1.GestureTypes.touch, function () {
+                blurSearchBar();
+                AppViewModel_1.appViewModel.hideCancelButton();
+            });
+        }
+        else {
+            var overviewButton = exports.headerView.getViewById('overviewButton');
+            overviewButton.visibility = 'visible';
+            overviewButton.animate({
+                opacity: 1
+            });
+            var menuButton = exports.headerView.getViewById('menuButton');
+            menuButton.visibility = 'visible';
+            menuButton.animate({
+                opacity: 1
+            });
+            var cancelButton_1 = exports.headerView.getViewById('cancelButton');
+            cancelButton_1.animate({
+                opacity: 0
+            }).then(function () {
+                cancelButton_1.visibility = 'collapse';
+            });
+            exports.bookmarksView.off(gestures_1.GestureTypes.touch);
+        }
+    }
 });
+// frames.Frame.prototype['_setNativeViewFrame'] = View.prototype['_setNativeViewFrame'];
 function pageLoaded(args) {
-    page = args.object;
-    page.bindingContext = viewModel;
-    page.backgroundColor = new color_1.Color("black");
-    //This was added to fix the bug of bookmark back navigation is shown when going back
-    var controller = frames.topmost().ios.controller;
-    var navigationItem = controller.visibleViewController.navigationItem;
-    navigationItem.setHidesBackButtonAnimated(true, false);
-    page.backgroundColor = new color_1.Color("black");
+    exports.page = args.object;
+    exports.page.bindingContext = AppViewModel_1.appViewModel;
+    AppViewModel_1.appViewModel.on('loadUrl', function (data) {
+        exports.browserView.loadUrl(data.url);
+    });
     // Set the icon for the menu button
-    var menuButton = page.getViewById("menuBtn");
+    var menuButton = exports.page.getViewById("menuButton");
     menuButton.text = String.fromCharCode(0xe5d4);
     // Set the icon for the overview button
-    var overviewButton = page.getViewById("overviewBtn");
+    var overviewButton = exports.page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
-    if (page.ios) {
+    if (exports.page.ios) {
         setTimeout(function () {
-            page.requestLayout();
+            exports.page.requestLayout();
         }, 0);
         application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, function () {
-            page.requestLayout();
+            exports.page.requestLayout();
         });
     }
+    AppViewModel_1.appViewModel.showBookmarks();
 }
 exports.pageLoaded = pageLoaded;
+function headerLoaded(args) {
+    exports.headerView = args.object;
+}
+exports.headerLoaded = headerLoaded;
 function searchBarLoaded(args) {
     searchBar = args.object;
     searchBar.on(search_bar_1.SearchBar.submitEvent, function () {
@@ -135,9 +221,8 @@ function searchBarLoaded(args) {
         if (url.protocol() !== "http" || url.protocol() !== "https") {
             url.protocol("http");
         }
-        console.log("Load url: " + url);
         setSearchBarText(url.toString());
-        exports.browserView.focussedLayer.webView.src = url.toString();
+        AppViewModel_1.appViewModel.loadUrl(url.toString());
     });
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
@@ -152,18 +237,13 @@ function setSearchBarText(url) {
         searchBar.text = url;
     }
 }
+function blurSearchBar() {
+    if (searchBar.ios) {
+        searchBar.ios.resignFirstResponder();
+    }
+}
 function browserViewLoaded(args) {
     exports.browserView = args.object;
-    exports.browserView.on('propertyChange', function (eventData) {
-        if (eventData.propertyName === 'url') {
-            setSearchBarText(eventData.value);
-        }
-    });
-    exports.browserView.focussedLayer.webView.on("loadFinished", function (eventData) {
-        if (!eventData.error) {
-            history.addPage(eventData.url);
-        }
-    });
     // Setup the debug view
     var debug = exports.browserView.page.getViewById("debug");
     debug.horizontalAlignment = 'stretch';
@@ -180,96 +260,92 @@ function browserViewLoaded(args) {
     };
     layer.webView.on("log", logChangeCallback);
     exports.browserView.on("propertyChange", function (evt) {
-        if (evt.propertyName === "focussedLayer") {
+        if (evt.propertyName === 'url') {
+            AppViewModel_1.appViewModel.setCurrentUrl(evt.value);
+            setSearchBarText(evt.value);
+        }
+        else if (evt.propertyName === 'focussedLayer') {
             if (layer) {
                 layer.webView.removeEventListener("log", logChangeCallback);
             }
             layer = exports.browserView.focussedLayer;
             console.log("FOCUSSED LAYER: " + layer.webView.src);
             layer.webView.on("log", logChangeCallback);
+            AppViewModel_1.appViewModel.hideOverview();
         }
     });
 }
 exports.browserViewLoaded = browserViewLoaded;
+function bookmarksViewLoaded(args) {
+    exports.bookmarksView = args.object;
+}
+exports.bookmarksViewLoaded = bookmarksViewLoaded;
 // initialize some properties of the menu so that animations will render correctly
 function menuLoaded(args) {
-    menu = args.object;
-    menu.originX = 1;
-    menu.originY = 0;
-    menu.scaleX = 0;
-    menu.scaleY = 0;
-    menu.opacity = 0;
-    menu.parent.requestLayout();
+    exports.menuView = args.object;
+    exports.menuView.originX = 1;
+    exports.menuView.originY = 0;
+    exports.menuView.scaleX = 0;
+    exports.menuView.scaleY = 0;
+    exports.menuView.opacity = 0;
 }
 exports.menuLoaded = menuLoaded;
+function onSearchBarTap(args) {
+    AppViewModel_1.appViewModel.showBookmarks();
+    AppViewModel_1.appViewModel.showCancelButton();
+}
+exports.onSearchBarTap = onSearchBarTap;
+function onCancel(args) {
+    if (!!exports.browserView.url)
+        AppViewModel_1.appViewModel.hideBookmarks();
+    AppViewModel_1.appViewModel.hideCancelButton();
+    blurSearchBar();
+}
+exports.onCancel = onCancel;
+function onAddChannel(args) {
+    exports.browserView.addLayer();
+    AppViewModel_1.appViewModel.hideMenu();
+}
+exports.onAddChannel = onAddChannel;
 function onReload(args) {
     exports.browserView.focussedLayer.webView.reload();
 }
 exports.onReload = onReload;
+function onFavoriteToggle(args) {
+    var url = exports.browserView.url;
+    if (!bookmarks_1.favoriteMap.get(url)) {
+        bookmarks_1.favoriteList.push(new bookmarks_1.BookmarkItem({
+            url: url,
+            title: exports.browserView.focussedLayer.webView.title
+        }));
+    }
+    else {
+        bookmarks_1.favoriteMap.set(url, undefined);
+    }
+}
+exports.onFavoriteToggle = onFavoriteToggle;
 function onOverview(args) {
-    exports.browserView.toggleOverview();
-    viewModel.setDebugEnabled(false);
-    viewModel.hideMenu();
+    AppViewModel_1.appViewModel.toggleOverview();
+    AppViewModel_1.appViewModel.setDebugEnabled(false);
+    AppViewModel_1.appViewModel.hideMenu();
 }
 exports.onOverview = onOverview;
 function onMenu(args) {
-    viewModel.toggleMenu();
+    AppViewModel_1.appViewModel.toggleMenu();
 }
 exports.onMenu = onMenu;
-function onNewChannel(args) {
-    exports.browserView.addLayer();
-    viewModel.hideMenu();
-}
-exports.onNewChannel = onNewChannel;
-function onBookmarks(args) {
-    var url_string = exports.browserView.focussedLayer.webView.src;
-    if (url_string != "") {
-        if (!checkExistingUrl(url_string)) {
-            dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
-                if (r.result !== false) {
-                    var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
-                    modified_url = modified_url.replace("/", "");
-                    modified_url = modified_url.replace("/", "");
-                    modified_url = modified_url.replace("http:", "");
-                    modified_url = modified_url.replace("https:", "");
-                    applicationSettings.setString("bookmarkurl", modified_url);
-                    applicationSettings.setString("bookmarkname", r.text);
-                    frames.topmost().navigate("bookmark");
-                }
-            });
-        }
-        else {
-            frames.topmost().navigate("bookmark");
-        }
-    }
-    else {
-        dialogs.alert("Url string for bookmark can't be empty").then(function () { });
-    }
-    viewModel.hideMenu();
-}
-exports.onBookmarks = onBookmarks;
-function onHistory(args) {
-    frames.topmost().currentPage.showModal("history-view", null, function () {
-        var url = historyView.getTappedUrl();
-        if (url) {
-            exports.browserView.focussedLayer.webView.src = url;
-        }
-    }, true);
-    viewModel.hideMenu();
-}
-exports.onHistory = onHistory;
 function onSettings(args) {
     //code to open the settings view goes here
-    viewModel.hideMenu();
+    AppViewModel_1.appViewModel.hideMenu();
 }
 exports.onSettings = onSettings;
 function onViewerToggle(args) {
-    viewModel.toggleViewer();
-    viewModel.hideMenu();
+    AppViewModel_1.appViewModel.toggleViewer();
+    AppViewModel_1.appViewModel.hideMenu();
 }
 exports.onViewerToggle = onViewerToggle;
 function onDebugToggle(args) {
-    viewModel.toggleDebug();
+    AppViewModel_1.appViewModel.toggleDebug();
 }
 exports.onDebugToggle = onDebugToggle;
 var IOSSearchBarController = (function () {
@@ -278,7 +354,6 @@ var IOSSearchBarController = (function () {
         this.searchBar = searchBar;
         this.uiSearchBar = searchBar.ios;
         this.textField = this.uiSearchBar.valueForKey("searchField");
-        this.uiSearchBar.showsCancelButton = false;
         this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
         this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
         this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
@@ -286,40 +361,26 @@ var IOSSearchBarController = (function () {
         this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal);
         this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
         var textFieldEditHandler = function () {
-            viewModel.hideMenu();
+            AppViewModel_1.appViewModel.hideMenu();
             if (_this.uiSearchBar.isFirstResponder()) {
-                _this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
-                var cancelButton = _this.uiSearchBar.valueForKey("cancelButton");
-                cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
+                AppViewModel_1.appViewModel.showBookmarks();
+                AppViewModel_1.appViewModel.showCancelButton();
                 setTimeout(function () {
                     if (_this.uiSearchBar.text === "") {
-                        _this.uiSearchBar.text = exports.browserView.url;
+                        _this.uiSearchBar.text = AppViewModel_1.appViewModel.currentUrl;
                         _this.setPlaceholderText(null);
                         _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
                     }
                 }, 500);
             }
             else {
-                _this.setPlaceholderText(_this.uiSearchBar.text);
+                _this.setPlaceholderText(AppViewModel_1.appViewModel.currentUrl);
                 _this.uiSearchBar.text = "";
-                Promise.resolve().then(function () {
-                    _this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
-                });
+                AppViewModel_1.appViewModel.hideCancelButton();
             }
         };
         application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
         application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
-        //This part is for bookmark. It basically checks if the app just returning from bookmark. And load the url
-        if (applicationSettings.getString("url") != "none" && applicationSettings.getString("url") != null) {
-            var bookmark_url = applicationSettings.getString("url");
-            var protocolRegex = /^[^:]+(?=:\/\/)/;
-            if (!protocolRegex.test(bookmark_url)) {
-                bookmark_url = "http://" + bookmark_url;
-            }
-            bookmark_url = bookmark_url.toLowerCase();
-            exports.browserView.focussedLayer.webView.src = bookmark_url;
-            applicationSettings.setString("url", "none");
-        }
     }
     IOSSearchBarController.prototype.setPlaceholderText = function (text) {
         if (text) {
@@ -338,26 +399,4 @@ var IOSSearchBarController = (function () {
     };
     return IOSSearchBarController;
 }());
-function onTap() {
-    console.log('tapped');
-}
-exports.onTap = onTap;
-//Helper function for bookmark. It checks if the url already existed in bookmark
-function checkExistingUrl(url_string) {
-    url_string = url_string.replace(/([^:]\/)\/+/g, "");
-    url_string = url_string.replace("/", "");
-    url_string = url_string.replace("/", "");
-    url_string = url_string.replace("http:", "");
-    url_string = url_string.replace("https:", "");
-    var url = [];
-    if (applicationSettings.getString("save_bookmark_url") != null) {
-        url = JSON.parse(applicationSettings.getString("save_bookmark_url"));
-    }
-    for (var i = 0; i < url.length; i++) {
-        if (url[i]["url"] == url_string) {
-            return true;
-        }
-    }
-    return false;
-}
 //# sourceMappingURL=main-page.js.map

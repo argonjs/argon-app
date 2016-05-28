@@ -5,59 +5,60 @@ import * as frames from 'ui/frame';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';
 import {CreateViewEventData} from 'ui/placeholder';
-import {LoadEventData} from 'ui/web-view';
 import {Button} from 'ui/button';
 import {View, getViewById} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
-import {Observable, PropertyChangeData} from 'data/observable';
+import {PropertyChangeData} from 'data/observable';
 import * as fs from 'file-system';
+import dialogs = require("ui/dialogs");
+import applicationSettings = require("application-settings");
+import {AnimationCurve} from 'ui/enums'
+import {GestureTypes} from 'ui/gestures'
 
 import * as Argon from 'argon';
 
-import dialogs = require("ui/dialogs");
-import applicationSettings = require("application-settings");
 import {Util} from './util';
 import {ArgonWebView} from 'argon-web-view';
-import {BrowserView} from './browser-view';
+import {BrowserView} from './components/browser-view';
+import {BookmarkItem, favoriteList, favoriteMap} from './components/common/bookmarks';
+import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 
 import {NativescriptDeviceService} from './argon-device-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
-import * as historyView from './history-view';
-import * as history from './shared/history';
-
 export let manager:Argon.ArgonSystem;
+
+export let page:Page;
+export let touchOverlayView:View;
+export let headerView:View;
+export let menuView:View;
 export let browserView:BrowserView;
+export let bookmarksView:View;
 
-let page:Page;
-let menu:View;
 let searchBar:SearchBar;
-
 let iosSearchBarController:IOSSearchBarController;
 
 const pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
 
 const publicKeyPromise = pgpFolder.contains('public.key') ? 
-	pgpFolder.getFile('public.key').readText() : Promise.reject(null);
+    pgpFolder.getFile('public.key').readText() : Promise.reject(null);
 const privateKeyPromise = pgpFolder.contains('private.key') ? 
-	pgpFolder.getFile('private.key').readText() : Promise.reject(null);
+    pgpFolder.getFile('private.key').readText() : Promise.reject(null);
 
 const container = new Argon.DI.Container;
 container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
 
 manager = Argon.init({container, config: {
-	role: Argon.Role.MANAGER,
-	name: 'ArgonApp',
-	managerPublicKey: publicKeyPromise,
-	managerPrivateKey: privateKeyPromise
+    role: Argon.Role.MANAGER,
+    name: 'ArgonApp'
 }});
 
 manager.reality.setDefault({type:'vuforia'});
 
 manager.vuforia.init({
-	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
 }).catch((err)=>{
     console.log(err);
 });
@@ -69,135 +70,220 @@ manager.focus.sessionFocusEvent.addEventListener(()=>{
 
 const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
-class ViewModel extends Observable {
-	menuOpen = false;
-	debugEnabled = false;
-	viewerEnabled = false;
-	toggleMenu() {
-		this.set('menuOpen', !this.menuOpen);
-	}
-	hideMenu() {
-		this.set('menuOpen', false);
-	}
-	toggleDebug() {
-		this.set('debugEnabled', !this.debugEnabled);
-	}
-	toggleViewer() {
-		this.set('viewerEnabled', !this.viewerEnabled);
-	}
-	setDebugEnabled(enabled:boolean) {
-		this.set('debugEnabled', enabled);
-	}
-	setViewerEnabled(enabled:boolean) {
-		this.set('viewerEnabled', enabled);
-	}
-}
-
-const viewModel = new ViewModel;
-
-viewModel.on('propertyChange', (evt:PropertyChangeData)=>{
-	if (evt.propertyName === 'viewerEnabled') {
-		vuforiaDelegate.setViewerEnabled(evt.value);
-	}
-	if (evt.propertyName === 'menuOpen') {
-		if (evt.value) {
-			browserView.hideOverview();
-			menu.visibility = "visible";
-			menu.animate({
-				scale: {
-					x: 1,
-					y: 1,
-				},
-				duration: 150,
-				opacity: 1,
-			});
-		} else {
-			menu.animate({
-				scale: {
-					x: 0,
-					y: 0,
-				},
-				duration: 150,
-				opacity: 0,
-			}).then(() => {
-				menu.visibility = "collapsed";
-			});
-		}
-	}
+appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
+    if (evt.propertyName === 'currentUrl') {
+        setSearchBarText(evt.value);
+    }
+    else if (evt.propertyName === 'viewerEnabled') {
+        vuforiaDelegate.setViewerEnabled(evt.value);
+    }
+    else if (evt.propertyName === 'menuOpen') {
+        if (evt.value) {
+            appViewModel.hideOverview();
+            menuView.visibility = "visible";
+            menuView.animate({
+                scale: {
+                    x: 1,
+                    y: 1,
+                },
+                duration: 150,
+                opacity: 1,
+                curve: AnimationCurve.easeInOut
+            });
+        } else {
+            menuView.animate({
+                scale: {
+                    x: 0,
+                    y: 0,
+                },
+                duration: 150,
+                opacity: 0,
+                curve: AnimationCurve.easeInOut
+            }).then(() => {
+                menuView.visibility = "collapse";
+            });
+        }
+    }
+    else if (evt.propertyName === 'overviewOpen') {
+        if (evt.value) {
+            browserView.showOverview();
+            appViewModel.hideBookmarks();
+            searchBar.animate({
+                translate: {x:-100, y:0},
+                opacity: 0,
+                curve: AnimationCurve.easeInOut
+            }).then(()=>{
+                searchBar.visibility = 'collapse';
+            })
+            const addButton = headerView.getViewById('addButton');
+            addButton.visibility = 'visible';
+            addButton.opacity = 0;
+            addButton.translateX = -10;
+            addButton.animate({
+                translate: {x:0,y:0},
+                opacity:1
+            })
+        } else {
+            browserView.hideOverview();
+            if (!browserView.url) appViewModel.showBookmarks();
+            searchBar.visibility = 'visible';
+            searchBar.animate({
+                translate: {x:0, y:0},
+                opacity: 1,
+                curve: AnimationCurve.easeInOut
+            })
+            const addButton = headerView.getViewById('addButton');
+            addButton.animate({
+                translate: {x:-10, y:0},
+                opacity:0
+            }).then(()=>{
+                addButton.visibility = 'collapse';
+            })
+        }
+    }
+    else if (evt.propertyName === 'bookmarksOpen') {
+        if (evt.value) {
+            bookmarksView.visibility = 'visible';
+            bookmarksView.scaleX = 0.9;
+            bookmarksView.scaleY = 0.9;
+            bookmarksView.animate({
+                scale: {
+                    x:1,
+                    y:1
+                },
+                opacity:1,
+                curve: AnimationCurve.easeInOut
+            })
+        } else {
+            bookmarksView.animate({
+                scale: {
+                    x:1,
+                    y:1
+                },
+                opacity:0,
+                curve: AnimationCurve.easeInOut
+            }).then(()=>{
+                bookmarksView.visibility = 'collapse';
+                bookmarksView.scaleX = 0.9;
+                bookmarksView.scaleY = 0.9;
+            })
+            blurSearchBar();
+        }
+    } 
+    else if (evt.propertyName === 'cancelButtonShown') {
+        if (evt.value) {
+            const overviewButton = headerView.getViewById('overviewButton');
+            overviewButton.animate({
+                opacity:0
+            }).then(()=>{
+                overviewButton.visibility = 'collapse';
+            })
+            const menuButton = headerView.getViewById('menuButton');
+            menuButton.animate({
+                opacity:0
+            }).then(()=>{
+                menuButton.visibility = 'collapse';
+            })
+            const cancelButton = headerView.getViewById('cancelButton');
+            cancelButton.visibility = 'visible';
+            cancelButton.animate({
+                opacity:1
+            });
+            bookmarksView.on(GestureTypes.touch,()=>{
+                blurSearchBar();
+                appViewModel.hideCancelButton();
+            });
+        } else {
+            const overviewButton = headerView.getViewById('overviewButton');
+            overviewButton.visibility = 'visible';
+            overviewButton.animate({
+                opacity:1
+            })
+            const menuButton = headerView.getViewById('menuButton');
+            menuButton.visibility = 'visible';
+            menuButton.animate({
+                opacity:1
+            })
+            const cancelButton = headerView.getViewById('cancelButton');
+            cancelButton.animate({
+                opacity:0
+            }).then(()=>{
+                cancelButton.visibility = 'collapse';
+            })
+            bookmarksView.off(GestureTypes.touch);
+        }
+    }
 })
 
+// frames.Frame.prototype['_setNativeViewFrame'] = View.prototype['_setNativeViewFrame'];
+
 export function pageLoaded(args) {
-	
-	page = args.object;
-	
-	page.bindingContext = viewModel;
-	
-	page.backgroundColor = new Color("black");
-	
-	//This was added to fix the bug of bookmark back navigation is shown when going back
-	var controller = frames.topmost().ios.controller;
-  	var navigationItem = controller.visibleViewController.navigationItem;
-	navigationItem.setHidesBackButtonAnimated(true, false);
-	page.backgroundColor = new Color("black");
+    
+    page = args.object;
+    page.bindingContext = appViewModel;
+    
+    appViewModel.on('loadUrl', (data:LoadUrlEventData)=>{
+        browserView.loadUrl(data.url);
+    })
 
-	// Set the icon for the menu button
-	const menuButton = <Button> page.getViewById("menuBtn");
-	menuButton.text = String.fromCharCode(0xe5d4);
+    // Set the icon for the menu button
+    const menuButton = <Button> page.getViewById("menuButton");
+    menuButton.text = String.fromCharCode(0xe5d4);
 
-	// Set the icon for the overview button
-	const overviewButton = <Button> page.getViewById("overviewBtn");
-	overviewButton.text = String.fromCharCode(0xe53b);
+    // Set the icon for the overview button
+    const overviewButton = <Button> page.getViewById("overviewButton");
+    overviewButton.text = String.fromCharCode(0xe53b);
 
-	// workaround (see https://github.com/NativeScript/NativeScript/issues/659)
-	if (page.ios) {
-		setTimeout(()=>{
-			page.requestLayout();
-		}, 0)
-		application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, () => {
-			page.requestLayout();
-		});
-	}
+    // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
+    if (page.ios) {
+        setTimeout(()=>{
+            page.requestLayout();
+        }, 0)
+        application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, () => {
+            page.requestLayout();
+        });
+    }
+    
+    appViewModel.showBookmarks();
+}
+
+export function headerLoaded(args) {
+    headerView = args.object;
 }
 
 export function searchBarLoaded(args) {
-	searchBar = args.object;
+    searchBar = args.object;
 
-	searchBar.on(SearchBar.submitEvent, () => {
-		const url = URI(searchBar.text);
-		if (url.protocol() !== "http" || url.protocol() !== "https") {
-			url.protocol("http");
-		}
-		console.log("Load url: " + url);
-		setSearchBarText(url.toString());
-		browserView.focussedLayer.webView.src = url.toString();
-	});
+    searchBar.on(SearchBar.submitEvent, () => {
+        const url = URI(searchBar.text);
+        if (url.protocol() !== "http" || url.protocol() !== "https") {
+            url.protocol("http");
+        }
+        setSearchBarText(url.toString());
+        appViewModel.loadUrl(url.toString());
+    });
 
-	if (application.ios) {
-		iosSearchBarController = new IOSSearchBarController(searchBar);
-	}
+    if (application.ios) {
+        iosSearchBarController = new IOSSearchBarController(searchBar);
+    }
 }
 
 function setSearchBarText(url:string) {
-	if (iosSearchBarController) {
-		iosSearchBarController.setText(url);
-	} else {
-		searchBar.text = url;
-	}
+    if (iosSearchBarController) {
+        iosSearchBarController.setText(url);
+    } else {
+        searchBar.text = url;
+    }
+}
+
+function blurSearchBar() {
+    if (searchBar.ios) {
+        (searchBar.ios as UISearchBar).resignFirstResponder();
+    }
 }
 
 export function browserViewLoaded(args) {
-	browserView = args.object;
-	browserView.on('propertyChange', (eventData:PropertyChangeData) => {
-		if (eventData.propertyName === 'url') {
-			setSearchBarText(eventData.value)
-		}
-	});
-
-    browserView.focussedLayer.webView.on("loadFinished", (eventData: LoadEventData) => {
-        if (!eventData.error) {
-            history.addPage(eventData.url);
-        }
-    });
+    browserView = args.object;
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
@@ -212,196 +298,154 @@ export function browserViewLoaded(args) {
     let layer = browserView.focussedLayer;
 
     const logChangeCallback = (args) => {
-		// while (layer.webView.log.length > 10) layer.webView.log.shift()
+        // while (layer.webView.log.length > 10) layer.webView.log.shift()
         // debug.html = layer.webView.log.join("<br/>");
     };
     layer.webView.on("log", logChangeCallback)
 
     browserView.on("propertyChange", (evt: PropertyChangeData) => {
-        if (evt.propertyName === "focussedLayer") {
+        if (evt.propertyName === 'url') {
+            appViewModel.setCurrentUrl(evt.value);    
+            setSearchBarText(evt.value)
+        }
+        else if (evt.propertyName === 'focussedLayer') {
             if (layer) {
                 layer.webView.removeEventListener("log", logChangeCallback);
             }
             layer = browserView.focussedLayer;
             console.log("FOCUSSED LAYER: " + layer.webView.src);
             layer.webView.on("log", logChangeCallback)
+            appViewModel.hideOverview();
         }
     });
 }
 
+
+export function bookmarksViewLoaded(args) {
+    bookmarksView = args.object;
+}
+
 // initialize some properties of the menu so that animations will render correctly
 export function menuLoaded(args) {
-	menu = args.object;
-	menu.originX = 1;
-	menu.originY = 0;
-	menu.scaleX = 0;
-	menu.scaleY = 0;
-	menu.opacity = 0;
-	menu.parent.requestLayout();
+    menuView = args.object;
+    menuView.originX = 1;
+    menuView.originY = 0;
+    menuView.scaleX = 0;
+    menuView.scaleY = 0;
+    menuView.opacity = 0;
+}
+
+export function onSearchBarTap(args) {
+    appViewModel.showBookmarks();
+    appViewModel.showCancelButton();
+}
+
+export function onCancel(args) {
+    if (!!browserView.url) appViewModel.hideBookmarks();
+    appViewModel.hideCancelButton();
+    blurSearchBar();
+}
+
+export function onAddChannel(args) {
+    browserView.addLayer();
+    appViewModel.hideMenu();
 }
 
 export function onReload(args) {
-	browserView.focussedLayer.webView.reload();
+    browserView.focussedLayer.webView.reload();
+}
+
+export function onFavoriteToggle(args) {
+    const url = browserView.url;
+    if (!favoriteMap.get(url)) {
+        favoriteList.push(new BookmarkItem({
+            url,
+            title: browserView.focussedLayer.webView.title
+        }));
+    } else {
+        favoriteMap.set(url, undefined);
+    }
 }
 
 export function onOverview(args) {
-	browserView.toggleOverview();
-	viewModel.setDebugEnabled(false);
-	viewModel.hideMenu();
+    appViewModel.toggleOverview();
+    appViewModel.setDebugEnabled(false);
+    appViewModel.hideMenu();
 }
 
 export function onMenu(args) {
-	viewModel.toggleMenu();
-}
-
-export function onNewChannel(args) {
-	browserView.addLayer();
-	viewModel.hideMenu();
-}
-
-export function onBookmarks(args) {
-	var url_string = browserView.focussedLayer.webView.src;
-	if(url_string != "") {
-		if(!checkExistingUrl(url_string)) {
-			dialogs.prompt("Input a name for your bookmark", "").then(function (r) {
-				if(r.result !== false) {
-					var modified_url = url_string.replace(/([^:]\/)\/+/g, "");
-					modified_url = modified_url.replace("/", "");
-					modified_url = modified_url.replace("/","");
-					modified_url = modified_url.replace("http:","");
-					modified_url = modified_url.replace("https:","");
-					applicationSettings.setString("bookmarkurl", modified_url);
-					applicationSettings.setString("bookmarkname", r.text);
-					frames.topmost().navigate("bookmark");
-				}
-			});
-		} else {
-			frames.topmost().navigate("bookmark");
-		}
-	} else {
-		dialogs.alert("Url string for bookmark can't be empty").then(function() {});
-	}
-	viewModel.hideMenu();
-}
-
-export function onHistory(args) {
-    frames.topmost().currentPage.showModal("history-view", null, () => {
-        const url = historyView.getTappedUrl();
-        if (url) {
-            browserView.focussedLayer.webView.src = url;
-        }
-    }, true);
-	viewModel.hideMenu();
+    appViewModel.toggleMenu();
 }
 
 export function onSettings(args) {
     //code to open the settings view goes here
-	viewModel.hideMenu();
+    appViewModel.hideMenu();
 }
 
 export function onViewerToggle(args) {
-	viewModel.toggleViewer();
-	viewModel.hideMenu();
+    appViewModel.toggleViewer();
+    appViewModel.hideMenu();
 }
 
 export function onDebugToggle(args) {
-	viewModel.toggleDebug();
+    appViewModel.toggleDebug();
 }
 
 class IOSSearchBarController {
 
-	private uiSearchBar:UISearchBar;
-	private textField:UITextField;
+    private uiSearchBar:UISearchBar;
+    private textField:UITextField;
 
-	constructor(public searchBar:SearchBar) {
-		this.uiSearchBar = searchBar.ios;
-		this.textField = this.uiSearchBar.valueForKey("searchField");
+    constructor(public searchBar:SearchBar) {
+        this.uiSearchBar = searchBar.ios;
+        this.textField = this.uiSearchBar.valueForKey("searchField");
 
-		this.uiSearchBar.showsCancelButton = false;
-		this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
-		this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
-		this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
-		this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
-		this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
+        this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
+        this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
+        this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
+        this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
+        this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
+        
+        this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
 
-		this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
+        const textFieldEditHandler = () => {
+            appViewModel.hideMenu();
+            if (this.uiSearchBar.isFirstResponder()) {
+                
+                appViewModel.showBookmarks();
+                appViewModel.showCancelButton();
+                
+                setTimeout(()=>{
+                    if (this.uiSearchBar.text === "") {
+                        this.uiSearchBar.text = appViewModel.currentUrl;
+                        this.setPlaceholderText(null);
+                        this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
+                    }
+                }, 500)
+            } else {
+                this.setPlaceholderText(appViewModel.currentUrl);
+                this.uiSearchBar.text = "";
+                appViewModel.hideCancelButton();
+            }
+        }
 
-		const textFieldEditHandler = () => {
-			viewModel.hideMenu();
-			if (this.uiSearchBar.isFirstResponder()) {
-				this.uiSearchBar.setShowsCancelButtonAnimated(true, true);
-				const cancelButton:UIButton = this.uiSearchBar.valueForKey("cancelButton");
-				cancelButton.setTitleColorForState(UIColor.darkGrayColor(), UIControlState.UIControlStateNormal);
-				
-				setTimeout(()=>{
-					if (this.uiSearchBar.text === "") {
-						this.uiSearchBar.text = browserView.url;
-						this.setPlaceholderText(null);
-						this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
-					}
-				}, 500)
-			} else {
-				this.setPlaceholderText(this.uiSearchBar.text);
-				this.uiSearchBar.text = "";
-				Promise.resolve().then(()=>{
-					this.uiSearchBar.setShowsCancelButtonAnimated(false, true);
-				});
-			}
-		}
+        application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
+        application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+    }
 
+    private setPlaceholderText(text:string) {
+        if (text) {
+            var attributes = NSMutableDictionary.alloc().init();
+            attributes.setObjectForKey(UIColor.blackColor(), NSForegroundColorAttributeName);
+            this.textField.attributedPlaceholder = NSAttributedString.alloc().initWithStringAttributes(text, attributes);
+        } else {
+            this.textField.placeholder = searchBar.hint;
+        }
+    }
 
-    	application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
-    	application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
-
-			//This part is for bookmark. It basically checks if the app just returning from bookmark. And load the url
-			if(applicationSettings.getString("url") != "none" && applicationSettings.getString("url") != null) {
-				let bookmark_url = applicationSettings.getString("url");
-				const protocolRegex = /^[^:]+(?=:\/\/)/;
-				if (!protocolRegex.test(bookmark_url)) {
-					bookmark_url = "http://" + bookmark_url;
-				}
-				bookmark_url = bookmark_url.toLowerCase();
-				browserView.focussedLayer.webView.src = bookmark_url;
-				applicationSettings.setString("url", "none");
-			}
-	}
-
-	private setPlaceholderText(text:string) {
-		if (text) {
-			var attributes = NSMutableDictionary.alloc().init();
-			attributes.setObjectForKey(UIColor.blackColor(), NSForegroundColorAttributeName);
-			this.textField.attributedPlaceholder = NSAttributedString.alloc().initWithStringAttributes(text, attributes);
-		} else {
-			this.textField.placeholder = searchBar.hint;
-		}
-	}
-
-	public setText(url) {
-		if (!this.uiSearchBar.isFirstResponder()) {
-			this.setPlaceholderText(url);
-		}
-	}
-}
-
-export function onTap() {
-	console.log('tapped')
-}
-
-//Helper function for bookmark. It checks if the url already existed in bookmark
-function checkExistingUrl(url_string) {
-	url_string = url_string.replace(/([^:]\/)\/+/g,"");
-	url_string = url_string.replace("/","");
-	url_string = url_string.replace("/","");
-	url_string = url_string.replace("http:","");
-	url_string = url_string.replace("https:","");
-	var url = [];
-	if(applicationSettings.getString("save_bookmark_url") != null) {
-		url = JSON.parse(applicationSettings.getString("save_bookmark_url"));
-	}
-	for(var i = 0 ; i < url.length; i++) {
-		if(url[i]["url"] == url_string) {
-			return true;
-		}
-	}
-	return false;
+    public setText(url) {
+        if (!this.uiSearchBar.isFirstResponder()) {
+            this.setPlaceholderText(url);
+        }
+    }
 }

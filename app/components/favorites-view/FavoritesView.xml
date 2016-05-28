@@ -1,0 +1,23 @@
+<GridLayout xmlns="http://schemas.nativescript.org/tns.xsd" >
+    <ListView
+        items="{{ favoriteList }}"
+        loaded="onLoaded"
+        rowHeight="64">
+        <ListView.itemTemplate>
+            <GridLayout backgroundColor="#FFFFFF" height="64" loaded="onItemLoaded">
+                <GridLayout id="delete" backgroundColor="#EEEEEE">
+                    <Button width="64" class="material-icon delete-btn" tap="onDelete" text="delete" horizontalAlignment="right" backgroundColor="#FF0000" />
+                </GridLayout>
+                <GridLayout id="content" rows="*" columns="64,*" backgroundColor="#FFFFFF" tap="onTap">
+                    <GridLayout row="0" col="0" rows="*" columns="*">
+                        <Label backgroundColor="#44FFAA00" textAlignment="center" class="material-icon" text="bookmark_border" />
+                    </GridLayout>
+                    <StackLayout col="1" padding="10" class="bookmark-item"> 
+                        <Label text="{{ title }}" class="bookmark-title" horizontalAlignment="stretch" />
+                        <Label text="{{ url }}" class="bookmark-subtitle" horizontalAlignment="stretch" />
+                    </StackLayout>
+                </GridLayout>
+            </GridLayout>
+        </ListView.itemTemplate>
+    </ListView>
+</GridLayout>

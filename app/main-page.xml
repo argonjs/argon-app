@@ -1,34 +1,39 @@
 <Page
     xmlns="http://schemas.nativescript.org/tns.xsd"
-    xmlns:browserView="browser-view"
+    xmlns:browserView="components/browser-view"
+    xmlns:bookmarksView="components/bookmarks-view"
     loaded="pageLoaded" 
     backgroundColor="#00000000"
     actionBarHidden="{{ viewerEnabled }}">
     <Page.actionBar>
         <ActionBar>
             <ActionBar.titleView margin="0px" padding="0px" >
-            <GridLayout id="header" columns="*, auto, auto, auto" rows="auto" horizontalAlignment="stretch">
-                <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" />
-                <Button col="1" id="overviewBtn" class="material-icon action-btn" tap="onOverview" />
-                <Button col="2" id="menuBtn" class="material-icon action-btn" tap="onMenu" />
-                <Label col="3" ios:width="5%" />
+            <GridLayout columns="*, auto auto, auto, auto" rows="auto" horizontalAlignment="stretch" loaded="headerLoaded">
+                <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
+                <Label col="1" width="10" />
+                <Button id="overviewButton" col="2" width="30" id="overviewButton" class="material-icon action-btn" tap="onOverview" />
+                <Button id="menuButton" col="3" width="30" id="menuButton" class="material-icon action-btn" tap="onMenu" />
+                <Button id="cancelButton" visibility="collapse" col="2" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
+                <Button id="addButton" visibility="collapse" width="30" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
+                <Label col="4" width="5%" />
             </GridLayout>
             </ActionBar.titleView>
         </ActionBar>
     </Page.actionBar>
-    <browserView:BrowserView loaded="browserViewLoaded" horizontalAlignment="stretch" verticalAlignment="stretch">
-        <StackLayout id="menu" loaded="menuLoaded" visibility="collapsed" horizontalAlignment="right" verticalAlignment="top" orientation="vertical">
-            <StackLayout class="menuItem" orientation="horizontal">
-                <Button id="reloadBtn" class="material-icon action-btn" text="refresh" tap="onReload"/>
-            </StackLayout>
-            <Label class="menuItem" text="New Channel" tap="onNewChannel"/>
-            <Label class="menuItem" text="Bookmarks" tap="onBookmarks"/>
-            <Label class="menuItem" text="History" tap="onHistory"/>
-            <Label class="menuItem" text="Settings" tap="onSettings"/>            
-            <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer' }}" tap="onViewerToggle"/>
-            <Label class="menuItem" text="{{ debugEnabled ? 'Hide Debug Console' : 'Show Debug Console' }}" tap="onDebugToggle"/>
-        </StackLayout>
+    <GridLayout>
+        <browserView:BrowserView id="browser" loaded="browserViewLoaded" horizontalAlignment="stretch" verticalAlignment="stretch" />
+        <bookmarksView:BookmarksView id="bookmarks" visibility="collapse" loaded="bookmarksViewLoaded" />
         <HtmlView id="debug" visibility="{{ debugEnabled ? 'visible' : 'collapsed' }}"></HtmlView>
         <Button text="exit_to_app" class="material-icon action-btn" horizontalAlignment="center" verticalAlignment="bottom" tap="onViewerToggle" visibility="{{ viewerEnabled ? 'visible' : 'collapsed' }}"></Button>
-    </browserView:BrowserView>
+        <StackLayout id="menu" width="220" loaded="menuLoaded" visibility="collapsed" horizontalAlignment="right" verticalAlignment="top" orientation="vertical">
+            <GridLayout rows="*" columns="*,*" class="menuItem" horizontalAlignment="stretch" orientation="horizontal" height="44">
+                <Button col="0" id="reload" class="material-icon action-btn" text="refresh" tap="onReload"/>
+                <Button col="1" id="favorite" class="{{ currentUrlIsFavorite ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off' }}" text="{{ currentUrlIsFavorite ? 'star' : 'star_border' }}" tap="onFavoriteToggle"/>
+            </GridLayout>
+            <Label class="menuItem" text="Settings" tap="onSettings"/>
+            <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer Mode' }}" tap="onViewerToggle"/>
+            <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
+        </StackLayout>
+        <StackLayout id="touchOverlay" visibility="collapsed" loaded="touchOverlayLoaded" />
+    </GridLayout>
 </Page>
