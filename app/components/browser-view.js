@@ -9,15 +9,14 @@ var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var util_1 = require('../util');
 var vuforia = require('nativescript-vuforia');
-var Argon = require('argon');
 var application = require('application');
 var utils = require('utils/utils');
 var AppViewModel_1 = require('./common/AppViewModel');
 var bookmarks_1 = require('./common/bookmarks');
+var Argon = require('argon');
 var TITLE_BAR_HEIGHT = 30;
 var OVERVIEW_VERTICAL_PADDING = 150;
 var OVERVIEW_ANIMATION_DURATION = 250;
-var DEFAULT_REALITY_HTML = "~/default-reality.html";
 var BrowserView = (function (_super) {
     __extends(BrowserView, _super);
     function BrowserView() {
@@ -32,7 +31,6 @@ var BrowserView = (function (_super) {
         this._panStartOffset = 0;
         this._lastTime = Date.now();
         this.realityLayer = this.addLayer();
-        this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.api) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
@@ -56,37 +54,56 @@ var BrowserView = (function (_super) {
         this.backgroundColor = new color_1.Color("#555");
         this.scrollView.on(scroll_view_1.ScrollView.scrollEvent, this._animate.bind(this));
         // Make a new layer to be used with the url bar.
-        this._setFocussedLayer(this.addLayer());
+        this.addLayer();
         application.on(application.orientationChangedEvent, function () {
             _this.requestLayout();
             _this.scrollView.scrollToVerticalOffset(0, false);
+        });
+        Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(function (_a) {
+            var current = _a.current;
+            var details = _this.realityLayer.details;
+            if (current.type === 'live-video')
+                details.set('title', 'Reality: Live Video');
+            else if (current.type === 'hosted') {
+                details.set('title', 'Reality: Hosted');
+            }
+            else {
+                details.set('title', 'No Reality Loaded');
+            }
+            details.set('url', 'reality:' + current.type);
+            details.set('isArgonChannel', true);
+            details.set('supportedInteractionModes', ['page', 'immersive']);
+            if (_this.realityLayer === _this.focussedLayer) {
+                AppViewModel_1.appViewModel.setLayerDetails(details);
+            }
         });
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
         var layer;
-        // Put things in a grid layout to be able to decorate later.
         var container = new grid_layout_1.GridLayout();
         container.horizontalAlignment = 'left';
         container.verticalAlignment = 'top';
-        // Make an argon-enabled webview
         var webView = new argon_web_view_1.ArgonWebView;
         webView.on('propertyChange', function (eventData) {
+            if (!_this.focussedLayer)
+                return;
             if (webView !== _this.focussedLayer.webView)
                 return;
             if (eventData.propertyName === 'url') {
-                _this._setURL(eventData.value);
+                layer.details.set('url', eventData.value);
             }
             else if (eventData.propertyName === 'title') {
-                _this._title = eventData.value;
-                _this.notifyPropertyChange('title', _this._title);
                 var historyBookmarkItem = bookmarks_1.historyMap.get(webView.url);
                 if (historyBookmarkItem) {
-                    historyBookmarkItem.set('title', _this._title);
+                    historyBookmarkItem.set('title', eventData.value);
                 }
+                layer.details.set('title', eventData.value);
             }
         });
         webView.on('sessionConnect', function (eventData) {
+            if (!_this.focussedLayer)
+                return;
             var session = eventData.session;
             if (webView === _this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
@@ -95,7 +112,7 @@ var BrowserView = (function (_super) {
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
         webView.on("loadFinished", function (eventData) {
-            if (!eventData.error) {
+            if (!eventData.error && webView !== _this.realityLayer.webView) {
                 var historyBookmarkItem = bookmarks_1.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
                     bookmarks_1.historyMap.set(eventData.url, undefined);
@@ -108,6 +125,13 @@ var BrowserView = (function (_super) {
                     }));
                 }
             }
+            layer.details.set('isArgonChannel', !!webView.session);
+            layer.details.set('supportedInteractionModes', layer.details.isArgonChannel ?
+                ['page', 'immersive'] :
+                ['page']);
+        });
+        webView.on('sessionConnect', function () {
+            layer.details.set('isArgonChannel', true);
         });
         // Cover the webview to detect gestures and disable interaction
         var touchOverlay = new grid_layout_1.GridLayout();
@@ -115,12 +139,7 @@ var BrowserView = (function (_super) {
         touchOverlay.horizontalAlignment = 'stretch';
         touchOverlay.verticalAlignment = 'stretch';
         touchOverlay.on(gestures_1.GestureTypes.tap, function (event) {
-            _this._setFocussedLayer(layer);
-            if (layer !== _this.realityLayer) {
-                _this.layers.splice(_this.layers.indexOf(layer), 1);
-                _this.layers.push(layer);
-                util_1.Util.bringToFront(container);
-            }
+            _this.setFocussedLayer(layer);
             AppViewModel_1.appViewModel.hideOverview();
         });
         var titleBar = new grid_layout_1.GridLayout();
@@ -155,10 +174,6 @@ var BrowserView = (function (_super) {
         grid_layout_1.GridLayout.setColumn(label, 1);
         titleBar.addChild(closeButton);
         titleBar.addChild(label);
-        label.bind({
-            sourceProperty: 'title',
-            targetProperty: 'text'
-        }, webView);
         container.addChild(webView);
         container.addChild(touchOverlay);
         container.addChild(titleBar);
@@ -170,10 +185,16 @@ var BrowserView = (function (_super) {
             titleBar: titleBar,
             closeButton: closeButton,
             label: label,
-            visualIndex: this.layers.length
+            visualIndex: this.layers.length,
+            details: new AppViewModel_1.LayerDetails()
         };
         this.layers.push(layer);
-        this._setFocussedLayer(layer);
+        if (this.isLoaded)
+            this.setFocussedLayer(layer);
+        label.bind({
+            targetProperty: 'text',
+            sourceProperty: 'title'
+        }, layer.details);
         if (this._overviewEnabled)
             this._showLayer(layer);
         return layer;
@@ -189,6 +210,9 @@ var BrowserView = (function (_super) {
         var index = this.layers.indexOf(layer);
         this.removeLayerAtIndex(index);
     };
+    BrowserView.prototype.onLoaded = function () {
+        _super.prototype.onLoaded.call(this);
+    };
     BrowserView.prototype.onMeasure = function (widthMeasureSpec, heightMeasureSpec) {
         var width = utils.layout.getMeasureSpecSize(widthMeasureSpec);
         var height = utils.layout.getMeasureSpecSize(heightMeasureSpec);
@@ -199,25 +223,8 @@ var BrowserView = (function (_super) {
         this.layers.forEach(function (layer) {
             layer.container.width = width;
             layer.container.height = height;
-            // layer.container.layout(0,0,width,height);
-            // layer.webView.layout(0,0,width,height);
-            // layer.touchOverlay.layout(0,0,width,height);
         });
         _super.prototype.onMeasure.call(this, widthMeasureSpec, heightMeasureSpec);
-    };
-    BrowserView.prototype.onLayout = function (left, top, right, bottom) {
-        _super.prototype.onLayout.call(this, left, top, right, bottom);
-        // if (this._overviewEnabled) return;
-        // var width = this.getMeasuredWidth();
-        // var height = this.getMeasuredHeight();
-        // this.scrollView.layout(0, 0, width, height);
-        // this.layerContainer.layout(0, 0, width, height);
-        // this.layers.forEach((layer)=>{
-        //     layer.container.layout(0,0,width,height);
-        //     layer.webView.layout(0,0,width,height);
-        //     layer.touchOverlay.layout(0,0,width,height);
-        // })
-        // this.videoView.layout(0, 0, width, height);
     };
     BrowserView.prototype._calculateTargetTransform = function (index) {
         var layerPosition = index * OVERVIEW_VERTICAL_PADDING - this.scrollView.verticalOffset;
@@ -247,13 +254,8 @@ var BrowserView = (function (_super) {
         var containerHeight = height + OVERVIEW_VERTICAL_PADDING * (this.layers.length - 1);
         this.layerContainer.width = width;
         this.layerContainer.height = containerHeight;
-        // this.scrollView.measure(width,height);
-        // this.scrollView.layout(0,0,width,height);
         this.layers.forEach(function (layer, index) {
             layer.visualIndex = _this._lerp(layer.visualIndex, index, deltaT * 4);
-            // layer.container.layout(0,0,width,height);
-            // layer.webView.layout(0,0,width,height);
-            // layer.touchOverlay.layout(0,0,width,height);
             var transform = _this._calculateTargetTransform(layer.visualIndex);
             layer.container.scaleX = transform.scale.x;
             layer.container.scaleY = transform.scale.y;
@@ -270,6 +272,7 @@ var BrowserView = (function (_super) {
             layer.webView.ios.layer.masksToBounds = true;
         layer.touchOverlay.style.visibility = 'visible';
         // For transparent webviews, add a little bit of opacity
+        layer.container.isUserInteractionEnabled = true;
         layer.container.animate({
             backgroundColor: new color_1.Color(128, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -290,7 +293,7 @@ var BrowserView = (function (_super) {
             translate: translate,
             scale: scale,
             duration: OVERVIEW_ANIMATION_DURATION,
-            curve: enums_1.AnimationCurve.easeOut,
+            curve: enums_1.AnimationCurve.easeInOut,
         });
     };
     BrowserView.prototype._hideLayer = function (layer) {
@@ -299,6 +302,7 @@ var BrowserView = (function (_super) {
             layer.webView.ios.layer.masksToBounds = false;
         layer.touchOverlay.style.visibility = 'collapsed';
         // For transparent webviews, add a little bit of opacity
+        layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.container.animate({
             backgroundColor: new color_1.Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -320,7 +324,7 @@ var BrowserView = (function (_super) {
             translate: { x: 0, y: 0 },
             scale: { x: 1, y: 1 },
             duration: OVERVIEW_ANIMATION_DURATION,
-            curve: enums_1.AnimationCurve.easeOut,
+            curve: enums_1.AnimationCurve.easeInOut,
         });
     };
     BrowserView.prototype.showOverview = function () {
@@ -344,7 +348,6 @@ var BrowserView = (function (_super) {
             return _this._hideLayer(layer);
         });
         Promise.all(animations).then(function () {
-            // this.requestLayout();
             _this.scrollView.scrollToVerticalOffset(0, true);
             setTimeout(function () {
                 _this.scrollView.scrollToVerticalOffset(0, false);
@@ -355,39 +358,26 @@ var BrowserView = (function (_super) {
         clearInterval(this._intervalId);
         this._intervalId = null;
     };
-    BrowserView.prototype._setURL = function (url) {
-        if (this._url !== url) {
-            this._url = url;
-            this._title = '';
-            this.notifyPropertyChange('url', url);
-            this.notifyPropertyChange('title', this._title);
-        }
-    };
-    Object.defineProperty(BrowserView.prototype, "url", {
-        get: function () {
-            return this._url;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(BrowserView.prototype, "title", {
-        get: function () {
-            return this._title;
-        },
-        enumerable: true,
-        configurable: true
-    });
     BrowserView.prototype.loadUrl = function (url) {
         this.focussedLayer.webView.src = url;
-        this._setURL(url);
+        this.focussedLayer.details.set('url', url);
+        this.focussedLayer.details.set('title', '');
+        this.focussedLayer.details.set('isFavorite', false);
+        this.focussedLayer.details.set('supportedInteractionModes', ['page', 'immersive']);
     };
-    BrowserView.prototype._setFocussedLayer = function (layer) {
+    BrowserView.prototype.setFocussedLayer = function (layer) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.webView.url);
-            console.log("Set focussed layer: " + layer.webView.url);
+            console.log("Set focussed layer: " + layer.details.url);
             Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
+            AppViewModel_1.appViewModel.setLayerDetails(this.focussedLayer.details);
+            AppViewModel_1.appViewModel.hideOverview();
+            if (layer !== this.realityLayer) {
+                this.layers.splice(this.layers.indexOf(layer), 1);
+                this.layers.push(layer);
+                util_1.Util.bringToFront(layer.container);
+            }
         }
     };
     Object.defineProperty(BrowserView.prototype, "focussedLayer", {

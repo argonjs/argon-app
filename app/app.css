@@ -4,11 +4,15 @@
 }
 
 #menu {
-    background-color: #DDEFEFEF;
+    background-color: #DDFAFAFA;
 }
 
 .action-btn {
     color: #545454;
+}
+
+.action-btn-disabled {
+    color: #BBBBBB;
 }
 
 .toggle-btn-on {
@@ -26,7 +30,6 @@
 
 .bookmark-title {
     font-size: 18px;
-    font-style:bold;
 }
 
 .bookmark-subtitle {

@@ -26,11 +26,11 @@ var ArgonWebView = (function (_super) {
         if (typeof this._sessionMessagePort == 'undefined') {
             // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
             var sessionUrl_1 = this.url;
-            console.log('Connecting to argon.js application at ' + sessionUrl_1);
+            console.log('Connecting to argon.js session at ' + sessionUrl_1);
             var manager = Argon.ArgonSystem.instance;
             var messageChannel = manager.session.createSynchronousMessageChannel();
-            var remoteSession_1 = manager.session.addManagedSessionPort();
-            ArgonWebView.sessionUrlMap.set(remoteSession_1, sessionUrl_1);
+            var session_1 = manager.session.addManagedSessionPort();
+            ArgonWebView.sessionUrlMap.set(session_1, sessionUrl_1);
             this._sessionMessagePort = messageChannel.port2;
             this._sessionMessagePort.onmessage = function (msg) {
                 if (!_this.session)
@@ -38,23 +38,23 @@ var ArgonWebView = (function (_super) {
                 var injectedMessage = "__ARGON_PORT__.postMessage(" + JSON.stringify(msg.data) + ")";
                 _this.evaluateJavascript(injectedMessage);
             };
-            remoteSession_1.connectEvent.addEventListener(function () {
-                remoteSession_1.info.name = sessionUrl_1;
-                _this.session = remoteSession_1;
+            session_1.connectEvent.addEventListener(function () {
+                session_1.info.name = sessionUrl_1;
+                _this.session = session_1;
                 var args = {
                     eventName: ArgonWebView.sessionConnectEvent,
                     object: _this,
-                    session: remoteSession_1
+                    session: session_1
                 };
                 _this.notify(args);
             });
-            remoteSession_1.closeEvent.addEventListener(function () {
-                if (_this.session === remoteSession_1) {
+            session_1.closeEvent.addEventListener(function () {
+                if (_this.session === session_1) {
                     _this._sessionMessagePort = undefined;
                     _this.session = null;
                 }
             });
-            remoteSession_1.open(messageChannel.port1, manager.session.configuration);
+            session_1.open(messageChannel.port1, manager.session.configuration);
         }
         console.log(message);
         this._sessionMessagePort.postMessage(JSON.parse(message));

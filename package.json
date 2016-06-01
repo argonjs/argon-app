@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "argon": "../argon",
+    "argon": "file:///Users/gspeiginer/Code/argon-project/argon",
     "argon-web-view": "file:plugins/argon-web-view",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",

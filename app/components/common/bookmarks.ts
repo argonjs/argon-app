@@ -3,6 +3,8 @@ import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
 import {Observable, PropertyChangeData} from 'data/observable';
 
+import * as Argon from 'argon'
+
 class BookmarkItem extends Observable {
     url:string
     title:string
@@ -24,13 +26,40 @@ class BookmarkItemMap extends Observable {
     }
 }
 
+class RealityBookmarkItem extends Observable {
+    reality:Argon.RealityView
+    title:string
+    builtin = false
+    
+    constructor(item:{
+        builtin?:boolean,
+        title:string,
+        reality:Argon.RealityView
+    }) {
+        super(item);
+    }
+    
+    get url() {
+        return 'reality:' + this.reality.type;
+    }
+}
+
+class RealityBookmarkItemMap extends Observable {
+    get(name:string) : RealityBookmarkItem {
+        return super.get(name);
+    }
+    set(name:string, value:RealityBookmarkItem) {
+        return super.set(name, value);
+    }
+}
+
 const favoriteList: ObservableArray<BookmarkItem> = new ObservableArray<BookmarkItem>();
 const historyList: ObservableArray<BookmarkItem> = new ObservableArray<BookmarkItem>();
-const realityList: ObservableArray<BookmarkItem> = new ObservableArray<BookmarkItem>();
+const realityList: ObservableArray<RealityBookmarkItem> = new ObservableArray<RealityBookmarkItem>();
 
 const favoriteMap = new BookmarkItemMap();
 const historyMap = new BookmarkItemMap();
-const realityMap = new BookmarkItemMap();
+const realityMap = new RealityBookmarkItemMap();
 
 function updateMap(data:ChangedData<BookmarkItem>, map:Observable) {
     const list = <ObservableArray<BookmarkItem>>data.object
@@ -77,9 +106,22 @@ const builtinFavoritesSet = new Set<string>();
 builtinFavorites.forEach((item)=>favoriteList.push(item));
 builtinFavorites.forEach((item)=>builtinFavoritesSet.add(item.url));
 
+const builtinRealities:Array<RealityBookmarkItem> = [
+    new RealityBookmarkItem({
+        title: 'Live Video',
+        reality: {
+            type: 'live-video'
+        }
+    })
+]
+const builtinRealitiesSet = new Set<string>();
+
+builtinRealities.forEach((item)=>item.set('builtin', true));
+builtinRealities.forEach((item)=>realityList.push(item));
+builtinRealities.forEach((item)=>builtinRealitiesSet.add(item.url));
+
 const FAVORITE_LIST_KEY = 'favorite_list';
 const HISTORY_LIST_KEY = 'history_list';
-const REALITY_LIST_KEY = 'reality_list';
 
 if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
     favoriteList.push(JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY)));
@@ -90,9 +132,18 @@ application.on(application.suspendEvent, ()=>{
     applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(filteredFavorites));
 })
 
+if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
+    historyList.push(JSON.parse(applicationSettings.getString(HISTORY_LIST_KEY)));
+}
+
+application.on(application.suspendEvent, ()=>{
+    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(historyList));
+})
+
 export {
     BookmarkItem,
     BookmarkItemMap,
+    RealityBookmarkItem,
     favoriteList,
     historyList,
     realityList,

@@ -26,21 +26,21 @@ import {
 import {Util} from '../util';
 import {PropertyChangeData} from 'data/observable'
 import {Placeholder, CreateViewEventData} from 'ui/placeholder'
+import {Observable} from 'data/observable';
 import * as vuforia from 'nativescript-vuforia';
-import * as Argon from 'argon';
 import * as fs from 'file-system';
 import * as frames from 'ui/frame';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 
-import {appViewModel} from './common/AppViewModel'
+import {appViewModel, LayerDetails} from './common/AppViewModel'
 import {BookmarkItem, historyList, historyMap} from './common/bookmarks'
+
+import * as Argon from 'argon'
 
 const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;
-
 const OVERVIEW_ANIMATION_DURATION = 250;
-const DEFAULT_REALITY_HTML = "~/default-reality.html";
 
 export interface Layer {
     webView:ArgonWebView,
@@ -49,7 +49,8 @@ export interface Layer {
     titleBar:GridLayout,
     closeButton:Button,
     label: Label,
-    visualIndex: number
+    visualIndex: number,
+    details: LayerDetails
 }
 
 export class BrowserView extends GridLayout {
@@ -60,8 +61,6 @@ export class BrowserView extends GridLayout {
     layerContainer = new GridLayout;
     layers:Layer[] = [];
         
-    private _url:string;
-    private _title:string;
     private _focussedLayer:Layer;
     private _overviewEnabled = false;
     private _scrollOffset = 0;
@@ -72,7 +71,6 @@ export class BrowserView extends GridLayout {
     constructor() {
         super();
         this.realityLayer = this.addLayer();
-        this.realityLayer.webView.src = DEFAULT_REALITY_HTML;
         if (vuforia.api) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
@@ -100,40 +98,56 @@ export class BrowserView extends GridLayout {
         this.scrollView.on(ScrollView.scrollEvent, this._animate.bind(this));
         
         // Make a new layer to be used with the url bar.
-        this._setFocussedLayer(this.addLayer());
+        this.addLayer();
         
         application.on(application.orientationChangedEvent, ()=>{
             this.requestLayout();
             this.scrollView.scrollToVerticalOffset(0, false);
+        })
+        
+        Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(({current})=>{
+            const details = this.realityLayer.details;
+            if (current.type === 'live-video') 
+                details.set('title','Reality: Live Video');
+            else if (current.type === 'hosted') {
+                details.set('title','Reality: Hosted');
+            } else {
+                details.set('title','No Reality Loaded');
+            }
+            details.set('url', 'reality:' + current.type);
+            details.set('isArgonChannel', true);
+            details.set('supportedInteractionModes', ['page','immersive']);
+            if (this.realityLayer === this.focussedLayer) {
+                appViewModel.setLayerDetails(details);
+            }
         })
     }
 
     addLayer() {
         let layer:Layer;
         
-        // Put things in a grid layout to be able to decorate later.
         const container = new GridLayout();
         container.horizontalAlignment = 'left';
         container.verticalAlignment = 'top';
         
-        // Make an argon-enabled webview
         const webView = new ArgonWebView;
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
+            if (!this.focussedLayer) return;
             if  (webView !== this.focussedLayer.webView) return;
             
             if (eventData.propertyName === 'url') {
-                this._setURL(eventData.value);
+                layer.details.set('url', eventData.value);
             }
             else if (eventData.propertyName === 'title') {
-                this._title = eventData.value;
-                this.notifyPropertyChange('title', this._title);
                 var historyBookmarkItem = historyMap.get(webView.url);
                 if (historyBookmarkItem) {
-                    historyBookmarkItem.set('title', this._title);
+                    historyBookmarkItem.set('title', eventData.value);
                 }
+                layer.details.set('title', eventData.value);
             }
         });
         webView.on('sessionConnect', (eventData) => {
+            if (!this.focussedLayer) return;
             var session = eventData.session;
             if (webView === this.focussedLayer.webView) {
                 Argon.ArgonSystem.instance.focus.setSession(session);
@@ -144,7 +158,7 @@ export class BrowserView extends GridLayout {
         
         
         webView.on("loadFinished", (eventData: LoadEventData) => {
-            if (!eventData.error) {
+            if (!eventData.error && webView !== this.realityLayer.webView) {
                 const historyBookmarkItem = historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
                     historyMap.set(eventData.url, undefined);
@@ -156,7 +170,16 @@ export class BrowserView extends GridLayout {
                     }))
                 }
             }
+            layer.details.set('isArgonChannel', !!webView.session);
+            layer.details.set('supportedInteractionModes', layer.details.isArgonChannel ? 
+                ['page', 'immersive'] :
+                ['page']
+            );
         });
+        
+        webView.on('sessionConnect', ()=>{
+            layer.details.set('isArgonChannel', true);
+        })
         
         // Cover the webview to detect gestures and disable interaction
         const touchOverlay = new GridLayout();
@@ -164,12 +187,7 @@ export class BrowserView extends GridLayout {
         touchOverlay.horizontalAlignment = 'stretch';
         touchOverlay.verticalAlignment = 'stretch';
         touchOverlay.on(GestureTypes.tap, (event) => {
-            this._setFocussedLayer(layer);
-            if (layer !== this.realityLayer) {
-                this.layers.splice(this.layers.indexOf(layer), 1);
-                this.layers.push(layer);
-                Util.bringToFront(container);
-            }
+            this.setFocussedLayer(layer);
             appViewModel.hideOverview();
         });
         
@@ -210,11 +228,6 @@ export class BrowserView extends GridLayout {
         titleBar.addChild(closeButton);
         titleBar.addChild(label);
         
-        label.bind({
-            sourceProperty: 'title',
-            targetProperty: 'text'
-        }, webView);
-        
         container.addChild(webView);
         container.addChild(touchOverlay);
         container.addChild(titleBar);
@@ -227,10 +240,18 @@ export class BrowserView extends GridLayout {
             titleBar,
             closeButton,
             label,
-            visualIndex: this.layers.length
+            visualIndex: this.layers.length,
+            details: new LayerDetails()
         };
         this.layers.push(layer);
-        this._setFocussedLayer(layer);
+        
+        if (this.isLoaded)
+            this.setFocussedLayer(layer);
+        
+        label.bind({
+            targetProperty: 'text',
+            sourceProperty: 'title'
+        }, layer.details);
         
         if (this._overviewEnabled) this._showLayer(layer);
         
@@ -250,6 +271,10 @@ export class BrowserView extends GridLayout {
         this.removeLayerAtIndex(index);
     }
     
+    onLoaded() {
+        super.onLoaded();
+    }
+    
     onMeasure(widthMeasureSpec, heightMeasureSpec) {
         const width = utils.layout.getMeasureSpecSize(widthMeasureSpec);
         const height = utils.layout.getMeasureSpecSize(heightMeasureSpec);
@@ -258,35 +283,13 @@ export class BrowserView extends GridLayout {
             this.layerContainer.width = width;
             this.layerContainer.height = height;
         }
-         
+        
         this.layers.forEach((layer)=>{
             layer.container.width = width;
             layer.container.height = height;
-            // layer.container.layout(0,0,width,height);
-            // layer.webView.layout(0,0,width,height);
-            // layer.touchOverlay.layout(0,0,width,height);
         });
         
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-    }
-    
-    onLayout(left, top, right, bottom) {
-        super.onLayout(left, top, right, bottom);
-        // if (this._overviewEnabled) return;
-        
-        // var width = this.getMeasuredWidth();
-        // var height = this.getMeasuredHeight();
-        
-        // this.scrollView.layout(0, 0, width, height);
-        // this.layerContainer.layout(0, 0, width, height);
-        
-        // this.layers.forEach((layer)=>{
-        //     layer.container.layout(0,0,width,height);
-        //     layer.webView.layout(0,0,width,height);
-        //     layer.touchOverlay.layout(0,0,width,height);
-        // })
-        
-        // this.videoView.layout(0, 0, width, height);
     }
     
     private _calculateTargetTransform(index:number) {
@@ -321,15 +324,9 @@ export class BrowserView extends GridLayout {
         const containerHeight = height + OVERVIEW_VERTICAL_PADDING * (this.layers.length-1);
         this.layerContainer.width = width;
         this.layerContainer.height = containerHeight;
-
-        // this.scrollView.measure(width,height);
-        // this.scrollView.layout(0,0,width,height);
         
         this.layers.forEach((layer, index) => {
             layer.visualIndex = this._lerp(layer.visualIndex, index, deltaT*4);
-            // layer.container.layout(0,0,width,height);
-            // layer.webView.layout(0,0,width,height);
-            // layer.touchOverlay.layout(0,0,width,height);
             const transform = this._calculateTargetTransform(layer.visualIndex);
             layer.container.scaleX = transform.scale.x;
             layer.container.scaleY = transform.scale.y;
@@ -350,6 +347,7 @@ export class BrowserView extends GridLayout {
             
         layer.touchOverlay.style.visibility = 'visible';
         // For transparent webviews, add a little bit of opacity
+        layer.container.isUserInteractionEnabled = true;
         layer.container.animate({
             backgroundColor: new Color(128, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -370,7 +368,7 @@ export class BrowserView extends GridLayout {
             translate,
             scale,
             duration: OVERVIEW_ANIMATION_DURATION,
-            curve: AnimationCurve.easeOut,
+            curve: AnimationCurve.easeInOut,
         });
     }
     
@@ -381,6 +379,7 @@ export class BrowserView extends GridLayout {
             layer.webView.ios.layer.masksToBounds = false;
         layer.touchOverlay.style.visibility = 'collapsed';
         // For transparent webviews, add a little bit of opacity
+        layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.container.animate({
             backgroundColor: new Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -402,7 +401,7 @@ export class BrowserView extends GridLayout {
             translate: { x: 0, y: 0 },
             scale: { x: 1, y: 1 },
             duration: OVERVIEW_ANIMATION_DURATION,
-            curve: AnimationCurve.easeOut,
+            curve: AnimationCurve.easeInOut,
         });
     }
 
@@ -427,7 +426,6 @@ export class BrowserView extends GridLayout {
             return this._hideLayer(layer)
         });
         Promise.all(animations).then(() => {
-            // this.requestLayout();
             this.scrollView.scrollToVerticalOffset(0, true);
             setTimeout(()=>{
                 this.scrollView.scrollToVerticalOffset(0, false);
@@ -440,36 +438,29 @@ export class BrowserView extends GridLayout {
         clearInterval(this._intervalId);
         this._intervalId = null;
     }
-
-    private _setURL(url:string) {
-        if (this._url !== url) {
-            this._url = url;
-            this._title = '';
-            this.notifyPropertyChange('url', url);
-            this.notifyPropertyChange('title', this._title);
-        }
-    }
-
-    get url() : string {
-        return this._url;
-    }
-    
-    get title() : string {
-        return this._title;
-    }
     
     public loadUrl(url:string) {
         this.focussedLayer.webView.src = url;
-        this._setURL(url);
+        this.focussedLayer.details.set('url',url);
+        this.focussedLayer.details.set('title','');
+        this.focussedLayer.details.set('isFavorite',false);
+        this.focussedLayer.details.set('supportedInteractionModes',['page', 'immersive']);
     }
 
-    private _setFocussedLayer(layer:Layer) {
+    public setFocussedLayer(layer:Layer) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            this._setURL(layer.webView.url);
-            console.log("Set focussed layer: " + layer.webView.url);
+            console.log("Set focussed layer: " + layer.details.url);
             Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
+            appViewModel.setLayerDetails(this.focussedLayer.details);
+            appViewModel.hideOverview();
+            
+            if (layer !== this.realityLayer) {
+                this.layers.splice(this.layers.indexOf(layer), 1);
+                this.layers.push(layer);
+                Util.bringToFront(layer.container);
+            }
         }
     }
 

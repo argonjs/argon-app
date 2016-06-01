@@ -19,7 +19,7 @@ import {GestureTypes} from 'ui/gestures'
 import * as Argon from 'argon';
 
 import {Util} from './util';
-import {ArgonWebView} from 'argon-web-view';
+import {ArgonWebView, SessionConnectEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import {BookmarkItem, favoriteList, favoriteMap} from './components/common/bookmarks';
 import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
@@ -30,11 +30,13 @@ import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 export let manager:Argon.ArgonSystem;
 
 export let page:Page;
+export let layout:View;
 export let touchOverlayView:View;
 export let headerView:View;
 export let menuView:View;
 export let browserView:BrowserView;
 export let bookmarksView:View;
+export let realityChooserView:View;
 
 let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
@@ -55,12 +57,27 @@ manager = Argon.init({container, config: {
     name: 'ArgonApp'
 }});
 
-manager.reality.setDefault({type:'vuforia'});
+manager.reality.setDefault({type:'live-video'});
 
 manager.vuforia.init({
     licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
 }).catch((err)=>{
     console.log(err);
+});
+
+manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
+    type: 'hosted';
+    setup(reality: Argon.RealityView) {
+        var url:string = reality['url'];
+        return new Promise<Argon.SessionPort>((resolve, reject)=>{
+            var sessionConnectCallback = (data:SessionConnectEventData)=>{
+                browserView.realityLayer.webView.off('sessionConnect', sessionConnectCallback);
+                resolve(data.session);
+            }
+            browserView.realityLayer.webView.on('sessionConnect', sessionConnectCallback);
+            browserView.realityLayer.webView.src = url;
+        });
+    }
 });
 
 manager.focus.sessionFocusEvent.addEventListener(()=>{
@@ -72,7 +89,7 @@ const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.V
 
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUrl') {
-        setSearchBarText(evt.value);
+        setSearchBarText(appViewModel.currentUrl);
     }
     else if (evt.propertyName === 'viewerEnabled') {
         vuforiaDelegate.setViewerEnabled(evt.value);
@@ -125,7 +142,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             })
         } else {
             browserView.hideOverview();
-            if (!browserView.url) appViewModel.showBookmarks();
+            if (!appViewModel.layerDetails.url) appViewModel.showBookmarks();
             searchBar.visibility = 'visible';
             searchBar.animate({
                 translate: {x:0, y:0},
@@ -141,11 +158,38 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             })
         }
     }
+    else if (evt.propertyName === 'realityChooserOpen') {
+        if (evt.value) {
+            realityChooserView.visibility = 'visible';
+            realityChooserView.animate({
+                scale: {
+                    x:1,
+                    y:1
+                },
+                opacity:1,
+                curve: AnimationCurve.easeInOut
+            })
+            appViewModel.showCancelButton();
+        } else {
+            realityChooserView.animate({
+                scale: {
+                    x:1,
+                    y:1
+                },
+                opacity:0,
+                curve: AnimationCurve.easeInOut
+            }).then(()=>{
+                realityChooserView.visibility = 'collapse';
+                realityChooserView.scaleX = 0.9;
+                realityChooserView.scaleY = 0.9;
+            })
+            blurSearchBar();
+            appViewModel.hideCancelButton();
+        }
+    }
     else if (evt.propertyName === 'bookmarksOpen') {
         if (evt.value) {
             bookmarksView.visibility = 'visible';
-            bookmarksView.scaleX = 0.9;
-            bookmarksView.scaleY = 0.9;
             bookmarksView.animate({
                 scale: {
                     x:1,
@@ -168,6 +212,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 bookmarksView.scaleY = 0.9;
             })
             blurSearchBar();
+            appViewModel.hideCancelButton();
         }
     } 
     else if (evt.propertyName === 'cancelButtonShown') {
@@ -189,10 +234,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             cancelButton.animate({
                 opacity:1
             });
-            bookmarksView.on(GestureTypes.touch,()=>{
-                blurSearchBar();
-                appViewModel.hideCancelButton();
-            });
         } else {
             const overviewButton = headerView.getViewById('overviewButton');
             overviewButton.visibility = 'visible';
@@ -210,7 +251,8 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             }).then(()=>{
                 cancelButton.visibility = 'collapse';
             })
-            bookmarksView.off(GestureTypes.touch);
+            
+            layout.off(GestureTypes.touch);
         }
     }
 })
@@ -233,6 +275,9 @@ export function pageLoaded(args) {
     // Set the icon for the overview button
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
+    
+    // focus on the topmost layer
+    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
@@ -245,6 +290,14 @@ export function pageLoaded(args) {
     }
     
     appViewModel.showBookmarks();
+    
+    manager.session.errorEvent.addEventListener((error)=>{
+        alert(error.message);
+    })
+}
+
+export function layoutLoaded(args) {
+    layout = args.object
 }
 
 export function headerLoaded(args) {
@@ -261,6 +314,8 @@ export function searchBarLoaded(args) {
         }
         setSearchBarText(url.toString());
         appViewModel.loadUrl(url.toString());
+        appViewModel.hideBookmarks();
+        appViewModel.hideCancelButton();
     });
 
     if (application.ios) {
@@ -291,38 +346,22 @@ export function browserViewLoaded(args) {
     debug.verticalAlignment = 'stretch';
     debug.backgroundColor = new Color(150, 255, 255, 255);
     debug.visibility = "collapsed";
-    if (debug.ios) {
-        (<UIView>debug.ios).userInteractionEnabled = false;
-    }
-
-    let layer = browserView.focussedLayer;
-
-    const logChangeCallback = (args) => {
-        // while (layer.webView.log.length > 10) layer.webView.log.shift()
-        // debug.html = layer.webView.log.join("<br/>");
-    };
-    layer.webView.on("log", logChangeCallback)
-
-    browserView.on("propertyChange", (evt: PropertyChangeData) => {
-        if (evt.propertyName === 'url') {
-            appViewModel.setCurrentUrl(evt.value);    
-            setSearchBarText(evt.value)
-        }
-        else if (evt.propertyName === 'focussedLayer') {
-            if (layer) {
-                layer.webView.removeEventListener("log", logChangeCallback);
-            }
-            layer = browserView.focussedLayer;
-            console.log("FOCUSSED LAYER: " + layer.webView.src);
-            layer.webView.on("log", logChangeCallback)
-            appViewModel.hideOverview();
-        }
-    });
+    debug.isUserInteractionEnabled = false;
 }
 
 
 export function bookmarksViewLoaded(args) {
     bookmarksView = args.object;
+    bookmarksView.scaleX = 0.9;
+    bookmarksView.scaleY = 0.9;
+    bookmarksView.opacity = 0;
+}
+
+export function realityChooserLoaded(args) {
+    realityChooserView = args.object;
+    realityChooserView.scaleX = 0.9;
+    realityChooserView.scaleY = 0.9;
+    realityChooserView.opacity = 0;
 }
 
 // initialize some properties of the menu so that animations will render correctly
@@ -341,7 +380,8 @@ export function onSearchBarTap(args) {
 }
 
 export function onCancel(args) {
-    if (!!browserView.url) appViewModel.hideBookmarks();
+    if (!!appViewModel.layerDetails.url) appViewModel.hideBookmarks();
+    appViewModel.hideRealityChooser();
     appViewModel.hideCancelButton();
     blurSearchBar();
 }
@@ -356,7 +396,7 @@ export function onReload(args) {
 }
 
 export function onFavoriteToggle(args) {
-    const url = browserView.url;
+    const url = appViewModel.layerDetails.url;
     if (!favoriteMap.get(url)) {
         favoriteList.push(new BookmarkItem({
             url,
@@ -367,6 +407,10 @@ export function onFavoriteToggle(args) {
     }
 }
 
+export function onInteractionToggle(args) {
+    appViewModel.toggleInteractionMode();
+}
+
 export function onOverview(args) {
     appViewModel.toggleOverview();
     appViewModel.setDebugEnabled(false);
@@ -375,6 +419,12 @@ export function onOverview(args) {
 
 export function onMenu(args) {
     appViewModel.toggleMenu();
+}
+
+export function onSelectReality(args) {
+    appViewModel.showRealityChooser();
+    appViewModel.showCancelButton();
+    appViewModel.hideMenu();
 }
 
 export function onSettings(args) {
@@ -412,20 +462,29 @@ class IOSSearchBarController {
             appViewModel.hideMenu();
             if (this.uiSearchBar.isFirstResponder()) {
                 
-                appViewModel.showBookmarks();
+                if (browserView.focussedLayer === browserView.realityLayer) {
+                    appViewModel.showRealityChooser();
+                } else {
+                    appViewModel.showBookmarks();
+                }
                 appViewModel.showCancelButton();
                 
                 setTimeout(()=>{
                     if (this.uiSearchBar.text === "") {
-                        this.uiSearchBar.text = appViewModel.currentUrl;
+                        this.uiSearchBar.text = appViewModel.layerDetails.url;
                         this.setPlaceholderText(null);
                         this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
                     }
                 }, 500)
+                
+                layout.on(GestureTypes.touch,()=>{
+                    blurSearchBar();
+                    layout.off(GestureTypes.touch);
+                    if (!browserView.focussedLayer.webView.url) appViewModel.hideCancelButton();
+                });
             } else {
-                this.setPlaceholderText(appViewModel.currentUrl);
+                this.setPlaceholderText(appViewModel.layerDetails.url);
                 this.uiSearchBar.text = "";
-                appViewModel.hideCancelButton();
             }
         }
 

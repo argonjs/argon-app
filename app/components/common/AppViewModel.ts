@@ -1,4 +1,4 @@
-import {Observable, EventData} from 'data/observable'
+import {PropertyChangeData, Observable, EventData} from 'data/observable'
 
 import {BookmarkItem, favoriteList, favoriteMap} from './bookmarks'
 import {viewModel as favoritesViewModel} from '../favorites-view/FavoritesView'
@@ -8,22 +8,37 @@ export interface LoadUrlEventData extends EventData {
     url: string
 }
 
+export class LayerDetails extends Observable {
+    isArgonChannel = false;
+    url = '';
+    title = '';
+    supportedInteractionModes:Array<InteractionMode> = [];
+}
+
+export type InteractionMode = 'immersive'|'page';
+
 export class AppViewModel extends Observable {
     menuOpen = false;
     cancelButtonShown = false;
+    realityChooserOpen = false;
     overviewOpen = false;
     bookmarksOpen = false;
     debugEnabled = false;
     viewerEnabled = false;
+    interactionMode:InteractionMode = 'immersive';
+    interactionModeButtonEnabled = false;
+    layerDetails:LayerDetails = new LayerDetails()
     currentUrl = '';
-    currentUrlIsFavorite = false;
+    isFavorite = false;
     
     static loadUrlEvent:'loadUrl' = 'loadUrl'
     
     constructor() {
         super();
         favoriteMap.on('propertyChange',()=>{
-            this.updateFavoriteStatus();
+            setTimeout(()=>{
+                this.updateFavoriteStatus();
+            })
         })
     }
     
@@ -33,6 +48,14 @@ export class AppViewModel extends Observable {
     
     hideMenu() {
         this.set('menuOpen', false);
+    }
+    
+    toggleInteractionMode() {
+        this.set('interactionMode', this.interactionMode === 'page' ? 'immersive' : 'page')
+    }
+    
+    setInteractionMode(mode:InteractionMode) {
+        this.set('interactionMode', mode);
     }
     
     showOverview() {
@@ -53,6 +76,14 @@ export class AppViewModel extends Observable {
     
     hideBookmarks() {
         this.set('bookmarksOpen', false);
+    }
+    
+    showRealityChooser() {
+        this.set('realityChooserOpen', true);
+    }
+    
+    hideRealityChooser() {
+        this.set('realityChooserOpen', false);
     }
     
     showCancelButton() {
@@ -79,14 +110,22 @@ export class AppViewModel extends Observable {
         this.set('viewerEnabled', enabled);
     }
     
-    setCurrentUrl(url:string) {
-        this.set('currentUrl', url);
-        this.set('bookmarksOpen', !url);
+    setLayerDetails(details:LayerDetails) {
+        this.layerDetails.off('propertyChange');
+        this.set('layerDetails', details);
+        this.set('bookmarksOpen', !details.url);
+        details.on('propertyChange', (data:PropertyChangeData) => {
+            if (data.propertyName === 'url') {
+                this.set('currentUrl', details.url);
+                this.updateFavoriteStatus();
+            }
+        });
+        this.set('currentUrl', details.url);
         this.updateFavoriteStatus();
     }
     
     updateFavoriteStatus() {
-        this.set('currentUrlIsFavorite', !!favoriteMap.get(this.currentUrl));
+        this.set('isFavorite', !!favoriteMap.get(this.currentUrl));
     }
     
     loadUrl(url:string) {
@@ -95,7 +134,8 @@ export class AppViewModel extends Observable {
             object: this,
             url
         })
-        this.setCurrentUrl(url);
+        this.layerDetails.set('url', url);
+        this.set('bookmarksOpen', !url);
     }
 }
 

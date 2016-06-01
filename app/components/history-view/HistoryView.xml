@@ -4,13 +4,13 @@
         loaded="onLoaded"
         rowHeight="40">
         <ListView.itemTemplate>
-            <GridLayout backgroundColor="#FFFFFF" height="64" loaded="onItemLoaded">
+            <GridLayout backgroundColor="#FFFFFF" height="40" loaded="onItemLoaded">
                 <GridLayout id="delete" backgroundColor="#EEEEEE">
                     <Button width="64" class="material-icon delete-btn" tap="onDelete" text="delete" horizontalAlignment="right" backgroundColor="#FF0000" />
                 </GridLayout>
                 <GridLayout id="content" rows="*" columns="*" backgroundColor="#FFFFFF" tap="onTap">
-                    <StackLayout col="1" padding="2" class="bookmark-item"> 
-                        <Label text="{{ title }}" class="bookmark-subtitle" style="font-style:bold" horizontalAlignment="stretch" />
+                    <StackLayout col="1" padding="2" class="bookmark-item" verticalAlignment="center" padding="0 0 0 18"> 
+                        <Label text="{{ title }}" class="bookmark-subtitle" style="font-weight:bold" horizontalAlignment="stretch" />
                         <Label text="{{ url }}" class="bookmark-subtitle" horizontalAlignment="stretch" />
                     </StackLayout>
                 </GridLayout>
