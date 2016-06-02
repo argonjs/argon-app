@@ -67,7 +67,7 @@ manager.vuforia.init({
 
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
     type = 'hosted';
-    setup(reality: Argon.RealityView) {
+    load(reality: Argon.RealityView) {
         var url:string = reality['url'];
         return new Promise<Argon.SessionPort>((resolve, reject)=>{
             var sessionConnectCallback = (data:SessionConnectEventData)=>{

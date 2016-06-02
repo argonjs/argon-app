@@ -37,7 +37,7 @@ exports.manager.reality.registerLoader(new (function (_super) {
         _super.apply(this, arguments);
         this.type = 'hosted';
     }
-    HostedRealityLoader.prototype.setup = function (reality) {
+    HostedRealityLoader.prototype.load = function (reality) {
         var url = reality['url'];
         return new Promise(function (resolve, reject) {
             var sessionConnectCallback = function (data) {
@@ -299,6 +299,7 @@ function searchBarLoaded(args) {
         setSearchBarText(url.toString());
         AppViewModel_1.appViewModel.loadUrl(url.toString());
         AppViewModel_1.appViewModel.hideBookmarks();
+        AppViewModel_1.appViewModel.hideRealityChooser();
         AppViewModel_1.appViewModel.hideCancelButton();
     });
     if (application.ios) {
