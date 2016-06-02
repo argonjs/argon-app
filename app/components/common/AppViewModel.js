@@ -30,7 +30,7 @@ var AppViewModel = (function (_super) {
         this.layerDetails = new LayerDetails();
         this.currentUrl = '';
         this.isFavorite = false;
-        bookmarks_1.favoriteMap.on('propertyChange', function () {
+        bookmarks_1.favoriteList.on('change', function () {
             setTimeout(function () {
                 _this.updateFavoriteStatus();
             });

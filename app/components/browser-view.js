@@ -47,9 +47,15 @@ var BrowserView = (function (_super) {
         util_1.Util.bringToFront(this.realityLayer.titleBar);
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
+        if (this.layerContainer.ios) {
+            this.layerContainer.ios.layer.masksToBounds = false;
+        }
         this.scrollView.horizontalAlignment = 'stretch';
         this.scrollView.verticalAlignment = 'stretch';
         this.scrollView.content = this.layerContainer;
+        if (this.scrollView.ios) {
+            this.scrollView.ios.layer.masksToBounds = false;
+        }
         this.addChild(this.scrollView);
         this.backgroundColor = new color_1.Color("#555");
         this.scrollView.on(scroll_view_1.ScrollView.scrollEvent, this._animate.bind(this));
@@ -61,16 +67,10 @@ var BrowserView = (function (_super) {
         });
         Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(function (_a) {
             var current = _a.current;
+            var realityListItem = bookmarks_1.realityMap.get(current);
             var details = _this.realityLayer.details;
-            if (current.type === 'live-video')
-                details.set('title', 'Reality: Live Video');
-            else if (current.type === 'hosted') {
-                details.set('title', 'Reality: Hosted');
-            }
-            else {
-                details.set('title', 'No Reality Loaded');
-            }
-            details.set('url', 'reality:' + current.type);
+            details.set('title', 'Reality: ' + realityListItem.name);
+            details.set('url', realityListItem.url);
             details.set('isArgonChannel', true);
             details.set('supportedInteractionModes', ['page', 'immersive']);
             if (_this.realityLayer === _this.focussedLayer) {
@@ -115,13 +115,14 @@ var BrowserView = (function (_super) {
             if (!eventData.error && webView !== _this.realityLayer.webView) {
                 var historyBookmarkItem = bookmarks_1.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
-                    bookmarks_1.historyMap.set(eventData.url, undefined);
+                    var i = bookmarks_1.historyList.indexOf(historyBookmarkItem);
+                    bookmarks_1.historyList.splice(i, 1);
                     bookmarks_1.historyList.unshift(historyBookmarkItem);
                 }
                 else {
                     bookmarks_1.historyList.unshift(new bookmarks_1.BookmarkItem({
                         url: eventData.url,
-                        title: webView.title
+                        name: webView.title
                     }));
                 }
             }
@@ -298,8 +299,6 @@ var BrowserView = (function (_super) {
     };
     BrowserView.prototype._hideLayer = function (layer) {
         var idx = this.layers.indexOf(layer);
-        if (layer.webView.ios)
-            layer.webView.ios.layer.masksToBounds = false;
         layer.touchOverlay.style.visibility = 'collapsed';
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
@@ -310,6 +309,9 @@ var BrowserView = (function (_super) {
         layer.webView.animate({
             translate: { x: 0, y: 0 },
             duration: OVERVIEW_ANIMATION_DURATION
+        }).then(function () {
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = false;
         });
         // Hide titlebars
         layer.titleBar.animate({

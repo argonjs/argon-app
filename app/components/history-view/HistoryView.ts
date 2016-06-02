@@ -1,7 +1,7 @@
 import {Observable} from 'data/observable';
 import {View} from 'ui/core/view';
 import {ListView,ItemEventData} from 'ui/list-view';
-import {BookmarkItem, historyList, historyMap} from '../common/bookmarks'
+import {BookmarkItem, historyList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
 import {
@@ -36,7 +36,8 @@ export function onTap(args) {
 export function onDelete(args) {
     closeAllCells();
     var item:BookmarkItem = (args.object as View).bindingContext;
-    historyMap.set(item.url, undefined);
+    var i = historyList.indexOf(item);
+    historyList.splice(i, 1);
 }
 
 const swipeLimit = -64;

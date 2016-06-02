@@ -1,7 +1,8 @@
 import {Observable} from 'data/observable';
+import {ObservableArray} from 'data/observable-array';
 import {View} from 'ui/core/view';
 import {ListView,ItemEventData} from 'ui/list-view';
-import {RealityBookmarkItem, realityList, realityMap} from '../common/bookmarks'
+import {RealityBookmarkItem, realityList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
 import {

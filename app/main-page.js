@@ -7,7 +7,7 @@ var fs = require('file-system');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var Argon = require('argon');
-var bookmarks_1 = require('./components/common/bookmarks');
+var bookmarks = require('./components/common/bookmarks');
 var AppViewModel_1 = require('./components/common/AppViewModel');
 var argon_device_service_1 = require('./argon-device-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
@@ -25,7 +25,7 @@ exports.manager = Argon.init({ container: container, config: {
         role: Argon.Role.MANAGER,
         name: 'ArgonApp'
     } });
-exports.manager.reality.setDefault({ type: 'live-video' });
+exports.manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
 exports.manager.vuforia.init({
     licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
 }).catch(function (err) {
@@ -35,6 +35,7 @@ exports.manager.reality.registerLoader(new (function (_super) {
     __extends(HostedRealityLoader, _super);
     function HostedRealityLoader() {
         _super.apply(this, arguments);
+        this.type = 'hosted';
     }
     HostedRealityLoader.prototype.setup = function (reality) {
         var url = reality['url'];
@@ -49,6 +50,21 @@ exports.manager.reality.registerLoader(new (function (_super) {
     };
     return HostedRealityLoader;
 }(Argon.RealityLoader)));
+exports.manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
+    var previous = _a.previous, current = _a.current;
+    if (previous) {
+        var previousRealityItem = bookmarks.realityMap.get(previous);
+        if (!previousRealityItem.builtin) {
+            var i = bookmarks.realityList.indexOf(previousRealityItem);
+            bookmarks.realityList.splice(i, 1);
+        }
+    }
+    if (current) {
+        var currentRealityItem = bookmarks.realityMap.get(current);
+        if (!currentRealityItem)
+            bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
+    }
+});
 exports.manager.focus.sessionFocusEvent.addEventListener(function () {
     var focussedSession = exports.manager.focus.getSession();
     console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
@@ -137,6 +153,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
                     y: 1
                 },
                 opacity: 1,
+                duration: 150,
                 curve: enums_1.AnimationCurve.easeInOut
             });
             AppViewModel_1.appViewModel.showCancelButton();
@@ -148,6 +165,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
                     y: 1
                 },
                 opacity: 0,
+                duration: 150,
                 curve: enums_1.AnimationCurve.easeInOut
             }).then(function () {
                 exports.realityChooserView.visibility = 'collapse';
@@ -167,6 +185,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
                     y: 1
                 },
                 opacity: 1,
+                duration: 150,
                 curve: enums_1.AnimationCurve.easeInOut
             });
         }
@@ -177,6 +196,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
                     y: 1
                 },
                 opacity: 0,
+                duration: 150,
                 curve: enums_1.AnimationCurve.easeInOut
             }).then(function () {
                 exports.bookmarksView.visibility = 'collapse';
@@ -260,6 +280,9 @@ function pageLoaded(args) {
 exports.pageLoaded = pageLoaded;
 function layoutLoaded(args) {
     exports.layout = args.object;
+    if (exports.layout.ios) {
+        exports.layout.ios.layer.masksToBounds = false;
+    }
 }
 exports.layoutLoaded = layoutLoaded;
 function headerLoaded(args) {
@@ -355,14 +378,16 @@ function onReload(args) {
 exports.onReload = onReload;
 function onFavoriteToggle(args) {
     var url = AppViewModel_1.appViewModel.layerDetails.url;
-    if (!bookmarks_1.favoriteMap.get(url)) {
-        bookmarks_1.favoriteList.push(new bookmarks_1.BookmarkItem({
+    var bookmarkItem = bookmarks.favoriteMap.get(url);
+    if (!bookmarkItem) {
+        bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
             url: url,
-            title: exports.browserView.focussedLayer.webView.title
+            name: exports.browserView.focussedLayer.webView.title
         }));
     }
     else {
-        bookmarks_1.favoriteMap.set(url, undefined);
+        var i = bookmarks.favoriteList.indexOf(bookmarkItem);
+        bookmarks.favoriteList.splice(i, 1);
     }
 }
 exports.onFavoriteToggle = onFavoriteToggle;

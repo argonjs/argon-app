@@ -21,7 +21,7 @@ import * as Argon from 'argon';
 import {Util} from './util';
 import {ArgonWebView, SessionConnectEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
-import {BookmarkItem, favoriteList, favoriteMap} from './components/common/bookmarks';
+import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 
 import {NativescriptDeviceService} from './argon-device-service';
@@ -57,7 +57,7 @@ manager = Argon.init({container, config: {
     name: 'ArgonApp'
 }});
 
-manager.reality.setDefault({type:'live-video'});
+manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
 
 manager.vuforia.init({
     licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
@@ -66,7 +66,7 @@ manager.vuforia.init({
 });
 
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
-    type: 'hosted';
+    type = 'hosted';
     setup(reality: Argon.RealityView) {
         var url:string = reality['url'];
         return new Promise<Argon.SessionPort>((resolve, reject)=>{
@@ -79,6 +79,20 @@ manager.reality.registerLoader(new class HostedRealityLoader extends Argon.Reali
         });
     }
 });
+
+manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current})=>{
+    if (previous) {
+        const previousRealityItem = bookmarks.realityMap.get(previous);
+        if (!previousRealityItem.builtin) {
+            var i = bookmarks.realityList.indexOf(previousRealityItem);
+            bookmarks.realityList.splice(i, 1);
+        }
+    } 
+    if (current) {        
+        const currentRealityItem = bookmarks.realityMap.get(current)
+        if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
+    }
+})
 
 manager.focus.sessionFocusEvent.addEventListener(()=>{
     const focussedSession = manager.focus.getSession();    
@@ -167,6 +181,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                     y:1
                 },
                 opacity:1,
+                duration: 150,
                 curve: AnimationCurve.easeInOut
             })
             appViewModel.showCancelButton();
@@ -177,6 +192,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                     y:1
                 },
                 opacity:0,
+                duration: 150,
                 curve: AnimationCurve.easeInOut
             }).then(()=>{
                 realityChooserView.visibility = 'collapse';
@@ -196,6 +212,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                     y:1
                 },
                 opacity:1,
+                duration: 150,
                 curve: AnimationCurve.easeInOut
             })
         } else {
@@ -205,6 +222,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                     y:1
                 },
                 opacity:0,
+                duration: 150,
                 curve: AnimationCurve.easeInOut
             }).then(()=>{
                 bookmarksView.visibility = 'collapse';
@@ -298,6 +316,9 @@ export function pageLoaded(args) {
 
 export function layoutLoaded(args) {
     layout = args.object
+    if (layout.ios) {
+        layout.ios.layer.masksToBounds = false;
+    }
 }
 
 export function headerLoaded(args) {
@@ -315,6 +336,7 @@ export function searchBarLoaded(args) {
         setSearchBarText(url.toString());
         appViewModel.loadUrl(url.toString());
         appViewModel.hideBookmarks();
+        appViewModel.hideRealityChooser();
         appViewModel.hideCancelButton();
     });
 
@@ -397,13 +419,15 @@ export function onReload(args) {
 
 export function onFavoriteToggle(args) {
     const url = appViewModel.layerDetails.url;
-    if (!favoriteMap.get(url)) {
-        favoriteList.push(new BookmarkItem({
+    const bookmarkItem = bookmarks.favoriteMap.get(url);
+    if (!bookmarkItem) {
+        bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
             url,
-            title: browserView.focussedLayer.webView.title
+            name: browserView.focussedLayer.webView.title
         }));
     } else {
-        favoriteMap.set(url, undefined);
+        var i = bookmarks.favoriteList.indexOf(bookmarkItem);
+        bookmarks.favoriteList.splice(i,1);
     }
 }
 

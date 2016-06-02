@@ -35,7 +35,7 @@ export class AppViewModel extends Observable {
     
     constructor() {
         super();
-        favoriteMap.on('propertyChange',()=>{
+        favoriteList.on('change',()=>{
             setTimeout(()=>{
                 this.updateFavoriteStatus();
             })

@@ -10,7 +10,7 @@
                         <Label backgroundColor="#44FFAF00" textAlignment="center" class="material-icon" text="bookmark_border" />
                     </GridLayout>
                     <StackLayout col="1" padding="10" class="bookmark-item"> 
-                        <Label text="{{ title }}" class="bookmark-title" horizontalAlignment="stretch" />
+                        <Label text="{{ name }}" class="bookmark-title" horizontalAlignment="stretch" />
                         <Label text="{{ url }}" class="bookmark-subtitle" horizontalAlignment="stretch" />
                     </StackLayout>
                 </GridLayout>

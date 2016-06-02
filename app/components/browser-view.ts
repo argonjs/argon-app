@@ -34,7 +34,7 @@ import * as application from 'application';
 import * as utils from 'utils/utils';
 
 import {appViewModel, LayerDetails} from './common/AppViewModel'
-import {BookmarkItem, historyList, historyMap} from './common/bookmarks'
+import {BookmarkItem, realityMap, historyList, historyMap} from './common/bookmarks'
 
 import * as Argon from 'argon'
 
@@ -88,10 +88,16 @@ export class BrowserView extends GridLayout {
         
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
+        if (this.layerContainer.ios) {
+            this.layerContainer.ios.layer.masksToBounds = false;
+        }
         
         this.scrollView.horizontalAlignment = 'stretch';
         this.scrollView.verticalAlignment = 'stretch';
         this.scrollView.content = this.layerContainer;
+        if (this.scrollView.ios) {
+            this.scrollView.ios.layer.masksToBounds = false;
+        }
         this.addChild(this.scrollView);
         this.backgroundColor = new Color("#555");
         
@@ -106,15 +112,10 @@ export class BrowserView extends GridLayout {
         })
         
         Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(({current})=>{
+            const realityListItem = realityMap.get(current);
             const details = this.realityLayer.details;
-            if (current.type === 'live-video') 
-                details.set('title','Reality: Live Video');
-            else if (current.type === 'hosted') {
-                details.set('title','Reality: Hosted');
-            } else {
-                details.set('title','No Reality Loaded');
-            }
-            details.set('url', 'reality:' + current.type);
+            details.set('title', 'Reality: ' + realityListItem.name);
+            details.set('url', realityListItem.url);
             details.set('isArgonChannel', true);
             details.set('supportedInteractionModes', ['page','immersive']);
             if (this.realityLayer === this.focussedLayer) {
@@ -161,12 +162,13 @@ export class BrowserView extends GridLayout {
             if (!eventData.error && webView !== this.realityLayer.webView) {
                 const historyBookmarkItem = historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
-                    historyMap.set(eventData.url, undefined);
+                    let i = historyList.indexOf(historyBookmarkItem);
+                    historyList.splice(i, 1);
                     historyList.unshift(historyBookmarkItem);
                 } else {
                     historyList.unshift(new BookmarkItem({
                         url: eventData.url,
-                        title: webView.title
+                        name: webView.title
                     }))
                 }
             }
@@ -375,8 +377,6 @@ export class BrowserView extends GridLayout {
     private _hideLayer(layer:Layer) {
         const idx = this.layers.indexOf(layer);
         
-        if (layer.webView.ios)
-            layer.webView.ios.layer.masksToBounds = false;
         layer.touchOverlay.style.visibility = 'collapsed';
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
@@ -387,7 +387,10 @@ export class BrowserView extends GridLayout {
         layer.webView.animate({
             translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
-        })
+        }).then(()=>{
+            if (layer.webView.ios)
+                layer.webView.ios.layer.masksToBounds = false;
+        });
         // Hide titlebars
         layer.titleBar.animate({
             opacity: 0,
@@ -402,7 +405,7 @@ export class BrowserView extends GridLayout {
             scale: { x: 1, y: 1 },
             duration: OVERVIEW_ANIMATION_DURATION,
             curve: AnimationCurve.easeInOut,
-        });
+        })
     }
 
     showOverview() {

@@ -32,7 +32,8 @@ exports.onTap = onTap;
 function onDelete(args) {
     closeAllCells();
     var item = args.object.bindingContext;
-    bookmarks_1.favoriteMap.set(item.url, undefined);
+    var i = bookmarks_1.favoriteList.indexOf(item);
+    bookmarks_1.favoriteList.splice(i, 1);
 }
 exports.onDelete = onDelete;
 var swipeLimit = -64;
