@@ -37,6 +37,10 @@ var BrowserView = (function (_super) {
         this.realityLayer.titleBar.backgroundColor = new color_1.Color(0xFF222222);
         this.realityLayer.label.color = new color_1.Color('white');
         this.realityLayer.closeButton.visibility = 'collapsed';
+        if (this.realityLayer.webView.ios) {
+            // disable user navigation of the reality view
+            this.realityLayer.webView.ios.allowsBackForwardNavigationGestures = false;
+        }
         this.videoView.horizontalAlignment = 'stretch';
         this.videoView.verticalAlignment = 'stretch';
         if (this.videoView.parent)

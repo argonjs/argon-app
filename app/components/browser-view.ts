@@ -78,6 +78,11 @@ export class BrowserView extends GridLayout {
         this.realityLayer.label.color = new Color('white');
         this.realityLayer.closeButton.visibility = 'collapsed';
         
+        if (this.realityLayer.webView.ios) {
+            // disable user navigation of the reality view
+            (this.realityLayer.webView.ios as WKWebView).allowsBackForwardNavigationGestures = false;
+        }
+        
         this.videoView.horizontalAlignment = 'stretch';
         this.videoView.verticalAlignment = 'stretch';
         if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
