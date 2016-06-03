@@ -10,6 +10,12 @@ var BookmarkItem = (function (_super) {
         this.key = 'url';
         this.builtin = false;
     }
+    BookmarkItem.prototype.toJSON = function () {
+        return {
+            name: this.name,
+            url: this.url
+        };
+    };
     return BookmarkItem;
 }(observable_1.Observable));
 exports.BookmarkItem = BookmarkItem;
@@ -76,16 +82,23 @@ builtinRealities.forEach(function (item) {
 var FAVORITE_LIST_KEY = 'favorite_list';
 var HISTORY_LIST_KEY = 'history_list';
 if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
-    favoriteList.push(JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY)));
+    console.log(applicationSettings.getString(FAVORITE_LIST_KEY));
+    var savedFavorites = JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY));
+    savedFavorites.forEach(function (item) {
+        favoriteList.push(new BookmarkItem(item));
+    });
 }
-application.on(application.suspendEvent, function () {
-    var userFavorites = favoriteList.filter(function (item) { return !item.builtin; });
-    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(userFavorites));
-});
 if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
-    historyList.push(JSON.parse(applicationSettings.getString(HISTORY_LIST_KEY)));
+    console.log(applicationSettings.getString(HISTORY_LIST_KEY));
+    var savedHistory = JSON.parse(applicationSettings.getString(HISTORY_LIST_KEY));
+    savedHistory.forEach(function (item) {
+        historyList.push(new BookmarkItem(item));
+    });
 }
 application.on(application.suspendEvent, function () {
-    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(historyList));
+    var savedFavorites = favoriteList.filter(function (item) { return !item.builtin; });
+    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(savedFavorites));
+    var historyArray = historyList.map(function (item) { return item; }); // convert to standard array
+    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(historyArray));
 });
 //# sourceMappingURL=bookmarks.js.map

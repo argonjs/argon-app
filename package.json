@@ -1,27 +1,27 @@
 {
-  "nativescript": {
-    "id": "edu.gatech.ael.argon4",
-    "tns-android": {
-      "version": "1.7.1"
-    },
-    "tns-ios": {
-      "version": "2.0.0"
-    }
-  },
-  "dependencies": {
-    "argon": "file:../argon",
-    "argon-web-view": "file:plugins/argon-web-view",
-    "nativescript-vuforia": "file:plugins/nativescript-vuforia",
-    "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^2.0.0",
-    "urijs": "^1.17.1"
-  },
-  "devDependencies": {
-    "nativescript-dev-typescript": "^0.3.1",
-    "openpgp": "^2.3.0",
-    "typescript": "^1.9.0-dev.20160313"
-  },
-  "scripts": {
-    "ios-fix": "xcproj --project platforms/ios/argonapp.xcodeproj touch; xcproj --project platforms/ios/Pods/Pods.xcodeproj touch;"
-  }
+	"nativescript": {
+		"id": "edu.gatech.ael.argon4",
+		"tns-android": {
+			"version": "1.7.1"
+		},
+		"tns-ios": {
+			"version": "2.0.1"
+		}
+	},
+	"dependencies": {
+		"argon": "file:../argon",
+		"argon-web-view": "file:plugins/argon-web-view",
+		"nativescript-vuforia": "file:plugins/nativescript-vuforia",
+		"speigg-nativescript-geolocation": "0.0.9-patch.0",
+		"tns-core-modules": "^2.0.0",
+		"urijs": "^1.17.1"
+	},
+	"devDependencies": {
+		"nativescript-dev-typescript": "^0.3.1",
+		"openpgp": "^2.3.0",
+		"typescript": "^1.9.0-dev.20160313"
+	},
+	"scripts": {
+		"ios-fix": "xcproj --project platforms/ios/argonapp.xcodeproj touch; xcproj --project platforms/ios/Pods/Pods.xcodeproj touch;"
+	}
 }
