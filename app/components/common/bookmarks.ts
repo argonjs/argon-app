@@ -110,12 +110,24 @@ if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
     });
 }
 
-application.on(application.suspendEvent, ()=>{
-    const savedFavorites = favoriteList.filter((item)=>!item.builtin);
-    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(savedFavorites));
-    const historyArray = historyList.map((item)=>item); // convert to standard array
-    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(historyArray));
-})
+function saveFavorites() {
+    const userFavorites = favoriteList.filter((item)=>!item.builtin);
+    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(userFavorites));
+}
+
+function saveHistory() {
+    const history = historyList.map((item)=>item); // convert to standard array
+    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(history));
+}
+
+function saveBookmarks() {
+    saveFavorites();
+    saveHistory();
+}
+
+application.on(application.suspendEvent,saveBookmarks);
+favoriteList.on('change', saveFavorites);
+historyList.on('change', saveHistory);
 
 export {
     BookmarkItem,

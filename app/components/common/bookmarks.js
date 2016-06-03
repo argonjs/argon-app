@@ -95,10 +95,19 @@ if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
         historyList.push(new BookmarkItem(item));
     });
 }
-application.on(application.suspendEvent, function () {
-    var savedFavorites = favoriteList.filter(function (item) { return !item.builtin; });
-    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(savedFavorites));
-    var historyArray = historyList.map(function (item) { return item; }); // convert to standard array
-    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(historyArray));
-});
+function saveFavorites() {
+    var userFavorites = favoriteList.filter(function (item) { return !item.builtin; });
+    applicationSettings.setString(FAVORITE_LIST_KEY, JSON.stringify(userFavorites));
+}
+function saveHistory() {
+    var history = historyList.map(function (item) { return item; }); // convert to standard array
+    applicationSettings.setString(HISTORY_LIST_KEY, JSON.stringify(history));
+}
+function saveBookmarks() {
+    saveFavorites();
+    saveHistory();
+}
+application.on(application.suspendEvent, saveBookmarks);
+favoriteList.on('change', saveFavorites);
+historyList.on('change', saveHistory);
 //# sourceMappingURL=bookmarks.js.map
