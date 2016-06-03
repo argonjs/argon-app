@@ -49,6 +49,7 @@ var lastGPSPosition;
 export class NativescriptDeviceService extends Argon.DeviceService {
     
     private locationWatchId:number;
+    private locationManager:CLLocationManager;
     
     constructor() {
         super()
@@ -106,7 +107,8 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways: 
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
-                    CLLocationManager.new().requestWhenInUseAuthorization();
+                    this.locationManager = CLLocationManager.new();
+                    this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
                 case CLAuthorizationStatus.kCLAuthorizationStatusRestricted:

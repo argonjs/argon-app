@@ -84,7 +84,8 @@ var NativescriptDeviceService = (function (_super) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways:
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
-                    CLLocationManager.new().requestWhenInUseAuthorization();
+                    this.locationManager = CLLocationManager.new();
+                    this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
                 case CLAuthorizationStatus.kCLAuthorizationStatusRestricted:
