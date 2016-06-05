@@ -21,7 +21,7 @@
         </ActionBar>
     </Page.actionBar>
     <GridLayout loaded="layoutLoaded">
-        <browserView:BrowserView id="browser" loaded="browserViewLoaded" horizontalAlignment="stretch" verticalAlignment="stretch" />
+        <browserView:BrowserView id="browser" loaded="browserViewLoaded" />
         <bookmarksView:BookmarksView id="bookmarks" visibility="collapse" loaded="bookmarksViewLoaded" />
         <realityChooser:RealityChooserView id="realityChooser" visibility="collapse" loaded="realityChooserLoaded" />
         <HtmlView id="debug" visibility="{{ debugEnabled ? 'visible' : 'collapsed' }}"></HtmlView>
