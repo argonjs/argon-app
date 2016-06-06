@@ -26,6 +26,7 @@
         <realityChooser:RealityChooserView id="realityChooser" visibility="collapse" loaded="realityChooserLoaded" />
         <HtmlView id="debug" visibility="{{ debugEnabled ? 'visible' : 'collapsed' }}"></HtmlView>
         <Button text="exit_to_app" class="material-icon action-btn" horizontalAlignment="center" verticalAlignment="bottom" tap="onViewerToggle" visibility="{{ viewerEnabled ? 'visible' : 'collapsed' }}"></Button>
+        <StackLayout id="touchOverlay" visibility="collapsed" loaded="touchOverlayLoaded" />
         <StackLayout id="menu" width="220" loaded="menuLoaded" visibility="collapsed" horizontalAlignment="right" verticalAlignment="top" orientation="vertical">
             <GridLayout rows="*" columns="*,*,*" class="menuItem" horizontalAlignment="stretch" orientation="horizontal" height="44">
                 <Button col="0" id="reload" class="material-icon action-btn" text="refresh" tap="onReload"/>
@@ -37,6 +38,5 @@
             <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer Mode' }}" tap="onViewerToggle"/>
             <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
         </StackLayout>
-        <StackLayout id="touchOverlay" visibility="collapsed" loaded="touchOverlayLoaded" />
     </GridLayout>
 </Page>

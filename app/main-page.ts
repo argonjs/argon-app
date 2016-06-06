@@ -121,6 +121,12 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity: 1,
                 curve: AnimationCurve.easeInOut
             });
+            touchOverlayView.visibility = 'visible';
+            touchOverlayView.on(GestureTypes.touch,()=>{
+                touchOverlayView.off(GestureTypes.touch);
+                touchOverlayView.visibility = 'collapse';
+                appViewModel.hideMenu();
+            });
         } else {
             menuView.animate({
                 scale: {
@@ -384,6 +390,10 @@ export function realityChooserLoaded(args) {
     realityChooserView.scaleX = 0.9;
     realityChooserView.scaleY = 0.9;
     realityChooserView.opacity = 0;
+}
+
+export function touchOverlayLoaded(args) {
+    touchOverlayView = args.object;
 }
 
 // initialize some properties of the menu so that animations will render correctly

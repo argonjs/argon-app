@@ -90,6 +90,12 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
                 opacity: 1,
                 curve: enums_1.AnimationCurve.easeInOut
             });
+            exports.touchOverlayView.visibility = 'visible';
+            exports.touchOverlayView.on(gestures_1.GestureTypes.touch, function () {
+                exports.touchOverlayView.off(gestures_1.GestureTypes.touch);
+                exports.touchOverlayView.visibility = 'collapse';
+                AppViewModel_1.appViewModel.hideMenu();
+            });
         }
         else {
             exports.menuView.animate({
@@ -345,6 +351,10 @@ function realityChooserLoaded(args) {
     exports.realityChooserView.opacity = 0;
 }
 exports.realityChooserLoaded = realityChooserLoaded;
+function touchOverlayLoaded(args) {
+    exports.touchOverlayView = args.object;
+}
+exports.touchOverlayLoaded = touchOverlayLoaded;
 // initialize some properties of the menu so that animations will render correctly
 function menuLoaded(args) {
     exports.menuView = args.object;
