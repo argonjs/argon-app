@@ -31,6 +31,7 @@ var ArgonWebView = (function (_super) {
             var messageChannel = manager.session.createSynchronousMessageChannel();
             var session_1 = manager.session.addManagedSessionPort();
             ArgonWebView.sessionUrlMap.set(session_1, sessionUrl_1);
+            this.session = session_1;
             this._sessionMessagePort = messageChannel.port2;
             this._sessionMessagePort.onmessage = function (msg) {
                 if (!_this.session)
@@ -40,7 +41,6 @@ var ArgonWebView = (function (_super) {
             };
             session_1.connectEvent.addEventListener(function () {
                 session_1.info.name = sessionUrl_1;
-                _this.session = session_1;
                 var args = {
                     eventName: ArgonWebView.sessionConnectEvent,
                     object: _this,
@@ -56,7 +56,7 @@ var ArgonWebView = (function (_super) {
             });
             session_1.open(messageChannel.port1, manager.session.configuration);
         }
-        console.log(message);
+        // console.log(message);
         this._sessionMessagePort.postMessage(JSON.parse(message));
     };
     ArgonWebView.prototype._handleLogMessage = function (message) {

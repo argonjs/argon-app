@@ -12,7 +12,7 @@ var vuforia = require('nativescript-vuforia');
 var application = require('application');
 var utils = require('utils/utils');
 var AppViewModel_1 = require('./common/AppViewModel');
-var bookmarks_1 = require('./common/bookmarks');
+var bookmarks = require('./common/bookmarks');
 var Argon = require('argon');
 var TITLE_BAR_HEIGHT = 30;
 var OVERVIEW_VERTICAL_PADDING = 150;
@@ -71,14 +71,18 @@ var BrowserView = (function (_super) {
         });
         Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(function (_a) {
             var current = _a.current;
-            var realityListItem = bookmarks_1.realityMap.get(current);
+            var realityListItem = bookmarks.realityMap.get(current);
             var details = _this.realityLayer.details;
             details.set('title', 'Reality: ' + realityListItem.name);
             details.set('url', realityListItem.url);
             details.set('isArgonChannel', true);
             details.set('supportedInteractionModes', ['page', 'immersive']);
-            if (_this.realityLayer === _this.focussedLayer) {
-                AppViewModel_1.appViewModel.setLayerDetails(details);
+            if (current === bookmarks.LIVE_VIDEO_REALITY) {
+                _this.realityLayer.webView.visibility = 'collapse';
+                _this.realityLayer.webView.src = '';
+            }
+            else {
+                _this.realityLayer.webView.visibility = 'visible';
             }
         });
     }
@@ -98,7 +102,7 @@ var BrowserView = (function (_super) {
                 layer.details.set('url', eventData.value);
             }
             else if (eventData.propertyName === 'title') {
-                var historyBookmarkItem = bookmarks_1.historyMap.get(webView.url);
+                var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
                 if (historyBookmarkItem) {
                     historyBookmarkItem.set('title', eventData.value);
                 }
@@ -117,14 +121,14 @@ var BrowserView = (function (_super) {
         webView.verticalAlignment = 'stretch';
         webView.on("loadFinished", function (eventData) {
             if (!eventData.error && webView !== _this.realityLayer.webView) {
-                var historyBookmarkItem = bookmarks_1.historyMap.get(eventData.url);
+                var historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
-                    var i = bookmarks_1.historyList.indexOf(historyBookmarkItem);
-                    bookmarks_1.historyList.splice(i, 1);
-                    bookmarks_1.historyList.unshift(historyBookmarkItem);
+                    var i = bookmarks.historyList.indexOf(historyBookmarkItem);
+                    bookmarks.historyList.splice(i, 1);
+                    bookmarks.historyList.unshift(historyBookmarkItem);
                 }
                 else {
-                    bookmarks_1.historyList.unshift(new bookmarks_1.BookmarkItem({
+                    bookmarks.historyList.unshift(new bookmarks.BookmarkItem({
                         url: eventData.url,
                         name: webView.title
                     }));

@@ -45,13 +45,16 @@ exports.manager.reality.registerLoader(new (function (_super) {
                 resolve(data.session);
             };
             exports.browserView.realityLayer.webView.on('sessionConnect', sessionConnectCallback);
+            exports.browserView.realityLayer.webView.src = '';
             exports.browserView.realityLayer.webView.src = url;
         });
     };
     return HostedRealityLoader;
 }(Argon.RealityLoader)));
 exports.manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
-    var previous = _a.previous, current = _a.current;
+    var previous = _a.previous, current = _a.current, session = _a.session;
+    if (session === exports.manager.session.manager)
+        return;
     if (previous) {
         var previousRealityItem = bookmarks.realityMap.get(previous);
         if (!previousRealityItem.builtin) {
@@ -64,6 +67,14 @@ exports.manager.reality.sessionDesiredRealityChangeEvent.addEventListener(functi
         if (!currentRealityItem)
             bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
     }
+    session.closeEvent.addEventListener(function () {
+        var sessionDesiredReality = exports.manager.reality.desiredRealityMap.get(session);
+        var sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality);
+        if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
+            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
+            bookmarks.realityList.splice(i, 1);
+        }
+    });
 });
 exports.manager.focus.sessionFocusEvent.addEventListener(function () {
     var focussedSession = exports.manager.focus.getSession();
@@ -109,6 +120,8 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
             }).then(function () {
                 exports.menuView.visibility = "collapse";
             });
+            exports.touchOverlayView.off(gestures_1.GestureTypes.touch);
+            exports.touchOverlayView.visibility = 'collapse';
         }
     }
     else if (evt.propertyName === 'overviewOpen') {
@@ -298,7 +311,10 @@ exports.headerLoaded = headerLoaded;
 function searchBarLoaded(args) {
     searchBar = args.object;
     searchBar.on(search_bar_1.SearchBar.submitEvent, function () {
-        var url = URI(searchBar.text);
+        var urlString = searchBar.text;
+        if (urlString.indexOf('//') === -1)
+            urlString = '//' + urlString;
+        var url = URI(urlString);
         if (url.protocol() !== "http" || url.protocol() !== "https") {
             url.protocol("http");
         }

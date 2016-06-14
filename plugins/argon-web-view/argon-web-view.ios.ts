@@ -139,14 +139,6 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     }
 
     webViewDecidePolicyForNavigationResponseDecisionHandler(webview:WKWebView, navigationResponse:WKNavigationResponse, decisionHandler:(policy:WKNavigationResponsePolicy)=>void) {
-        if (navigationResponse.forMainFrame) {
-            // const owner = this._owner.get();
-            // if (owner) {
-                // owner['_suspendLoading'] = true;
-                // this.url = navigationResponse.response.URL.absoluteString;
-                // owner['_suspendLoading'] = false;
-            // }
-        }
         decisionHandler(WKNavigationResponsePolicy.WKNavigationResponsePolicyAllow);
     }
 
@@ -158,9 +150,6 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         const owner = this._owner.get();
         if (!owner) return;
         owner['_onLoadFinished'](this._provisionalURL);
-        // owner['_suspendLoading'] = true;
-        // this.url = this._ios.URL.absoluteString;
-        // owner['_suspendLoading'] = false;
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
@@ -170,6 +159,9 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         if (owner.session) {
             owner.session.close();
         }
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
     }
 
     webViewDidFinishNavigation(webView: WKWebView, navigation: WKNavigation) {

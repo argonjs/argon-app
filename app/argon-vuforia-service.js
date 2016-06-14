@@ -39,7 +39,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this.scratchMatrix4 = new Argon.Cesium.Matrix4();
         this.scratchMatrix3 = new Argon.Cesium.Matrix3();
         this.vuforiaTrackerEntity = new Argon.Cesium.Entity({
-            position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.entity),
+            position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.orientationEntity),
             orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90, y180, {}))
         });
         this._viewerEnabled = false;
@@ -66,7 +66,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var trackable = trackableResult.getTrackable();
                 var name_1 = trackable.getName();
                 var id = _this._getIdForTrackable(trackable);
-                var entity = contextService.entities.getById(id);
+                var entity = contextService.subscribedEntities.getById(id);
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
                         id: id,
@@ -80,7 +80,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entity.position.forwardExtrapolationDuration = 2 / 60;
                     entity.orientation.forwardExtrapolationDuration = 2 / 60;
-                    contextService.entities.add(entity);
+                    contextService.subscribedEntities.add(entity);
                 }
                 var trackableTime = JulianDate.clone(time);
                 // add any time diff from vuforia

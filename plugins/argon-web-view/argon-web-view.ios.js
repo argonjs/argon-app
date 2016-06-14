@@ -116,8 +116,6 @@ var ArgonWebViewDelegate = (function (_super) {
         decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyAllow);
     };
     ArgonWebViewDelegate.prototype.webViewDecidePolicyForNavigationResponseDecisionHandler = function (webview, navigationResponse, decisionHandler) {
-        if (navigationResponse.forMainFrame) {
-        }
         decisionHandler(WKNavigationResponsePolicy.WKNavigationResponsePolicyAllow);
     };
     ArgonWebViewDelegate.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
@@ -128,9 +126,6 @@ var ArgonWebViewDelegate = (function (_super) {
         if (!owner)
             return;
         owner['_onLoadFinished'](this._provisionalURL);
-        // owner['_suspendLoading'] = true;
-        // this.url = this._ios.URL.absoluteString;
-        // owner['_suspendLoading'] = false;
     };
     ArgonWebViewDelegate.prototype.webViewDidCommitNavigation = function (webView, navigation) {
         var owner = this._owner.get();
@@ -140,6 +135,9 @@ var ArgonWebViewDelegate = (function (_super) {
         if (owner.session) {
             owner.session.close();
         }
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
     };
     ArgonWebViewDelegate.prototype.webViewDidFinishNavigation = function (webView, navigation) {
         var owner = this._owner.get();

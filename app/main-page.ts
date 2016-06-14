@@ -75,12 +75,15 @@ manager.reality.registerLoader(new class HostedRealityLoader extends Argon.Reali
                 resolve(data.session);
             }
             browserView.realityLayer.webView.on('sessionConnect', sessionConnectCallback);
+            browserView.realityLayer.webView.src = '';
             browserView.realityLayer.webView.src = url;
         });
     }
 });
 
-manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current})=>{
+manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current, session})=>{
+    if (session === manager.session.manager) return;
+    
     if (previous) {
         const previousRealityItem = bookmarks.realityMap.get(previous);
         if (!previousRealityItem.builtin) {
@@ -92,6 +95,14 @@ manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, cu
         const currentRealityItem = bookmarks.realityMap.get(current)
         if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
     }
+    session.closeEvent.addEventListener(()=>{
+       const sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
+       const sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality);
+       if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
+            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
+            bookmarks.realityList.splice(i, 1);
+       }
+    });
 })
 
 manager.focus.sessionFocusEvent.addEventListener(()=>{
@@ -139,6 +150,8 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             }).then(() => {
                 menuView.visibility = "collapse";
             });
+            touchOverlayView.off(GestureTypes.touch);
+            touchOverlayView.visibility = 'collapse';
         }
     }
     else if (evt.propertyName === 'overviewOpen') {
@@ -335,7 +348,10 @@ export function searchBarLoaded(args) {
     searchBar = args.object;
 
     searchBar.on(SearchBar.submitEvent, () => {
-        const url = URI(searchBar.text);
+        let urlString = searchBar.text;
+        if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
+        
+        const url = URI(urlString);
         if (url.protocol() !== "http" || url.protocol() !== "https") {
             url.protocol("http");
         }

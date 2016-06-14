@@ -46,23 +46,24 @@ export function getIosMotionManager() {
 
 var lastGPSPosition;
 
+@Argon.DI.inject(Argon.ContextService)
 export class NativescriptDeviceService extends Argon.DeviceService {
     
     private locationWatchId:number;
     private locationManager:CLLocationManager;
     
-    constructor() {
-        super()
+    constructor(context:Argon.ContextService) {
+        super(context);
 
-        this.entity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
-        this.entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.entity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.entity.position.maxNumSamples = 10;
+        this.locationEntity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
+        this.locationEntity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.locationEntity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.locationEntity.position.maxNumSamples = 10;
         
-        this.entity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
-        this.entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.entity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.entity.orientation.maxNumSamples = 10;
+        this.orientationEntity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
+        this.orientationEntity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.orientationEntity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.orientationEntity.orientation.maxNumSamples = 10;
     }
     
     ensureGeolocation() {
@@ -78,7 +79,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
             // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
             const locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
-            const sampledPosition = this.entity.position as Argon.Cesium.SampledPositionProperty;
+            const sampledPosition = this.locationEntity.position as Argon.Cesium.SampledPositionProperty;
             const position =  Argon.Cesium.Cartesian3.fromDegrees(
                     location.longitude,
                     location.latitude,
@@ -86,6 +87,9 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                     Argon.Cesium.Ellipsoid.WGS84,
                     scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
+            
+            const enuOrientation = Transforms.headingPitchRollQuaternion(position, 0, 0, 0, undefined, scratchECEFQuaternion);
+            (this.locationEntity.orientation as Argon.Cesium.ConstantProperty).setValue(enuOrientation);
             
             // make sure its actually working
             // var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
@@ -133,7 +137,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         this.ensureGeolocation();
         
         const time = JulianDate.now();
-        const position = this.entity.position.getValue(time);
+        const position = this.locationEntity.position.getValue(time);
     
         if (application.ios) {
             
@@ -152,12 +156,12 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 const orientation = Quaternion.multiply(z90, motionQuaternion, scratchQuaternion);
 
                 // Finally, convert from local ENU to ECEF (Earth-Centered-Earth-Fixed)
-                const enu2ecef = Transforms.eastNorthUpToFixedFrame(position, undefined, scratchMatrix4);
-                const enu2ecefRot = Matrix4.getRotation(enu2ecef, scratchMatrix3);
-                const enu2ecefQuat = Quaternion.fromRotationMatrix(enu2ecefRot, scratchECEFQuaternion);
-                Quaternion.multiply(enu2ecefQuat, orientation, orientation);
+                // const enu2ecef = Transforms.eastNorthUpToFixedFrame(position, undefined, scratchMatrix4);
+                // const enu2ecefRot = Matrix4.getRotation(enu2ecef, scratchMatrix3);
+                // const enu2ecefQuat = Quaternion.fromRotationMatrix(enu2ecefRot, scratchECEFQuaternion);
+                // Quaternion.multiply(enu2ecefQuat, orientation, orientation);
 
-                const sampledOrientation = this.entity.orientation as Argon.Cesium.SampledProperty;
+                const sampledOrientation = this.orientationEntity.orientation as Argon.Cesium.SampledProperty;
                 sampledOrientation.addSample(time, orientation);
             }
 

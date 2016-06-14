@@ -34,7 +34,7 @@ import * as application from 'application';
 import * as utils from 'utils/utils';
 
 import {appViewModel, LayerDetails} from './common/AppViewModel'
-import {BookmarkItem, realityMap, historyList, historyMap} from './common/bookmarks'
+import * as bookmarks from './common/bookmarks'
 
 import * as Argon from 'argon'
 
@@ -117,14 +117,17 @@ export class BrowserView extends GridLayout {
         })
         
         Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(({current})=>{
-            const realityListItem = realityMap.get(current);
+            const realityListItem = bookmarks.realityMap.get(current);
             const details = this.realityLayer.details;
             details.set('title', 'Reality: ' + realityListItem.name);
             details.set('url', realityListItem.url);
             details.set('isArgonChannel', true);
             details.set('supportedInteractionModes', ['page','immersive']);
-            if (this.realityLayer === this.focussedLayer) {
-                appViewModel.setLayerDetails(details);
+            if (current === bookmarks.LIVE_VIDEO_REALITY) {
+                this.realityLayer.webView.visibility = 'collapse';
+                this.realityLayer.webView.src = '';
+            } else {
+                this.realityLayer.webView.visibility = 'visible';
             }
         })
     }
@@ -145,7 +148,7 @@ export class BrowserView extends GridLayout {
                 layer.details.set('url', eventData.value);
             }
             else if (eventData.propertyName === 'title') {
-                var historyBookmarkItem = historyMap.get(webView.url);
+                var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
                 if (historyBookmarkItem) {
                     historyBookmarkItem.set('title', eventData.value);
                 }
@@ -165,13 +168,13 @@ export class BrowserView extends GridLayout {
         
         webView.on("loadFinished", (eventData: LoadEventData) => {
             if (!eventData.error && webView !== this.realityLayer.webView) {
-                const historyBookmarkItem = historyMap.get(eventData.url);
+                const historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
-                    let i = historyList.indexOf(historyBookmarkItem);
-                    historyList.splice(i, 1);
-                    historyList.unshift(historyBookmarkItem);
+                    let i = bookmarks.historyList.indexOf(historyBookmarkItem);
+                    bookmarks.historyList.splice(i, 1);
+                    bookmarks.historyList.unshift(historyBookmarkItem);
                 } else {
-                    historyList.unshift(new BookmarkItem({
+                    bookmarks.historyList.unshift(new bookmarks.BookmarkItem({
                         url: eventData.url,
                         name: webView.title
                     }))

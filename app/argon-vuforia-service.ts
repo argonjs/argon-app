@@ -45,7 +45,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
     
     private vuforiaTrackerEntity = new Argon.Cesium.Entity({
-        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.entity),
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.orientationEntity),
         orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
     });
 	
@@ -78,7 +78,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const name = trackable.getName();
                 
                 const id = this._getIdForTrackable(trackable);
-                let entity = contextService.entities.getById(id);
+                let entity = contextService.subscribedEntities.getById(id);
                 
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
@@ -93,7 +93,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                     entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entity.position.forwardExtrapolationDuration = 2/60;
                     entity.orientation.forwardExtrapolationDuration = 2/60;
-                    contextService.entities.add(entity);
+                    contextService.subscribedEntities.add(entity);
                 }
                 
                 const trackableTime = JulianDate.clone(time); 
