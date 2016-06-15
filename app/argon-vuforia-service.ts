@@ -34,9 +34,7 @@ if (vuforia.videoView.ios) {
 
 @Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
-    
-    public stateUpdateEvent = new Argon.Event<Argon.SerializedFrameState>();
-    
+        
     private scratchDate = new Argon.Cesium.JulianDate();
     private scratchCartesian = new Argon.Cesium.Cartesian3();
     private scratchCartesian2 = new Argon.Cesium.Cartesian3();
@@ -246,15 +244,50 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     private _viewerEnabled = false;
+    private _videoEnabled = true;
+    private _trackingEnabled = true;
     
-    isViewerEnabled() {
+    get viewerEnabled() {
         return this._viewerEnabled;
     }
     
-    setViewerEnabled(enabled) {
+    set viewerEnabled(enabled) {
         this._viewerEnabled = enabled;
         const device = vuforia.api.getDevice();
         if (device) device.setViewerActive(enabled);
+    }
+    
+    get videoEnabled() {
+        return this._videoEnabled;
+    }
+    
+    set videoEnabled(value:boolean) {
+        this._videoEnabled = value;
+        this._configureCameraAndTrackers();
+    }
+    
+    get trackingEnabled() {
+        return this._trackingEnabled;
+    }
+    
+    set trackingEnabled(value:boolean) {
+        this._trackingEnabled = value;
+        this._configureCameraAndTrackers();
+    }
+    
+    _configureCameraAndTrackers() {
+        if (this.trackingEnabled) {
+            if (this.cameraDeviceStart()) {
+                this.objectTrackerStart() 
+            }
+        } else {
+            this.objectTrackerStop();
+            if (this.videoEnabled) {
+                this.cameraDeviceStart()
+            } else {
+                this.cameraDeviceStop();
+            }
+        }
     }
     
     isAvailable() {
@@ -304,13 +337,23 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
             
-        vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR);
-        this.setViewerEnabled(this._viewerEnabled);
+        const device = vuforia.api.getDevice();
+        device.setMode(vuforia.DeviceMode.AR);
+        if (this.viewerEnabled) {
+            device.setViewerActive(true);
+        }
             
-        configureVideoBackground();
-                
-        console.log("Vuforia starting camera device");
-        return cameraDevice.start();
+        configureVideoBackground(this.videoEnabled);
+        this._configureCameraAndTrackers();
+        return true;
+    }
+    
+    cameraDeviceStop(): boolean {
+        return vuforia.api.getCameraDevice().stop();
+    }
+    
+    cameraDeviceStart(): boolean {
+        return vuforia.api.getCameraDevice().start();
     }
     
     cameraDeviceSetFlashTorchMode(on: boolean): boolean {
@@ -434,7 +477,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
 }
 
-function configureVideoBackground() {
+function configureVideoBackground(enabled=true) {
     const frame = frames.topmost();
     const viewWidth = frame.getMeasuredWidth();
     const viewHeight = frame.getMeasuredHeight();
@@ -457,7 +500,7 @@ function configureVideoBackground() {
     // scale = Math.min(viewWidth / videoWidth, viewHeight / videoHeight);
     
     const config = {
-        enabled:true,
+        enabled,
         positionX:0,
         positionY:0,
         sizeX: Math.round(videoWidth * scale * contentScaleFactor),

@@ -187,7 +187,18 @@ export class BrowserView extends GridLayout {
             );
         });
         
-        webView.on('sessionConnect', ()=>{
+        webView.on('sessionConnect', (e)=>{
+            if (layer === this.realityLayer) {
+                if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
+                    e.session.close();
+                    alert("Only a reality can be loaded in the reality layer");
+                }
+            } else {
+                if (e.session.info.role !== Argon.Role.APPLICATION) {
+                    e.session.close();
+                    alert("Unable to load a reality in an app layer");
+                }
+            }
             layer.details.set('isArgonChannel', true);
         })
         

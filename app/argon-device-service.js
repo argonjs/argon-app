@@ -18,25 +18,6 @@ var scratchQuaternion = new Quaternion;
 var scratchECEFQuaternion = new Quaternion;
 var scratchMatrix4 = new Matrix4;
 var scratchMatrix3 = new Matrix3;
-var iosMotionManager;
-function getIosMotionManager() {
-    if (iosMotionManager)
-        return iosMotionManager;
-    console.log("Creating ios motion manager.");
-    iosMotionManager = CMMotionManager.alloc().init();
-    iosMotionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
-    var effectiveReferenceFrame;
-    if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-        effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
-    }
-    else {
-        effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
-    }
-    iosMotionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
-    return iosMotionManager;
-}
-exports.getIosMotionManager = getIosMotionManager;
-var lastGPSPosition;
 var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService(context) {
@@ -69,10 +50,6 @@ var NativescriptDeviceService = (function (_super) {
             sampledPosition.addSample(locationTime, position);
             var enuOrientation = Transforms.headingPitchRollQuaternion(position, 0, 0, 0, undefined, scratchECEFQuaternion);
             _this.locationEntity.orientation.setValue(enuOrientation);
-            // make sure its actually working
-            // var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
-            // if (lastGPSPosition !== gpsPos) console.log('gps position changed '+gpsPos);
-            // lastGPSPosition = gpsPos;
         }, function (e) {
             console.log(e);
         }, {
@@ -106,12 +83,38 @@ var NativescriptDeviceService = (function (_super) {
             }
         }
     };
-    NativescriptDeviceService.prototype.update = function () {
+    NativescriptDeviceService.prototype.ensureDeviceOrientation = function () {
+        if (this.motionManager)
+            return;
+        var motionManager = CMMotionManager.alloc().init();
+        motionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
+        var effectiveReferenceFrame;
+        if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
+            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+        }
+        else {
+            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
+        }
+        motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+        this.motionManager = motionManager;
+    };
+    NativescriptDeviceService.prototype.onIdle = function () {
+        if (Argon.Cesium.defined(this.locationWatchId)) {
+            geolocation.clearWatch(this.locationWatchId);
+            this.locationWatchId = undefined;
+        }
+        if (this.motionManager) {
+            this.motionManager.stopDeviceMotionUpdates();
+            this.motionManager = undefined;
+        }
+    };
+    NativescriptDeviceService.prototype.onUpdate = function () {
         this.ensureGeolocation();
+        this.ensureDeviceOrientation();
         var time = JulianDate.now();
         var position = this.locationEntity.position.getValue(time);
         if (application.ios) {
-            var motion = getIosMotionManager().deviceMotion;
+            var motion = this.motionManager.deviceMotion;
             if (motion && position) {
                 var motionQuaternion = motion.attitude.quaternion;
                 // Apple's orientation is reported in NWU, so we convert to ENU by applying a global rotation of
@@ -134,7 +137,7 @@ var NativescriptDeviceService = (function (_super) {
         var interfaceOrientation = getInterfaceOrientation();
         var interfaceOrientationRad = Argon.Cesium.CesiumMath.toRadians(interfaceOrientation);
         var interfaceOrientationProperty = this.interfaceEntity.orientation;
-        interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad));
+        interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad, scratchQuaternion));
     };
     NativescriptDeviceService = __decorate([
         Argon.DI.inject(Argon.ContextService)

@@ -117,7 +117,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         setSearchBarText(appViewModel.currentUrl);
     }
     else if (evt.propertyName === 'viewerEnabled') {
-        vuforiaDelegate.setViewerEnabled(evt.value);
+        vuforiaDelegate.viewerEnabled = evt.value;
     }
     else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {

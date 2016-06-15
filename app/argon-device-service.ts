@@ -25,32 +25,12 @@ const scratchECEFQuaternion = new Quaternion;
 const scratchMatrix4 = new Matrix4;
 const scratchMatrix3 = new Matrix3;
 
-let iosMotionManager:CMMotionManager;
-
-export function getIosMotionManager() {
-    if (iosMotionManager) return iosMotionManager;
-
-    console.log("Creating ios motion manager.")
-
-    iosMotionManager = CMMotionManager.alloc().init();
-    iosMotionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
-    let effectiveReferenceFrame:CMAttitudeReferenceFrame;
-    if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-        effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
-    } else {
-        effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
-    }
-    iosMotionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
-    return iosMotionManager;
-}
-
-var lastGPSPosition;
-
 @Argon.DI.inject(Argon.ContextService)
 export class NativescriptDeviceService extends Argon.DeviceService {
     
     private locationWatchId:number;
     private locationManager:CLLocationManager;
+    private motionManager:CMMotionManager;
     
     constructor(context:Argon.ContextService) {
         super(context);
@@ -90,11 +70,6 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             
             const enuOrientation = Transforms.headingPitchRollQuaternion(position, 0, 0, 0, undefined, scratchECEFQuaternion);
             (this.locationEntity.orientation as Argon.Cesium.ConstantProperty).setValue(enuOrientation);
-            
-            // make sure its actually working
-            // var gpsPos = location.longitude + ' ' + location.latitude + ' ' + location.altitude;
-            // if (lastGPSPosition !== gpsPos) console.log('gps position changed '+gpsPos);
-            // lastGPSPosition = gpsPos;
         }, 
         (e)=>{
             console.log(e);
@@ -133,15 +108,42 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         }
     }
     
-    update() {
+    ensureDeviceOrientation() {
+        if (this.motionManager) return;
+
+        const motionManager = CMMotionManager.alloc().init();
+        motionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
+        let effectiveReferenceFrame:CMAttitudeReferenceFrame;
+        if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
+            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+        } else {
+            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
+        }
+        motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+        this.motionManager = motionManager;
+    }
+    
+    onIdle() {
+        if (Argon.Cesium.defined(this.locationWatchId)) {
+            geolocation.clearWatch(this.locationWatchId);
+            this.locationWatchId = undefined;
+        }
+        if (this.motionManager) {
+            this.motionManager.stopDeviceMotionUpdates();
+            this.motionManager = undefined;
+        }
+    }
+    
+    onUpdate() {
         this.ensureGeolocation();
+        this.ensureDeviceOrientation();
         
         const time = JulianDate.now();
         const position = this.locationEntity.position.getValue(time);
     
         if (application.ios) {
             
-            const motion = getIosMotionManager().deviceMotion;
+            const motion = this.motionManager.deviceMotion;
 
             if (motion && position) {
                 const motionQuaternion = <Argon.Cesium.Quaternion>motion.attitude.quaternion;
@@ -170,7 +172,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         const interfaceOrientation = getInterfaceOrientation();
         const interfaceOrientationRad = Argon.Cesium.CesiumMath.toRadians(interfaceOrientation);
         const interfaceOrientationProperty = this.interfaceEntity.orientation as Argon.Cesium.ConstantProperty;
-        interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad));
+        interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad, scratchQuaternion));
     }
 }
 

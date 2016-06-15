@@ -31,7 +31,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         _super.call(this);
         this.deviceService = deviceService;
         this.contextService = contextService;
-        this.stateUpdateEvent = new Argon.Event();
         this.scratchDate = new Argon.Cesium.JulianDate();
         this.scratchCartesian = new Argon.Cesium.Cartesian3();
         this.scratchCartesian2 = new Argon.Cesium.Cartesian3();
@@ -43,6 +42,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90, y180, {}))
         });
         this._viewerEnabled = false;
+        this._videoEnabled = true;
+        this._trackingEnabled = true;
         this.idDataSetMap = new Map();
         this.dataSetUrlMap = new WeakMap();
         if (!vuforia.api)
@@ -211,14 +212,56 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             return 'vuforia_trackable_' + trackable.getId();
         }
     };
-    NativescriptVuforiaServiceDelegate.prototype.isViewerEnabled = function () {
-        return this._viewerEnabled;
-    };
-    NativescriptVuforiaServiceDelegate.prototype.setViewerEnabled = function (enabled) {
-        this._viewerEnabled = enabled;
-        var device = vuforia.api.getDevice();
-        if (device)
-            device.setViewerActive(enabled);
+    Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "viewerEnabled", {
+        get: function () {
+            return this._viewerEnabled;
+        },
+        set: function (enabled) {
+            this._viewerEnabled = enabled;
+            var device = vuforia.api.getDevice();
+            if (device)
+                device.setViewerActive(enabled);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "videoEnabled", {
+        get: function () {
+            return this._videoEnabled;
+        },
+        set: function (value) {
+            this._videoEnabled = value;
+            this._configureCameraAndTrackers();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "trackingEnabled", {
+        get: function () {
+            return this._trackingEnabled;
+        },
+        set: function (value) {
+            this._trackingEnabled = value;
+            this._configureCameraAndTrackers();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    NativescriptVuforiaServiceDelegate.prototype._configureCameraAndTrackers = function () {
+        if (this.trackingEnabled) {
+            if (this.cameraDeviceStart()) {
+                this.objectTrackerStart();
+            }
+        }
+        else {
+            this.objectTrackerStop();
+            if (this.videoEnabled) {
+                this.cameraDeviceStart();
+            }
+            else {
+                this.cameraDeviceStop();
+            }
+        }
     };
     NativescriptVuforiaServiceDelegate.prototype.isAvailable = function () {
         return !!vuforia.api;
@@ -259,11 +302,20 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             return false;
         if (!cameraDevice.selectVideoMode(cameraDeviceMode))
             return false;
-        vuforia.api.getDevice().setMode(0 /* AR */);
-        this.setViewerEnabled(this._viewerEnabled);
-        configureVideoBackground();
-        console.log("Vuforia starting camera device");
-        return cameraDevice.start();
+        var device = vuforia.api.getDevice();
+        device.setMode(0 /* AR */);
+        if (this.viewerEnabled) {
+            device.setViewerActive(true);
+        }
+        configureVideoBackground(this.videoEnabled);
+        this._configureCameraAndTrackers();
+        return true;
+    };
+    NativescriptVuforiaServiceDelegate.prototype.cameraDeviceStop = function () {
+        return vuforia.api.getCameraDevice().stop();
+    };
+    NativescriptVuforiaServiceDelegate.prototype.cameraDeviceStart = function () {
+        return vuforia.api.getCameraDevice().start();
     };
     NativescriptVuforiaServiceDelegate.prototype.cameraDeviceSetFlashTorchMode = function (on) {
         return vuforia.api.getCameraDevice().setFlashTorchMode(on);
@@ -382,7 +434,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
     return NativescriptVuforiaServiceDelegate;
 }(Argon.VuforiaServiceDelegateBase));
 exports.NativescriptVuforiaServiceDelegate = NativescriptVuforiaServiceDelegate;
-function configureVideoBackground() {
+function configureVideoBackground(enabled) {
+    if (enabled === void 0) { enabled = true; }
     var frame = frames.topmost();
     var viewWidth = frame.getMeasuredWidth();
     var viewHeight = frame.getMeasuredHeight();
@@ -401,7 +454,7 @@ function configureVideoBackground() {
     // aspect fit
     // scale = Math.min(viewWidth / videoWidth, viewHeight / videoHeight);
     var config = {
-        enabled: true,
+        enabled: enabled,
         positionX: 0,
         positionY: 0,
         sizeX: Math.round(videoWidth * scale * contentScaleFactor),
