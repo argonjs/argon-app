@@ -79,7 +79,6 @@ var BrowserView = (function (_super) {
             details.set('supportedInteractionModes', ['page', 'immersive']);
             if (current === bookmarks.LIVE_VIDEO_REALITY) {
                 _this.realityLayer.webView.visibility = 'collapse';
-                _this.realityLayer.webView.src = '';
             }
             else {
                 _this.realityLayer.webView.visibility = 'visible';
@@ -144,6 +143,11 @@ var BrowserView = (function (_super) {
                 if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
                     e.session.close();
                     alert("Only a reality can be loaded in the reality layer");
+                }
+                else {
+                    e.session.closeEvent.addEventListener(function () {
+                        webView.src = '';
+                    });
                 }
             }
             else {

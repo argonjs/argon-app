@@ -125,11 +125,11 @@ export class BrowserView extends GridLayout {
             details.set('supportedInteractionModes', ['page','immersive']);
             if (current === bookmarks.LIVE_VIDEO_REALITY) {
                 this.realityLayer.webView.visibility = 'collapse';
-                this.realityLayer.webView.src = '';
             } else {
                 this.realityLayer.webView.visibility = 'visible';
             }
         })
+        
     }
 
     addLayer() {
@@ -192,6 +192,10 @@ export class BrowserView extends GridLayout {
                 if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
                     e.session.close();
                     alert("Only a reality can be loaded in the reality layer");
+                } else {
+                    e.session.closeEvent.addEventListener(()=>{
+                        webView.src = '';
+                    })
                 }
             } else {
                 if (e.session.info.role !== Argon.Role.APPLICATION) {

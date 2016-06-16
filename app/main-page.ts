@@ -330,6 +330,7 @@ export function pageLoaded(args) {
     
     manager.session.errorEvent.addEventListener((error)=>{
         alert(error.message);
+        if (error.stack) console.log(error.stack);
     })
 }
 

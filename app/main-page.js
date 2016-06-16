@@ -294,6 +294,8 @@ function pageLoaded(args) {
     AppViewModel_1.appViewModel.showBookmarks();
     exports.manager.session.errorEvent.addEventListener(function (error) {
         alert(error.message);
+        if (error.stack)
+            console.log(error.stack);
     });
 }
 exports.pageLoaded = pageLoaded;
