@@ -88,9 +88,9 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
                 if (trackableTimeDiff !== 0)
                     JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
-                var pose = trackableResult.getPose();
-                var position = Matrix4.getTranslation(pose, _this.scratchCartesian);
-                var rotationMatrix = Matrix4.getRotation(pose, _this.scratchMatrix3);
+                var pose_1 = trackableResult.getPose();
+                var position = Matrix4.getTranslation(pose_1, _this.scratchCartesian);
+                var rotationMatrix = Matrix4.getRotation(pose_1, _this.scratchMatrix3);
                 var orientation_1 = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation_1);
@@ -100,100 +100,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // we still want to update the trackables above in case an app is depending on them)
             if (_this.stateUpdateEvent.numberOfListeners === 0)
                 return;
-            var device = vuforia.api.getDevice();
-            var renderingPrimitives = device.getRenderingPrimitives();
-            var renderingViews = renderingPrimitives.getRenderingViews();
-            var numViews = renderingViews.getNumViews();
-            var subviews = [];
-            var contentScaleFactor = vuforia.videoView.ios.contentScaleFactor;
-            for (var i = 0; i < numViews; i++) {
-                var view_1 = renderingViews.getView(i);
-                if (view_1 === 3 /* PostProcess */)
-                    continue;
-                var type = void 0;
-                switch (view_1) {
-                    case 1 /* LeftEye */:
-                        type = Argon.SubviewType.LEFTEYE;
-                        break;
-                    case 2 /* RightEye */:
-                        type = Argon.SubviewType.RIGHTEYE;
-                        break;
-                    case 0 /* Singular */:
-                        type = Argon.SubviewType.SINGULAR;
-                        break;
-                    default:
-                        type = Argon.SubviewType.OTHER;
-                        break;
-                }
-                // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
-                // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
-                var projectionMatrix = renderingPrimitives.getProjectionMatrix(view_1, 1 /* Camera */);
-                // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-                // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
-                // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
-                // Undo the video rotation since we already encode the interface orientation in our view pose
-                // Note: the "base" rotation vuforia's video (at least on iOS) is the landscape right orientation,
-                // this is the orientation where the device is held in landscape with the home button on the right. 
-                // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
-                // So, we want to undo this rotation which vuforia applies for us.  
-                // TODO: calculate this matrix only when we have to (when the interface orientation changes)
-                var inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + argon_device_service_1.getInterfaceOrientation() * Math.PI / 180), _this.scratchQuaternion), ONE, _this.scratchMatrix4);
-                Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
-                // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
-                // by negating the appropriate rows. 
-                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
-                // flip y axis so it is positive
-                projectionMatrix[4] *= -1; // x
-                projectionMatrix[5] *= -1; // y
-                projectionMatrix[6] *= -1; // z
-                projectionMatrix[7] *= -1; // w
-                // flip z axis so it is negative
-                projectionMatrix[8] *= -1; // x
-                projectionMatrix[9] *= -1; // y
-                projectionMatrix[10] *= -1; // z
-                projectionMatrix[11] *= -1; // w
-                if (vuforia.videoView.ios && device.isViewerActive()) {
-                    // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
-                    // then provide a means of passing an arbitrary scale factor to the video renderer.
-                    // We can then provide controls to zoom in/out the video reality using this scale factor. 
-                    var sceneScaleFactor = vuforia.videoView.ios.getSceneScaleFactor();
-                    // scale x-axis
-                    projectionMatrix[0] *= sceneScaleFactor; // x
-                    projectionMatrix[1] *= sceneScaleFactor; // y
-                    projectionMatrix[2] *= sceneScaleFactor; // z
-                    projectionMatrix[3] *= sceneScaleFactor; // w
-                    // scale y-axis
-                    projectionMatrix[4] *= sceneScaleFactor; // x
-                    projectionMatrix[5] *= sceneScaleFactor; // y
-                    projectionMatrix[6] *= sceneScaleFactor; // z
-                    projectionMatrix[7] *= sceneScaleFactor; // w
-                }
-                var viewport = renderingPrimitives.getViewport(view_1);
-                subviews.push({
-                    type: type,
-                    projectionMatrix: projectionMatrix,
-                    viewport: {
-                        x: Math.round(viewport.x / contentScaleFactor),
-                        y: Math.round(viewport.y / contentScaleFactor),
-                        width: Math.round(viewport.z / contentScaleFactor),
-                        height: Math.round(viewport.w / contentScaleFactor)
-                    }
-                });
-            }
-            // We expect the video view (managed by the browser view) to be the 
-            // same size as the current page's content view.
-            var contentView = frames.topmost().currentPage.content;
-            // construct the final view parameters for this frame
-            var view = {
-                viewport: {
-                    x: 0,
-                    y: 0,
-                    width: contentView.getMeasuredWidth(),
-                    height: contentView.getMeasuredHeight()
-                },
-                pose: Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
-                subviews: subviews
-            };
+            var pose = Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time);
+            var view = _this.getViewConfiguration(pose);
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
                 index: index,
@@ -204,6 +112,109 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         };
         vuforia.api.onNextStateUpdate(stateUpdateCallback);
     }
+    NativescriptVuforiaServiceDelegate.prototype.getCameraFieldOfViewRads = function () {
+        var cameraDevice = vuforia.api.getCameraDevice();
+        var cameraCalibration = cameraDevice.getCameraCalibration();
+        return Argon.Cesium.defined(cameraCalibration) ?
+            cameraCalibration.getFieldOfViewRads() : undefined;
+    };
+    NativescriptVuforiaServiceDelegate.prototype.getViewConfiguration = function (pose) {
+        var device = vuforia.api.getDevice();
+        var renderingPrimitives = device.getRenderingPrimitives();
+        var renderingViews = renderingPrimitives.getRenderingViews();
+        var numViews = renderingViews.getNumViews();
+        var subviews = [];
+        var contentScaleFactor = vuforia.videoView.ios.contentScaleFactor;
+        for (var i = 0; i < numViews; i++) {
+            var view_1 = renderingViews.getView(i);
+            if (view_1 === 3 /* PostProcess */)
+                continue;
+            var type = void 0;
+            switch (view_1) {
+                case 1 /* LeftEye */:
+                    type = Argon.SubviewType.LEFTEYE;
+                    break;
+                case 2 /* RightEye */:
+                    type = Argon.SubviewType.RIGHTEYE;
+                    break;
+                case 0 /* Singular */:
+                    type = Argon.SubviewType.SINGULAR;
+                    break;
+                default:
+                    type = Argon.SubviewType.OTHER;
+                    break;
+            }
+            // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
+            // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
+            var projectionMatrix = renderingPrimitives.getProjectionMatrix(view_1, 1 /* Camera */);
+            // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+            // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+            // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
+            // Undo the video rotation since we already encode the interface orientation in our view pose
+            // Note: the "base" rotation vuforia's video (at least on iOS) is the landscape right orientation,
+            // this is the orientation where the device is held in landscape with the home button on the right. 
+            // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
+            // So, we want to undo this rotation which vuforia applies for us.  
+            // TODO: calculate this matrix only when we have to (when the interface orientation changes)
+            var inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + argon_device_service_1.getInterfaceOrientation() * Math.PI / 180), this.scratchQuaternion), ONE, this.scratchMatrix4);
+            Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
+            // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
+            // by negating the appropriate rows. 
+            // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
+            // flip y axis so it is positive
+            projectionMatrix[4] *= -1; // x
+            projectionMatrix[5] *= -1; // y
+            projectionMatrix[6] *= -1; // z
+            projectionMatrix[7] *= -1; // w
+            // flip z axis so it is negative
+            projectionMatrix[8] *= -1; // x
+            projectionMatrix[9] *= -1; // y
+            projectionMatrix[10] *= -1; // z
+            projectionMatrix[11] *= -1; // w
+            if (vuforia.videoView.ios && device.isViewerActive()) {
+                // TODO: move getSceneScaleFactor to javascript so we can customize it more easily and 
+                // then provide a means of passing an arbitrary scale factor to the video renderer.
+                // We can then provide controls to zoom in/out the video reality using this scale factor. 
+                var sceneScaleFactor = vuforia.videoView.ios.getSceneScaleFactor();
+                // scale x-axis
+                projectionMatrix[0] *= sceneScaleFactor; // x
+                projectionMatrix[1] *= sceneScaleFactor; // y
+                projectionMatrix[2] *= sceneScaleFactor; // z
+                projectionMatrix[3] *= sceneScaleFactor; // w
+                // scale y-axis
+                projectionMatrix[4] *= sceneScaleFactor; // x
+                projectionMatrix[5] *= sceneScaleFactor; // y
+                projectionMatrix[6] *= sceneScaleFactor; // z
+                projectionMatrix[7] *= sceneScaleFactor; // w
+            }
+            var viewport = renderingPrimitives.getViewport(view_1);
+            subviews.push({
+                type: type,
+                projectionMatrix: projectionMatrix,
+                viewport: {
+                    x: Math.round(viewport.x / contentScaleFactor),
+                    y: Math.round(viewport.y / contentScaleFactor),
+                    width: Math.round(viewport.z / contentScaleFactor),
+                    height: Math.round(viewport.w / contentScaleFactor)
+                }
+            });
+        }
+        // We expect the video view (managed by the browser view) to be the 
+        // same size as the current page's content view.
+        var contentView = frames.topmost().currentPage.content;
+        // construct the final view parameters for this frame
+        var view = {
+            viewport: {
+                x: 0,
+                y: 0,
+                width: contentView.getMeasuredWidth(),
+                height: contentView.getMeasuredHeight()
+            },
+            pose: pose,
+            subviews: subviews
+        };
+        return view;
+    };
     NativescriptVuforiaServiceDelegate.prototype._getIdForTrackable = function (trackable) {
         if (trackable instanceof vuforia.ObjectTarget) {
             return 'vuforia_object_target_' + trackable.getUniqueTargetId();

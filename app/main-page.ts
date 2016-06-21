@@ -26,6 +26,7 @@ import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 
 import {NativescriptDeviceService} from './argon-device-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
+import {NativescriptViewService} from './argon-view-service';
 
 export let manager:Argon.ArgonSystem;
 
@@ -51,11 +52,14 @@ const privateKeyPromise = pgpFolder.contains('private.key') ?
 const container = new Argon.DI.Container;
 container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
+container.registerSingleton(Argon.ViewService, NativescriptViewService);
 
 manager = Argon.init({container, config: {
     role: Argon.Role.MANAGER,
     name: 'ArgonApp'
 }});
+
+const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
 manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
 
@@ -109,8 +113,6 @@ manager.focus.sessionFocusEvent.addEventListener(()=>{
     const focussedSession = manager.focus.getSession();    
     console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
 })
-
-const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUrl') {

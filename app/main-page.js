@@ -11,6 +11,7 @@ var bookmarks = require('./components/common/bookmarks');
 var AppViewModel_1 = require('./components/common/AppViewModel');
 var argon_device_service_1 = require('./argon-device-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
+var argon_view_service_1 = require('./argon-view-service');
 var searchBar;
 var iosSearchBarController;
 var pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
@@ -21,10 +22,12 @@ var privateKeyPromise = pgpFolder.contains('private.key') ?
 var container = new Argon.DI.Container;
 container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
 container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
+container.registerSingleton(Argon.ViewService, argon_view_service_1.NativescriptViewService);
 exports.manager = Argon.init({ container: container, config: {
         role: Argon.Role.MANAGER,
         name: 'ArgonApp'
     } });
+var vuforiaDelegate = container.get(Argon.VuforiaServiceDelegate);
 exports.manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
 exports.manager.vuforia.init({
     licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
@@ -80,7 +83,6 @@ exports.manager.focus.sessionFocusEvent.addEventListener(function () {
     var focussedSession = exports.manager.focus.getSession();
     console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
 });
-var vuforiaDelegate = container.get(Argon.VuforiaServiceDelegate);
 AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
     if (evt.propertyName === 'currentUrl') {
         setSearchBarText(AppViewModel_1.appViewModel.currentUrl);
