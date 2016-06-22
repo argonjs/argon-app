@@ -6,6 +6,7 @@ var ArgonWebView = (function (_super) {
     function ArgonWebView() {
         var _this = this;
         _super.call(this);
+        this.isArgonApp = true;
         this.log = [];
         this.on(web_view_1.WebView.loadFinishedEvent, function () {
             _this.notifyPropertyChange('title', _this.title);

@@ -26,13 +26,21 @@ export class ArgonWebView extends common.ArgonWebView  {
         
         configuration.processPool = processPool;
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
         configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly(`
             var _originalLog = console.log;
             console.log = function(message) {
                 webkit.messageHandlers.log.postMessage(message);
                 _originalLog.apply(console, arguments);
-            }
+            };
+	            document.addEventListener("DOMContentLoaded", function(event) {
+                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {
+                    webkit.messageHandlers.argoncheck.postMessage("true");
+                } else {
+                    webkit.messageHandlers.argoncheck.postMessage("false");
+                }
+            });
         `, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
 
 	    this._ios.allowsBackForwardNavigationGestures = true;
@@ -44,8 +52,23 @@ export class ArgonWebView extends common.ArgonWebView  {
         this._ios.scrollView.backgroundColor = UIColor.clearColor();
 		this._ios.backgroundColor = UIColor.clearColor();
 		this._ios.opaque = false;
+
     }
     
+    public _makeBackgroundOpaque() {
+        this._ios.scrollView.backgroundColor = UIColor.whiteColor();
+		this._ios.backgroundColor = UIColor.whiteColor();
+		this._ios.opaque = true;        
+        this.set("isArgonApp", false);
+    }
+
+    public _makeBackgroundClear() {
+        this._ios.scrollView.backgroundColor = UIColor.clearColor();
+		this._ios.backgroundColor = UIColor.clearColor();
+		this._ios.opaque = false;        
+        this.set("isArgonApp", true);
+    }
+
     get title() {
         return this._ios.title;
     }
@@ -94,9 +117,22 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         const owner = this._owner.get();
         if (!owner) return;
         if (message.name === 'argon') {
+            if (!owner.session) {
+                // make the background transparent,
+                // just in case we thought below that the page was not an
+                // argon page, perhaps because argon.js loaded asyncronously 
+                // and the programmer didn't set up an argon meta tag
+                owner._makeBackgroundClear();
+            }
             owner._handleArgonMessage(message.body);
         } else if (message.name === 'log') {
             owner._handleLogMessage(message.body);
+        } else if (message.name === 'argoncheck') {
+            if (!owner.session) {
+                if (message.body === "false") {
+                    owner._makeBackgroundOpaque();
+                }
+            }
         }
     }
     
