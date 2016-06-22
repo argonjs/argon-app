@@ -19,7 +19,7 @@ import {GestureTypes} from 'ui/gestures'
 import * as Argon from 'argon';
 
 import {Util} from './util';
-import {ArgonWebView, SessionConnectEventData} from 'argon-web-view';
+import {ArgonWebView, SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
@@ -71,17 +71,15 @@ manager.vuforia.init({
 
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
     type = 'hosted';
-    load(reality: Argon.RealityView) {
+    load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
         var url:string = reality['url'];
-        return new Promise<Argon.SessionPort>((resolve, reject)=>{
-            var sessionConnectCallback = (data:SessionConnectEventData)=>{
-                browserView.realityLayer.webView.off('sessionConnect', sessionConnectCallback);
-                resolve(data.session);
-            }
-            browserView.realityLayer.webView.on('sessionConnect', sessionConnectCallback);
-            browserView.realityLayer.webView.src = '';
-            browserView.realityLayer.webView.src = url;
-        });
+        var sessionCallback = (data:SessionEventData)=>{
+            browserView.realityLayer.webView.off('session', sessionCallback);
+            callback(data.session);
+        }
+        browserView.realityLayer.webView.on('session', sessionCallback);
+        browserView.realityLayer.webView.src = '';
+        browserView.realityLayer.webView.src = url;
     }
 });
 

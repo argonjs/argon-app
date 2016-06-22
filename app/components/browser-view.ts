@@ -155,12 +155,14 @@ export class BrowserView extends GridLayout {
                 layer.details.set('title', eventData.value);
             }
         });
-        webView.on('sessionConnect', (eventData) => {
-            if (!this.focussedLayer) return;
-            var session = eventData.session;
-            if (webView === this.focussedLayer.webView) {
-                Argon.ArgonSystem.instance.focus.setSession(session);
-            }
+        webView.on('session', (eventData) => {
+            const session = eventData.session;
+            session.connectEvent.addEventListener(()=>{
+                if (!this.focussedLayer) return;
+                if (webView === this.focussedLayer.webView) {
+                    Argon.ArgonSystem.instance.focus.setSession(session);
+                }
+            })
         });
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
@@ -187,22 +189,24 @@ export class BrowserView extends GridLayout {
             );
         });
         
-        webView.on('sessionConnect', (e)=>{
-            if (layer === this.realityLayer) {
-                if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
-                    e.session.close();
-                    alert("Only a reality can be loaded in the reality layer");
+        webView.on('session', (e)=>{
+            e.session.connectEvent.addEventListener(()=>{
+                if (layer === this.realityLayer) {
+                    if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
+                        e.session.close();
+                        alert("Only a reality can be loaded in the reality layer");
+                    } else {
+                        e.session.closeEvent.addEventListener(()=>{
+                            webView.src = '';
+                        })
+                    }
                 } else {
-                    e.session.closeEvent.addEventListener(()=>{
-                        webView.src = '';
-                    })
+                    if (e.session.info.role !== Argon.Role.APPLICATION) {
+                        e.session.close();
+                        alert("Unable to load a reality in an app layer");
+                    }
                 }
-            } else {
-                if (e.session.info.role !== Argon.Role.APPLICATION) {
-                    e.session.close();
-                    alert("Unable to load a reality in an app layer");
-                }
-            }
+            })
             layer.details.set('isArgonChannel', true);
         })
         

@@ -108,13 +108,15 @@ var BrowserView = (function (_super) {
                 layer.details.set('title', eventData.value);
             }
         });
-        webView.on('sessionConnect', function (eventData) {
-            if (!_this.focussedLayer)
-                return;
+        webView.on('session', function (eventData) {
             var session = eventData.session;
-            if (webView === _this.focussedLayer.webView) {
-                Argon.ArgonSystem.instance.focus.setSession(session);
-            }
+            session.connectEvent.addEventListener(function () {
+                if (!_this.focussedLayer)
+                    return;
+                if (webView === _this.focussedLayer.webView) {
+                    Argon.ArgonSystem.instance.focus.setSession(session);
+                }
+            });
         });
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
@@ -138,24 +140,26 @@ var BrowserView = (function (_super) {
                 ['page', 'immersive'] :
                 ['page']);
         });
-        webView.on('sessionConnect', function (e) {
-            if (layer === _this.realityLayer) {
-                if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
-                    e.session.close();
-                    alert("Only a reality can be loaded in the reality layer");
+        webView.on('session', function (e) {
+            e.session.connectEvent.addEventListener(function () {
+                if (layer === _this.realityLayer) {
+                    if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
+                        e.session.close();
+                        alert("Only a reality can be loaded in the reality layer");
+                    }
+                    else {
+                        e.session.closeEvent.addEventListener(function () {
+                            webView.src = '';
+                        });
+                    }
                 }
                 else {
-                    e.session.closeEvent.addEventListener(function () {
-                        webView.src = '';
-                    });
+                    if (e.session.info.role !== Argon.Role.APPLICATION) {
+                        e.session.close();
+                        alert("Unable to load a reality in an app layer");
+                    }
                 }
-            }
-            else {
-                if (e.session.info.role !== Argon.Role.APPLICATION) {
-                    e.session.close();
-                    alert("Unable to load a reality in an app layer");
-                }
-            }
+            });
             layer.details.set('isArgonChannel', true);
         });
         // Cover the webview to detect gestures and disable interaction

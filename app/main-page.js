@@ -40,17 +40,15 @@ exports.manager.reality.registerLoader(new (function (_super) {
         _super.apply(this, arguments);
         this.type = 'hosted';
     }
-    HostedRealityLoader.prototype.load = function (reality) {
+    HostedRealityLoader.prototype.load = function (reality, callback) {
         var url = reality['url'];
-        return new Promise(function (resolve, reject) {
-            var sessionConnectCallback = function (data) {
-                exports.browserView.realityLayer.webView.off('sessionConnect', sessionConnectCallback);
-                resolve(data.session);
-            };
-            exports.browserView.realityLayer.webView.on('sessionConnect', sessionConnectCallback);
-            exports.browserView.realityLayer.webView.src = '';
-            exports.browserView.realityLayer.webView.src = url;
-        });
+        var sessionCallback = function (data) {
+            exports.browserView.realityLayer.webView.off('session', sessionCallback);
+            callback(data.session);
+        };
+        exports.browserView.realityLayer.webView.on('session', sessionCallback);
+        exports.browserView.realityLayer.webView.src = '';
+        exports.browserView.realityLayer.webView.src = url;
     };
     return HostedRealityLoader;
 }(Argon.RealityLoader)));
