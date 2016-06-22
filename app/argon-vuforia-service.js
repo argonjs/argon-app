@@ -102,13 +102,13 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 return;
             var pose = Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time);
             var view = _this.getViewConfiguration(pose);
+            vuforia.api.onNextStateUpdate(stateUpdateCallback);
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
                 index: index,
                 time: time,
                 view: view
             });
-            vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
         vuforia.api.onNextStateUpdate(stateUpdateCallback);
     }

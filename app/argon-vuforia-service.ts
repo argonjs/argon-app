@@ -117,14 +117,14 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             const pose = Argon.getSerializedEntityPose(this.deviceService.interfaceEntity, time)
             const view = this.getViewConfiguration(pose);
             
+            vuforia.api.onNextStateUpdate(stateUpdateCallback);
+            
             // raise the event to let the vuforia service know we are ready!
             this.stateUpdateEvent.raiseEvent({
                 index,
                 time,
                 view
             });
-            
-            vuforia.api.onNextStateUpdate(stateUpdateCallback);
         };
         
         vuforia.api.onNextStateUpdate(stateUpdateCallback);
