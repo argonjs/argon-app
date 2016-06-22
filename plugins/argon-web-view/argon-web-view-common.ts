@@ -9,9 +9,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public static sessionEvent = 'session';
     public static logEvent = 'log';
 
-    public abstract get title() : string;
+    public title : string;
 
-    public abstract get progress() : number;
+    public progress : number;
 
     public log:string[] = [];    
 
@@ -20,9 +20,6 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     constructor() {
         super();
-        this.on(WebView.loadFinishedEvent, ()=>{
-            this.notifyPropertyChange('title', this.title);
-        })
     }
 
     public _didCommitNavigation() {

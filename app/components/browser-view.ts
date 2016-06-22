@@ -141,9 +141,6 @@ export class BrowserView extends GridLayout {
         
         const webView = new ArgonWebView;
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
-            if (!this.focussedLayer) return;
-            if  (webView !== this.focussedLayer.webView) return;
-            
             if (eventData.propertyName === 'url') {
                 layer.details.set('url', eventData.value);
             }

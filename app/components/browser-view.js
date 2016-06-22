@@ -93,10 +93,6 @@ var BrowserView = (function (_super) {
         container.verticalAlignment = 'top';
         var webView = new argon_web_view_1.ArgonWebView;
         webView.on('propertyChange', function (eventData) {
-            if (!_this.focussedLayer)
-                return;
-            if (webView !== _this.focussedLayer.webView)
-                return;
             if (eventData.propertyName === 'url') {
                 layer.details.set('url', eventData.value);
             }

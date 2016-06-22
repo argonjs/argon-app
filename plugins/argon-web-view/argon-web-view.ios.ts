@@ -45,14 +45,6 @@ export class ArgonWebView extends common.ArgonWebView  {
 		this._ios.backgroundColor = UIColor.clearColor();
 		this._ios.opaque = false;
     }
-    
-    get title() {
-        return this._ios.title;
-    }
-
-    get progress() {
-        return this._ios.estimatedProgress;
-    }
 
     public evaluateJavascript(script:string) {
         return new Promise((resolve, reject)=>{
@@ -139,6 +131,9 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
     webViewDidStartProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
         this._provisionalURL = webView.URL.absoluteString;
+        const owner = this._owner.get();
+        if (!owner) return;
+        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
@@ -148,6 +143,8 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
@@ -158,16 +155,22 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidFinishNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
         if (owner) owner['_onLoadFinished'](webView.URL.absoluteString)
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidFailNavigationWithError(webView: WKWebView, navigation: WKNavigation, error:NSError) {
         const owner = this._owner.get();
         if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];

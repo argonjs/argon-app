@@ -4,23 +4,9 @@ var Argon = require('argon');
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
-        var _this = this;
         _super.call(this);
         this.log = [];
-        this.on(web_view_1.WebView.loadFinishedEvent, function () {
-            _this.notifyPropertyChange('title', _this.title);
-        });
     }
-    Object.defineProperty(ArgonWebView.prototype, "title", {
-        get: function () { },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ArgonWebView.prototype, "progress", {
-        get: function () { },
-        enumerable: true,
-        configurable: true
-    });
     ArgonWebView.prototype._didCommitNavigation = function () {
         if (this.session)
             this.session.close();

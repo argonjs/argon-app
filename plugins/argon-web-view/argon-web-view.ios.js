@@ -26,20 +26,6 @@ var ArgonWebView = (function (_super) {
         this._ios.backgroundColor = UIColor.clearColor();
         this._ios.opaque = false;
     }
-    Object.defineProperty(ArgonWebView.prototype, "title", {
-        get: function () {
-            return this._ios.title;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ArgonWebView.prototype, "progress", {
-        get: function () {
-            return this._ios.estimatedProgress;
-        },
-        enumerable: true,
-        configurable: true
-    });
     ArgonWebView.prototype.evaluateJavascript = function (script) {
         var _this = this;
         return new Promise(function (resolve, reject) {
@@ -120,6 +106,10 @@ var ArgonWebViewDelegate = (function (_super) {
     };
     ArgonWebViewDelegate.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
         this._provisionalURL = webView.URL.absoluteString;
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.prototype.webViewDidFailProvisionalNavigation = function (webView, navigation) {
         var owner = this._owner.get();
@@ -129,6 +119,8 @@ var ArgonWebViewDelegate = (function (_super) {
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.prototype.webViewDidCommitNavigation = function (webView, navigation) {
         var owner = this._owner.get();
@@ -139,16 +131,22 @@ var ArgonWebViewDelegate = (function (_super) {
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.prototype.webViewDidFinishNavigation = function (webView, navigation) {
         var owner = this._owner.get();
         if (owner)
             owner['_onLoadFinished'](webView.URL.absoluteString);
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.prototype.webViewDidFailNavigationWithError = function (webView, navigation, error) {
         var owner = this._owner.get();
         if (owner)
             owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
     return ArgonWebViewDelegate;
