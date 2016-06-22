@@ -1,11 +1,6 @@
 import * as Argon from 'argon';
-import {SessionConnectEventData} from 'argon-web-view';
 import * as common from './argon-web-view-common';
-import {View} from 'ui/core/view';
 import {WebView} from 'ui/web-view';
-import {Page} from 'ui/page';
-import {Frame} from 'ui/frame';
-import * as uiUtils from 'ui/utils';
 import * as trace from 'trace';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
@@ -149,16 +144,17 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
         if (!owner) return;
-        owner['_onLoadFinished'](this._provisionalURL);
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
         if (!owner) return;
         owner.log = [];
-        if (owner.session) {
-            owner.session.close();
-        }
+        owner._didCommitNavigation();
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;

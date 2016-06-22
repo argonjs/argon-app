@@ -125,16 +125,17 @@ var ArgonWebViewDelegate = (function (_super) {
         var owner = this._owner.get();
         if (!owner)
             return;
-        owner['_onLoadFinished'](this._provisionalURL);
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
     };
     ArgonWebViewDelegate.prototype.webViewDidCommitNavigation = function (webView, navigation) {
         var owner = this._owner.get();
         if (!owner)
             return;
         owner.log = [];
-        if (owner.session) {
-            owner.session.close();
-        }
+        owner._didCommitNavigation();
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;
         owner['_suspendLoading'] = false;

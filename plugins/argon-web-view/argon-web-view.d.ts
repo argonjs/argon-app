@@ -16,9 +16,9 @@ declare module "argon-web-view" {
         title: string;
 
         /**
-         * Raised when a sessionConnect event occurs.
+         * Raised when a session event occurs.
          */
-        on(event: "sessionConnect", callback: (args: SessionConnectEventData) => void, thisArg?: any);
+        on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
 
         /**
          * Raised when a log event occurs.
@@ -28,7 +28,7 @@ declare module "argon-web-view" {
         on(event: string, callback: (args: EventData) => void, thisArg?: any);
     }
 
-    export interface SessionConnectEventData extends EventData {
+    export interface SessionEventData extends EventData {
         session: SessionPort;
     }
 

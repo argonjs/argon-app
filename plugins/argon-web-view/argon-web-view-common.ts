@@ -6,18 +6,18 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
     public static sessionUrlMap = new WeakMap<Argon.SessionPort, string>();
     
-    public static sessionConnectEvent = 'sessionConnect';
+    public static sessionEvent = 'session';
     public static logEvent = 'log';
 
     public abstract get title() : string;
 
     public abstract get progress() : number;
 
-    public session:Argon.SessionPort;
-    private _sessionMessagePort:Argon.MessagePortLike;
+    public log:string[] = [];    
 
-    public log:string[] = [];
-        
+    public session:Argon.SessionPort;
+    private _outputPort:Argon.MessagePortLike;
+
     constructor() {
         super();
         this.on(WebView.loadFinishedEvent, ()=>{
@@ -25,8 +25,17 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
         })
     }
 
+    public _didCommitNavigation() {
+        if (this.session) this.session.close();
+        this.session = null;
+        this._outputPort = null;
+    }
+
     public _handleArgonMessage(message:string) {
-        if (typeof this._sessionMessagePort == 'undefined') { 
+
+        if (this.session && !this.session.isConnected) return;
+
+        if (!this.session) { 
             // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
             const sessionUrl = this.url;
             
@@ -36,10 +45,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             const session = manager.session.addManagedSessionPort();
             
             ArgonWebView.sessionUrlMap.set(session, sessionUrl);
-            this.session = session;
             
-            this._sessionMessagePort = messageChannel.port2;
-            this._sessionMessagePort.onmessage = (msg:Argon.MessageEventLike) => {
+            const port = messageChannel.port2;
+            port.onmessage = (msg:Argon.MessageEventLike) => {
                 if (!this.session) return;
                 const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
                 this.evaluateJavascript(injectedMessage);
@@ -47,25 +55,22 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
             session.connectEvent.addEventListener(()=>{            
                 session.info.name = sessionUrl;
-                const args:def.SessionConnectEventData = {
-                    eventName: ArgonWebView.sessionConnectEvent,
-                    object: this,
-                    session: session
-                }
-                this.notify(args);
             });
+                 
+            const args:def.SessionEventData = {
+                eventName: ArgonWebView.sessionEvent,
+                object: this,
+                session: session
+            }
+            this.notify(args);
 
-            session.closeEvent.addEventListener(()=>{
-                if (this.session === session) {
-                    this._sessionMessagePort = undefined;
-                    this.session = null;
-                }
-            })
+            this.session = session;
+            this._outputPort = port;
 
             session.open(messageChannel.port1, manager.session.configuration)
         }
         // console.log(message);
-        this._sessionMessagePort.postMessage(JSON.parse(message));
+        this._outputPort.postMessage(JSON.parse(message));
     }
 
     public _handleLogMessage(message:string) {
