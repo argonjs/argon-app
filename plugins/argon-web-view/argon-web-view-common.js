@@ -5,6 +5,7 @@ var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
         _super.call(this);
+        this.isArgonApp = true;
         this.log = [];
     }
     ArgonWebView.prototype._didCommitNavigation = function () {

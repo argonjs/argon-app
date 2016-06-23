@@ -35,7 +35,7 @@ var BrowserView = (function (_super) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
         this.realityLayer.titleBar.backgroundColor = new color_1.Color(0xFF222222);
-        this.realityLayer.label.color = new color_1.Color('white');
+        this.realityLayer.titleLable.color = new color_1.Color('white');
         this.realityLayer.closeButton.visibility = 'collapsed';
         if (this.realityLayer.webView.ios) {
             // disable user navigation of the reality view
@@ -75,7 +75,6 @@ var BrowserView = (function (_super) {
             var details = _this.realityLayer.details;
             details.set('title', 'Reality: ' + realityListItem.name);
             details.set('url', realityListItem.url);
-            details.set('isArgonChannel', true);
             details.set('supportedInteractionModes', ['page', 'immersive']);
             if (current === bookmarks.LIVE_VIDEO_REALITY) {
                 _this.realityLayer.webView.visibility = 'collapse';
@@ -102,6 +101,21 @@ var BrowserView = (function (_super) {
                     historyBookmarkItem.set('title', eventData.value);
                 }
                 layer.details.set('title', eventData.value);
+            }
+            else if (eventData.propertyName === 'isArgonApp') {
+                var isArgonApp = eventData.value;
+                layer.details.set('supportedInteractionModes', isArgonApp ?
+                    ['page', 'immersive'] :
+                    ['page']);
+                if (isArgonApp || layer === _this.focussedLayer || _this._overviewEnabled) {
+                    layer.container.animate({
+                        opacity: 1,
+                        duration: OVERVIEW_ANIMATION_DURATION
+                    });
+                }
+                else {
+                    layer.container.opacity = 1;
+                }
             }
         });
         webView.on('session', function (eventData) {
@@ -131,10 +145,6 @@ var BrowserView = (function (_super) {
                     }));
                 }
             }
-            layer.details.set('isArgonChannel', !!webView.session);
-            layer.details.set('supportedInteractionModes', layer.details.isArgonChannel ?
-                ['page', 'immersive'] :
-                ['page']);
         });
         webView.on('session', function (e) {
             e.session.connectEvent.addEventListener(function () {
@@ -156,7 +166,6 @@ var BrowserView = (function (_super) {
                     }
                 }
             });
-            layer.details.set('isArgonChannel', true);
         });
         // Cover the webview to detect gestures and disable interaction
         var touchOverlay = new grid_layout_1.GridLayout();
@@ -189,16 +198,16 @@ var BrowserView = (function (_super) {
         closeButton.on('tap', function () {
             _this.removeLayer(layer);
         });
-        var label = new label_1.Label();
-        label.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
-        label.verticalAlignment = enums_1.VerticalAlignment.stretch;
-        label.textAlignment = enums_1.TextAlignment.center;
-        label.color = new color_1.Color('black');
-        label.fontSize = 14;
-        grid_layout_1.GridLayout.setRow(label, 0);
-        grid_layout_1.GridLayout.setColumn(label, 1);
+        var titleLable = new label_1.Label();
+        titleLable.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
+        titleLable.verticalAlignment = enums_1.VerticalAlignment.stretch;
+        titleLable.textAlignment = enums_1.TextAlignment.center;
+        titleLable.color = new color_1.Color('black');
+        titleLable.fontSize = 14;
+        grid_layout_1.GridLayout.setRow(titleLable, 0);
+        grid_layout_1.GridLayout.setColumn(titleLable, 1);
         titleBar.addChild(closeButton);
-        titleBar.addChild(label);
+        titleBar.addChild(titleLable);
         container.addChild(webView);
         container.addChild(touchOverlay);
         container.addChild(titleBar);
@@ -209,19 +218,19 @@ var BrowserView = (function (_super) {
             touchOverlay: touchOverlay,
             titleBar: titleBar,
             closeButton: closeButton,
-            label: label,
+            titleLable: titleLable,
             visualIndex: this.layers.length,
             details: new AppViewModel_1.LayerDetails()
         };
         this.layers.push(layer);
         if (this.isLoaded)
             this.setFocussedLayer(layer);
-        label.bind({
+        titleLable.bind({
             targetProperty: 'text',
             sourceProperty: 'title'
         }, layer.details);
         if (this._overviewEnabled)
-            this._showLayer(layer);
+            this._showLayerInCarousel(layer);
         return layer;
     };
     BrowserView.prototype.removeLayerAtIndex = function (index) {
@@ -291,7 +300,7 @@ var BrowserView = (function (_super) {
     BrowserView.prototype._lerp = function (a, b, t) {
         return a + (b - a) * t;
     };
-    BrowserView.prototype._showLayer = function (layer) {
+    BrowserView.prototype._showLayerInCarousel = function (layer) {
         var idx = this.layers.indexOf(layer);
         if (layer.webView.ios)
             layer.webView.ios.layer.masksToBounds = true;
@@ -299,6 +308,7 @@ var BrowserView = (function (_super) {
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = true;
         layer.container.animate({
+            opacity: 1,
             backgroundColor: new color_1.Color(128, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });
@@ -321,12 +331,13 @@ var BrowserView = (function (_super) {
             curve: enums_1.AnimationCurve.easeInOut,
         });
     };
-    BrowserView.prototype._hideLayer = function (layer) {
+    BrowserView.prototype._showLayerInStack = function (layer) {
         var idx = this.layers.indexOf(layer);
         layer.touchOverlay.style.visibility = 'collapsed';
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.container.animate({
+            opacity: layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
             backgroundColor: new color_1.Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });
@@ -359,7 +370,7 @@ var BrowserView = (function (_super) {
             return;
         this._overviewEnabled = true;
         this.layers.forEach(function (layer) {
-            _this._showLayer(layer);
+            _this._showLayerInCarousel(layer);
         });
         this.scrollView.scrollToVerticalOffset(0, true);
         // animate the views
@@ -371,7 +382,7 @@ var BrowserView = (function (_super) {
             return;
         this._overviewEnabled = false;
         var animations = this.layers.map(function (layer) {
-            return _this._hideLayer(layer);
+            return _this._showLayerInStack(layer);
         });
         Promise.all(animations).then(function () {
             _this.scrollView.scrollToVerticalOffset(0, true);

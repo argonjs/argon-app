@@ -15,6 +15,8 @@ declare module "argon-web-view" {
         
         title: string;
 
+        isArgonApp: boolean;
+
         /**
          * Raised when a session event occurs.
          */

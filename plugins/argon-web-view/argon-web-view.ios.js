@@ -15,8 +15,9 @@ var ArgonWebView = (function (_super) {
         this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         configuration.processPool = processPool;
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
-        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            }\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
+        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            };\n\t        document.addEventListener(\"DOMContentLoaded\", function(event) {\n                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {\n                    webkit.messageHandlers.argoncheck.postMessage(\"true\");\n                } else {\n                    webkit.messageHandlers.argoncheck.postMessage(\"false\");\n                }\n            });\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
         this._ios.allowsBackForwardNavigationGestures = true;
         this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
@@ -26,6 +27,20 @@ var ArgonWebView = (function (_super) {
         this._ios.backgroundColor = UIColor.clearColor();
         this._ios.opaque = false;
     }
+    ArgonWebView.prototype._setIsArgonApp = function (flag) {
+        if (!this.isArgonApp && flag) {
+            this._ios.scrollView.backgroundColor = UIColor.clearColor();
+            this._ios.backgroundColor = UIColor.clearColor();
+            this._ios.opaque = false;
+            this.set("isArgonApp", true);
+        }
+        else if (this.isArgonApp && !flag) {
+            this._ios.scrollView.backgroundColor = UIColor.whiteColor();
+            this._ios.backgroundColor = UIColor.whiteColor();
+            this._ios.opaque = true;
+            this.set("isArgonApp", false);
+        }
+    };
     ArgonWebView.prototype.evaluateJavascript = function (script) {
         var _this = this;
         return new Promise(function (resolve, reject) {
@@ -67,10 +82,26 @@ var ArgonWebViewDelegate = (function (_super) {
         if (!owner)
             return;
         if (message.name === 'argon') {
+            if (!owner.session) {
+                // just in case we thought below that the page was not an
+                // argon page, perhaps because argon.js loaded asyncronously 
+                // and the programmer didn't set up an argon meta tag
+                owner._setIsArgonApp(true);
+            }
             owner._handleArgonMessage(message.body);
         }
         else if (message.name === 'log') {
             owner._handleLogMessage(message.body);
+        }
+        else if (message.name === 'argoncheck') {
+            if (!owner.session) {
+                if (message.body === "true") {
+                    owner._setIsArgonApp(true);
+                }
+                else {
+                    owner._setIsArgonApp(false);
+                }
+            }
         }
     };
     ArgonWebViewDelegate.prototype.webViewDecidePolicyForNavigationActionDecisionHandler = function (webview, navigationAction, decisionHandler) {
