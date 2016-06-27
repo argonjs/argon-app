@@ -100,7 +100,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // we still want to update the trackables above in case an app is depending on them)
             if (_this.stateUpdateEvent.numberOfListeners === 0)
                 return;
-            var pose = Argon.getSerializedEntityPose(_this.deviceService.interfaceEntity, time);
+            var pose = Argon.getSerializedEntityPose(_this.deviceService.displayEntity, time);
             var view = _this.getViewConfiguration(pose);
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
             // raise the event to let the vuforia service know we are ready!
@@ -156,7 +156,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
             // So, we want to undo this rotation which vuforia applies for us.  
             // TODO: calculate this matrix only when we have to (when the interface orientation changes)
-            var inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + argon_device_service_1.getInterfaceOrientation() * Math.PI / 180), this.scratchQuaternion), ONE, this.scratchMatrix4);
+            var inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + argon_device_service_1.getDisplayOrientation() * Math.PI / 180), this.scratchQuaternion), ONE, this.scratchMatrix4);
             Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
             // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
             // by negating the appropriate rows. 
@@ -454,7 +454,7 @@ function configureVideoBackground(enabled) {
     var videoMode = vuforia.api.getCameraDevice().getVideoMode(cameraDeviceMode);
     var videoWidth = videoMode.width;
     var videoHeight = videoMode.height;
-    var orientation = argon_device_service_1.getInterfaceOrientation();
+    var orientation = argon_device_service_1.getDisplayOrientation();
     if (orientation === 0 || orientation === 180) {
         videoWidth = videoMode.height;
         videoHeight = videoMode.width;

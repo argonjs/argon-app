@@ -8,7 +8,7 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 
-import {getInterfaceOrientation} from './argon-device-service'
+import {getDisplayOrientation} from './argon-device-service'
 
 export const VIDEO_DELAY = -0.5/60;
 
@@ -114,7 +114,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // we still want to update the trackables above in case an app is depending on them)
             if (this.stateUpdateEvent.numberOfListeners === 0) return;
             
-            const pose = Argon.getSerializedEntityPose(this.deviceService.interfaceEntity, time)
+            const pose = Argon.getSerializedEntityPose(this.deviceService.displayEntity, time)
             const view = this.getViewConfiguration(pose);
             
             vuforia.api.onNextStateUpdate(stateUpdateCallback);
@@ -178,7 +178,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // TODO: calculate this matrix only when we have to (when the interface orientation changes)
             const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
                 Cartesian3.ZERO,
-                Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + getInterfaceOrientation()*Math.PI/180), this.scratchQuaternion),
+                Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -(CesiumMath.PI_OVER_TWO + getDisplayOrientation()*Math.PI/180), this.scratchQuaternion),
                 ONE,
                 this.scratchMatrix4
             );
@@ -501,7 +501,7 @@ function configureVideoBackground(enabled=true) {
     let videoWidth = videoMode.width;
     let videoHeight = videoMode.height;
     
-    const orientation = getInterfaceOrientation();
+    const orientation = getDisplayOrientation();
     if (orientation === 0 || orientation === 180) {
         videoWidth = videoMode.height;
         videoHeight = videoMode.width;

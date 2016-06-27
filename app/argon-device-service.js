@@ -22,10 +22,12 @@ var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService(context) {
         _super.call(this, context);
-        this.locationEntity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
-        this.locationEntity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.locationEntity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-        this.locationEntity.position.maxNumSamples = 10;
+        this.geolocationEntity.position = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
+        this.geolocationEntity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.geolocationEntity.position.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+        this.geolocationEntity.position.maxNumSamples = 10;
+        this.geolocationEntity.orientation = new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY);
+        this.orientationEntity.position = undefined;
         this.orientationEntity.orientation = new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion);
         this.orientationEntity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
         this.orientationEntity.orientation.backwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
@@ -45,11 +47,11 @@ var NativescriptDeviceService = (function (_super) {
             // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
             // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
             var locationTime = Argon.Cesium.JulianDate.fromDate(location.timestamp, scratchTime);
-            var sampledPosition = _this.locationEntity.position;
+            var sampledPosition = _this.geolocationEntity.position;
             var position = Argon.Cesium.Cartesian3.fromDegrees(location.longitude, location.latitude, location.altitude, Argon.Cesium.Ellipsoid.WGS84, scratchCartesian3);
             sampledPosition.addSample(locationTime, position);
             var enuOrientation = Transforms.headingPitchRollQuaternion(position, 0, 0, 0, undefined, scratchECEFQuaternion);
-            _this.locationEntity.orientation.setValue(enuOrientation);
+            _this.geolocationEntity.orientation.setValue(enuOrientation);
         }, function (e) {
             console.log(e);
         }, {
@@ -97,6 +99,13 @@ var NativescriptDeviceService = (function (_super) {
         }
         motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
         this.motionManager = motionManager;
+        // make sure the device entity has a defined pose relative to the device orientation entity
+        if (this.entity.position instanceof Argon.Cesium.ConstantPositionProperty == false) {
+            this.entity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.orientationEntity);
+        }
+        if (this.entity.orientation instanceof Argon.Cesium.ConstantProperty == false) {
+            this.entity.orientation = new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY);
+        }
     };
     NativescriptDeviceService.prototype.onIdle = function () {
         if (Argon.Cesium.defined(this.locationWatchId)) {
@@ -112,10 +121,9 @@ var NativescriptDeviceService = (function (_super) {
         this.ensureGeolocation();
         this.ensureDeviceOrientation();
         var time = JulianDate.now();
-        var position = this.locationEntity.position.getValue(time);
         if (application.ios) {
             var motion = this.motionManager.deviceMotion;
-            if (motion && position) {
+            if (motion) {
                 var motionQuaternion = motion.attitude.quaternion;
                 // Apple's orientation is reported in NWU, so we convert to ENU by applying a global rotation of
                 // 90 degrees about +z to the NWU orientation (or applying the NWU quaternion as a local rotation 
@@ -125,19 +133,17 @@ var NativescriptDeviceService = (function (_super) {
                 // such that the multiplication order is R*O, then R is a global rotation being applied on O. 
                 // Likewise, the reverse, O*R, is a local rotation R applied to the orientation O. 
                 var orientation_1 = Quaternion.multiply(z90, motionQuaternion, scratchQuaternion);
-                // Finally, convert from local ENU to ECEF (Earth-Centered-Earth-Fixed)
-                // const enu2ecef = Transforms.eastNorthUpToFixedFrame(position, undefined, scratchMatrix4);
-                // const enu2ecefRot = Matrix4.getRotation(enu2ecef, scratchMatrix3);
-                // const enu2ecefQuat = Quaternion.fromRotationMatrix(enu2ecefRot, scratchECEFQuaternion);
-                // Quaternion.multiply(enu2ecefQuat, orientation, orientation);
                 var sampledOrientation = this.orientationEntity.orientation;
                 sampledOrientation.addSample(time, orientation_1);
+                if (!Argon.Cesium.defined(this.orientationEntity.position)) {
+                    this.orientationEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.geolocationEntity);
+                }
             }
         }
-        var interfaceOrientation = getInterfaceOrientation();
-        var interfaceOrientationRad = Argon.Cesium.CesiumMath.toRadians(interfaceOrientation);
-        var interfaceOrientationProperty = this.interfaceEntity.orientation;
-        interfaceOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, interfaceOrientationRad, scratchQuaternion));
+        var displayOrientation = getDisplayOrientation();
+        var displayOrientationRad = Argon.Cesium.CesiumMath.toRadians(displayOrientation);
+        var displayOrientationProperty = this.displayEntity.orientation;
+        displayOrientationProperty.setValue(Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, displayOrientationRad, scratchQuaternion));
     };
     NativescriptDeviceService = __decorate([
         Argon.DI.inject(Argon.ContextService)
@@ -145,7 +151,7 @@ var NativescriptDeviceService = (function (_super) {
     return NativescriptDeviceService;
 }(Argon.DeviceService));
 exports.NativescriptDeviceService = NativescriptDeviceService;
-function getInterfaceOrientation() {
+function getDisplayOrientation() {
     if (application.ios) {
         var orientation_2 = UIApplication.sharedApplication().statusBarOrientation;
         switch (orientation_2) {
@@ -169,5 +175,5 @@ function getInterfaceOrientation() {
     }
     return 0;
 }
-exports.getInterfaceOrientation = getInterfaceOrientation;
+exports.getDisplayOrientation = getDisplayOrientation;
 //# sourceMappingURL=argon-device-service.js.map
