@@ -1,6 +1,5 @@
 "use strict";
 var frames = require('ui/frame');
-var argon_vuforia_service_1 = require('./argon-vuforia-service');
 var Argon = require("argon");
 var NativescriptViewService = (function (_super) {
     __extends(NativescriptViewService, _super);
@@ -21,7 +20,7 @@ var NativescriptViewService = (function (_super) {
         return this.vuforiaDelegate.getViewConfiguration(state.eye.pose);
     };
     NativescriptViewService = __decorate([
-        Argon.DI.inject(Argon.SessionService, Argon.FocusService, Argon.ContextService, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate)
+        Argon.DI.inject(Argon.SessionService, Argon.FocusService, Argon.ContextService, Argon.VuforiaServiceDelegate)
     ], NativescriptViewService);
     return NativescriptViewService;
 }(Argon.ViewService));
