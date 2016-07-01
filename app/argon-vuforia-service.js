@@ -102,7 +102,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 return;
             var pose = Argon.getSerializedEntityPose(_this.deviceService.displayEntity, time);
             var view = _this.getViewConfiguration(pose);
-            vuforia.api.onNextStateUpdate(stateUpdateCallback);
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
                 index: index,
@@ -110,7 +109,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 view: view
             });
         };
-        vuforia.api.onNextStateUpdate(stateUpdateCallback);
+        vuforia.api.setStateUpdateCallback(stateUpdateCallback);
     }
     NativescriptVuforiaServiceDelegate.prototype.getCameraFieldOfViewRads = function () {
         var cameraDevice = vuforia.api.getCameraDevice();

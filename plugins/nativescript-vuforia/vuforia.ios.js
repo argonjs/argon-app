@@ -83,7 +83,8 @@ var API = (function (_super) {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
                     VuforiaSession.registerCallback(function (state) {
-                        _this._stateUpdateCallback(new State(state));
+                        if (_this.callback)
+                            _this.callback(new State(state));
                     });
                     VuforiaSession.onResume();
                 }

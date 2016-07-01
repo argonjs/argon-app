@@ -27,7 +27,7 @@ declare module "nativescript-vuforia" {
         EXTERNAL_DEVICE_NOT_DETECTED = -10
     }
     
-    export class API {
+    export class API extends Observable {
         setLicenseKey(licenseKey:string) : boolean;
         setHint(hint:Hint,value:number) : boolean;
         init() : Promise<InitResult>;
@@ -38,7 +38,7 @@ declare module "nativescript-vuforia" {
         initObjectTracker() : boolean;
         getObjectTracker() : ObjectTracker;
         deinitObjectTracker() : boolean;
-        onNextStateUpdate(cb:(state:State)=>void);
+        setStateUpdateCallback(cb:(state:State)=>void);
     }
     
     interface Vec2 {

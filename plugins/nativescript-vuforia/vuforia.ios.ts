@@ -97,7 +97,8 @@ export class API extends common.APIBase {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
                     VuforiaSession.registerCallback((state)=>{
-                        this._stateUpdateCallback(new State(state));
+                        if (this.callback)
+                         this.callback(new State(state));
                     });
                     VuforiaSession.onResume();
                 }

@@ -2,17 +2,9 @@
 require('globals');
 var APIBase = (function () {
     function APIBase() {
-        this.callbacks = [];
     }
-    APIBase.prototype._stateUpdateCallback = function (state) {
-        var callbacks = this.callbacks;
-        this.callbacks = [];
-        callbacks.forEach(function (cb) {
-            cb(state);
-        });
-    };
-    APIBase.prototype.onNextStateUpdate = function (cb) {
-        this.callbacks.push(cb);
+    APIBase.prototype.setStateUpdateCallback = function (cb) {
+        this.callback = cb;
     };
     return APIBase;
 }());
