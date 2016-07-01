@@ -35,7 +35,7 @@ var BrowserView = (function (_super) {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
         this.realityLayer.titleBar.backgroundColor = new color_1.Color(0xFF222222);
-        this.realityLayer.titleLable.color = new color_1.Color('white');
+        this.realityLayer.titleLabel.color = new color_1.Color('white');
         this.realityLayer.closeButton.visibility = 'collapsed';
         if (this.realityLayer.webView.ios) {
             // disable user navigation of the reality view
@@ -92,30 +92,34 @@ var BrowserView = (function (_super) {
         container.verticalAlignment = 'top';
         var webView = new argon_web_view_1.ArgonWebView;
         webView.on('propertyChange', function (eventData) {
-            if (eventData.propertyName === 'url') {
-                layer.details.set('url', eventData.value);
-            }
-            else if (eventData.propertyName === 'title') {
-                var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
-                if (historyBookmarkItem) {
-                    historyBookmarkItem.set('title', eventData.value);
-                }
-                layer.details.set('title', eventData.value);
-            }
-            else if (eventData.propertyName === 'isArgonApp') {
-                var isArgonApp = eventData.value;
-                layer.details.set('supportedInteractionModes', isArgonApp ?
-                    ['page', 'immersive'] :
-                    ['page']);
-                if (isArgonApp || layer === _this.focussedLayer || _this._overviewEnabled) {
-                    layer.container.animate({
-                        opacity: 1,
-                        duration: OVERVIEW_ANIMATION_DURATION
-                    });
-                }
-                else {
-                    layer.container.opacity = 1;
-                }
+            switch (eventData.propertyName) {
+                case 'url':
+                    layer.details.set('url', eventData.value);
+                    break;
+                case 'title':
+                    var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
+                    if (historyBookmarkItem) {
+                        historyBookmarkItem.set('title', eventData.value);
+                    }
+                    if (layer !== _this.realityLayer)
+                        layer.details.set('title', eventData.value);
+                    break;
+                case 'isArgonApp':
+                    var isArgonApp = eventData.value;
+                    layer.details.set('supportedInteractionModes', isArgonApp ?
+                        ['page', 'immersive'] :
+                        ['page']);
+                    if (isArgonApp || layer === _this.focussedLayer || _this._overviewEnabled) {
+                        layer.container.animate({
+                            opacity: 1,
+                            duration: OVERVIEW_ANIMATION_DURATION
+                        });
+                    }
+                    else {
+                        layer.container.opacity = 1;
+                    }
+                    break;
+                default: break;
             }
         });
         webView.on('session', function (eventData) {
@@ -198,16 +202,16 @@ var BrowserView = (function (_super) {
         closeButton.on('tap', function () {
             _this.removeLayer(layer);
         });
-        var titleLable = new label_1.Label();
-        titleLable.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
-        titleLable.verticalAlignment = enums_1.VerticalAlignment.stretch;
-        titleLable.textAlignment = enums_1.TextAlignment.center;
-        titleLable.color = new color_1.Color('black');
-        titleLable.fontSize = 14;
-        grid_layout_1.GridLayout.setRow(titleLable, 0);
-        grid_layout_1.GridLayout.setColumn(titleLable, 1);
+        var titleLabel = new label_1.Label();
+        titleLabel.horizontalAlignment = enums_1.HorizontalAlignment.stretch;
+        titleLabel.verticalAlignment = enums_1.VerticalAlignment.stretch;
+        titleLabel.textAlignment = enums_1.TextAlignment.center;
+        titleLabel.color = new color_1.Color('black');
+        titleLabel.fontSize = 14;
+        grid_layout_1.GridLayout.setRow(titleLabel, 0);
+        grid_layout_1.GridLayout.setColumn(titleLabel, 1);
         titleBar.addChild(closeButton);
-        titleBar.addChild(titleLable);
+        titleBar.addChild(titleLabel);
         container.addChild(webView);
         container.addChild(touchOverlay);
         container.addChild(titleBar);
@@ -218,17 +222,20 @@ var BrowserView = (function (_super) {
             touchOverlay: touchOverlay,
             titleBar: titleBar,
             closeButton: closeButton,
-            titleLable: titleLable,
+            titleLabel: titleLabel,
             visualIndex: this.layers.length,
             details: new AppViewModel_1.LayerDetails()
         };
         this.layers.push(layer);
         if (this.isLoaded)
             this.setFocussedLayer(layer);
-        titleLable.bind({
-            targetProperty: 'text',
-            sourceProperty: 'title'
-        }, layer.details);
+        layer.details.addEventListener('propertyChange', function (data) {
+            switch (data.propertyName) {
+                case 'title':
+                    titleLabel.text = data.value;
+                    break;
+            }
+        });
         if (this._overviewEnabled)
             this._showLayerInCarousel(layer);
         return layer;
@@ -337,7 +344,7 @@ var BrowserView = (function (_super) {
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.container.animate({
-            opacity: layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
+            opacity: this.realityLayer === layer || layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
             backgroundColor: new color_1.Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });

@@ -9,7 +9,6 @@ export interface LoadUrlEventData extends EventData {
 }
 
 export class LayerDetails extends Observable {
-    isArgonChannel = false;
     url = '';
     title = '';
     supportedInteractionModes:Array<InteractionMode> = [];
@@ -109,19 +108,21 @@ export class AppViewModel extends Observable {
     setViewerEnabled(enabled:boolean) {
         this.set('viewerEnabled', enabled);
     }
+
+    _onLayerDetailsChange(data:PropertyChangeData) {
+        if (data.propertyName === 'url') {
+            this.set('currentUrl', data.value);
+            this.updateFavoriteStatus();
+        }
+    }
     
     setLayerDetails(details:LayerDetails) {
-        this.layerDetails.off('propertyChange');
+        this.layerDetails.off('propertyChange', this._onLayerDetailsChange, this);
         this.set('layerDetails', details);
         this.set('bookmarksOpen', !details.url);
-        details.on('propertyChange', (data:PropertyChangeData) => {
-            if (data.propertyName === 'url') {
-                this.set('currentUrl', details.url);
-                this.updateFavoriteStatus();
-            }
-        });
         this.set('currentUrl', details.url);
         this.updateFavoriteStatus();
+        details.on('propertyChange', this._onLayerDetailsChange, this);
     }
     
     updateFavoriteStatus() {

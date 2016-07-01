@@ -5,7 +5,6 @@ var LayerDetails = (function (_super) {
     __extends(LayerDetails, _super);
     function LayerDetails() {
         _super.apply(this, arguments);
-        this.isArgonChannel = false;
         this.url = '';
         this.title = '';
         this.supportedInteractionModes = [];
@@ -87,19 +86,19 @@ var AppViewModel = (function (_super) {
     AppViewModel.prototype.setViewerEnabled = function (enabled) {
         this.set('viewerEnabled', enabled);
     };
+    AppViewModel.prototype._onLayerDetailsChange = function (data) {
+        if (data.propertyName === 'url') {
+            this.set('currentUrl', data.value);
+            this.updateFavoriteStatus();
+        }
+    };
     AppViewModel.prototype.setLayerDetails = function (details) {
-        var _this = this;
-        this.layerDetails.off('propertyChange');
+        this.layerDetails.off('propertyChange', this._onLayerDetailsChange, this);
         this.set('layerDetails', details);
         this.set('bookmarksOpen', !details.url);
-        details.on('propertyChange', function (data) {
-            if (data.propertyName === 'url') {
-                _this.set('currentUrl', details.url);
-                _this.updateFavoriteStatus();
-            }
-        });
         this.set('currentUrl', details.url);
         this.updateFavoriteStatus();
+        details.on('propertyChange', this._onLayerDetailsChange, this);
     };
     AppViewModel.prototype.updateFavoriteStatus = function () {
         this.set('isFavorite', !!bookmarks_1.favoriteMap.get(this.currentUrl));

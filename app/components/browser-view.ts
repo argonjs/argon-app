@@ -48,7 +48,7 @@ export interface Layer {
     touchOverlay:GridLayout,
     titleBar:GridLayout,
     closeButton:Button,
-    titleLable: Label,
+    titleLabel: Label,
     visualIndex: number,
     details: LayerDetails
 }
@@ -75,7 +75,7 @@ export class BrowserView extends GridLayout {
             this.realityLayer.webView.style.visibility = 'collapsed';
         }
         this.realityLayer.titleBar.backgroundColor = new Color(0xFF222222);
-        this.realityLayer.titleLable.color = new Color('white');
+        this.realityLayer.titleLabel.color = new Color('white');
         this.realityLayer.closeButton.visibility = 'collapsed';
         
         if (this.realityLayer.webView.ios) {
@@ -140,30 +140,34 @@ export class BrowserView extends GridLayout {
         
         const webView = new ArgonWebView;
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
-            if (eventData.propertyName === 'url') {
-                layer.details.set('url', eventData.value);
-            }
-            else if (eventData.propertyName === 'title') {
-                var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
-                if (historyBookmarkItem) {
-                    historyBookmarkItem.set('title', eventData.value);
-                }
-                layer.details.set('title', eventData.value);
-            }
-            else if (eventData.propertyName === 'isArgonApp') {
-                const isArgonApp = eventData.value;
-                layer.details.set('supportedInteractionModes', isArgonApp ? 
-                    ['page', 'immersive'] :
-                    ['page']
-                );
-                if (isArgonApp || layer === this.focussedLayer || this._overviewEnabled) {
-                    layer.container.animate({
-                        opacity: 1,
-                        duration: OVERVIEW_ANIMATION_DURATION
-                    });
-                } else {
-                    layer.container.opacity = 1;
-                }
+            switch(eventData.propertyName) {
+                case 'url':
+                    layer.details.set('url', eventData.value);
+                    break;
+                case 'title':
+                    var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
+                    if (historyBookmarkItem) {
+                        historyBookmarkItem.set('title', eventData.value);
+                    }
+                    if (layer !== this.realityLayer)
+                        layer.details.set('title', eventData.value);
+                    break;
+                case 'isArgonApp':
+                    const isArgonApp = eventData.value;
+                    layer.details.set('supportedInteractionModes', isArgonApp ? 
+                        ['page', 'immersive'] :
+                        ['page']
+                    );
+                    if (isArgonApp || layer === this.focussedLayer || this._overviewEnabled) {
+                        layer.container.animate({
+                            opacity: 1,
+                            duration: OVERVIEW_ANIMATION_DURATION
+                        });
+                    } else {
+                        layer.container.opacity = 1;
+                    }
+                    break;
+                default: break;
             }
         });
         webView.on('session', (eventData) => {
@@ -250,17 +254,17 @@ export class BrowserView extends GridLayout {
             this.removeLayer(layer);
         })
         
-        const titleLable = new Label();
-        titleLable.horizontalAlignment = HorizontalAlignment.stretch;
-        titleLable.verticalAlignment = VerticalAlignment.stretch;
-        titleLable.textAlignment = TextAlignment.center;
-        titleLable.color = new Color('black');
-        titleLable.fontSize = 14;
-        GridLayout.setRow(titleLable, 0);
-        GridLayout.setColumn(titleLable, 1);
+        const titleLabel = new Label();
+        titleLabel.horizontalAlignment = HorizontalAlignment.stretch;
+        titleLabel.verticalAlignment = VerticalAlignment.stretch;
+        titleLabel.textAlignment = TextAlignment.center;
+        titleLabel.color = new Color('black');
+        titleLabel.fontSize = 14;
+        GridLayout.setRow(titleLabel, 0);
+        GridLayout.setColumn(titleLabel, 1);
         
         titleBar.addChild(closeButton);
-        titleBar.addChild(titleLable);
+        titleBar.addChild(titleLabel);
         
         container.addChild(webView);
         container.addChild(touchOverlay);
@@ -273,7 +277,7 @@ export class BrowserView extends GridLayout {
             touchOverlay,
             titleBar,
             closeButton,
-            titleLable,
+            titleLabel,
             visualIndex: this.layers.length,
             details: new LayerDetails()
         };
@@ -282,11 +286,13 @@ export class BrowserView extends GridLayout {
         if (this.isLoaded)
             this.setFocussedLayer(layer);
         
-        titleLable.bind({
-            targetProperty: 'text',
-            sourceProperty: 'title'
-        }, layer.details);
-        
+        layer.details.addEventListener('propertyChange', (data:PropertyChangeData)=>{
+            switch (data.propertyName) {
+                case 'title': 
+                    titleLabel.text = data.value;
+                    break;
+            }
+        })
         
         if (this._overviewEnabled) this._showLayerInCarousel(layer);
         
@@ -417,7 +423,7 @@ export class BrowserView extends GridLayout {
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.container.animate({
-            opacity: layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
+            opacity: this.realityLayer === layer || layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
             backgroundColor: new Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });

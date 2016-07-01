@@ -76,7 +76,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         (e)=>{
             console.log(e);
         }, <geolocation.Options>{
-            desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0,
+            desiredAccuracy: application.ios ? kCLLocationAccuracyBest : 0,
             updateDistance: application.ios ? kCLDistanceFilterNone : 0
         });
         

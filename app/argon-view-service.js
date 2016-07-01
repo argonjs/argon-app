@@ -16,7 +16,7 @@ var NativescriptViewService = (function (_super) {
             height: contentView.getMeasuredHeight()
         };
     };
-    NativescriptViewService.prototype.generateViewFromFrameState = function (state) {
+    NativescriptViewService.prototype.generateViewFromFrameStateEye = function (state) {
         return this.vuforiaDelegate.getViewConfiguration(state.eye.pose);
     };
     NativescriptViewService = __decorate([

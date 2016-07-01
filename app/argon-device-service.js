@@ -55,7 +55,7 @@ var NativescriptDeviceService = (function (_super) {
         }, function (e) {
             console.log(e);
         }, {
-            desiredAccuracy: application.ios ? kCLLocationAccuracyBestForNavigation : 0,
+            desiredAccuracy: application.ios ? kCLLocationAccuracyBest : 0,
             updateDistance: application.ios ? kCLDistanceFilterNone : 0
         });
         console.log("Creating location watcher. " + this.locationWatchId);

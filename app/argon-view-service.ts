@@ -12,7 +12,7 @@ import Argon = require("argon");
     Argon.SessionService, 
     Argon.FocusService, 
     Argon.ContextService,
-    NativescriptVuforiaServiceDelegate)
+    Argon.VuforiaServiceDelegate)
 export class NativescriptViewService extends Argon.ViewService {
     constructor(
     sessionService : Argon.SessionService, 
@@ -32,7 +32,7 @@ export class NativescriptViewService extends Argon.ViewService {
         }
     }
     
-    generateViewFromFrameState(state:Argon.SerializedFrameState) {
+    generateViewFromFrameStateEye(state:Argon.SerializedFrameState) {
         return this.vuforiaDelegate.getViewConfiguration(state.eye.pose);
     }
 }
