@@ -17,15 +17,12 @@ var ArgonWebView = (function (_super) {
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
-        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            };\n\t        document.addEventListener(\"DOMContentLoaded\", function(event) {\n                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {\n                    webkit.messageHandlers.argoncheck.postMessage(\"true\");\n                } else {\n                    webkit.messageHandlers.argoncheck.postMessage(\"false\");\n                }\n            });\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
+        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            };\n            function _sendArgonCheck(event) {\n                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {\n                    if (event.persisted) window.location.reload(false);\n                    else webkit.messageHandlers.argoncheck.postMessage(\"true\");\n                } else {\n                    webkit.messageHandlers.argoncheck.postMessage(\"false\");\n                }\n            }\n\t        document.addEventListener(\"DOMContentLoaded\", _sendArgonCheck);\n\t        window.addEventListener(\"pageshow\", _sendArgonCheck);\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
         this._ios.allowsBackForwardNavigationGestures = true;
         this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
         this._ios.scrollView.layer.masksToBounds = false;
         this._ios.layer.masksToBounds = false;
-        this._ios.scrollView.backgroundColor = UIColor.clearColor();
-        this._ios.backgroundColor = UIColor.clearColor();
-        this._ios.opaque = false;
     }
     ArgonWebView.prototype._setIsArgonApp = function (flag) {
         if (!this.isArgonApp && flag) {

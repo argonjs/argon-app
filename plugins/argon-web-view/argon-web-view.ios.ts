@@ -34,13 +34,16 @@ export class ArgonWebView extends common.ArgonWebView  {
                 webkit.messageHandlers.log.postMessage(message);
                 _originalLog.apply(console, arguments);
             };
-	        document.addEventListener("DOMContentLoaded", function(event) {
+            function _sendArgonCheck(event) {
                 if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {
-                    webkit.messageHandlers.argoncheck.postMessage("true");
+                    if (event.persisted) window.location.reload(false);
+                    else webkit.messageHandlers.argoncheck.postMessage("true");
                 } else {
                     webkit.messageHandlers.argoncheck.postMessage("false");
                 }
-            });
+            }
+	        document.addEventListener("DOMContentLoaded", _sendArgonCheck);
+	        window.addEventListener("pageshow", _sendArgonCheck);
         `, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
 
 	    this._ios.allowsBackForwardNavigationGestures = true;
@@ -49,10 +52,6 @@ export class ArgonWebView extends common.ArgonWebView  {
         // style appropriately
         this._ios.scrollView.layer.masksToBounds = false;
         this._ios.layer.masksToBounds = false;
-        this._ios.scrollView.backgroundColor = UIColor.clearColor();
-		this._ios.backgroundColor = UIColor.clearColor();
-		this._ios.opaque = false;
-
     }
     
     public _setIsArgonApp(flag:boolean) {

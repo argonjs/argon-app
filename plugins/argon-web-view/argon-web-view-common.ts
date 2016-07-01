@@ -9,7 +9,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public static sessionEvent = 'session';
     public static logEvent = 'log';
 
-    public isArgonApp = true;
+    public isArgonApp = false;
 
     public title : string;
     public progress : number;
