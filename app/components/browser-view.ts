@@ -390,6 +390,9 @@ export class BrowserView extends GridLayout {
         
         if (layer.webView.ios)
             layer.webView.ios.layer.masksToBounds = true;
+
+        if (layer.container.ios)
+            layer.container.ios.layer.masksToBounds = true;
             
         layer.touchOverlay.style.visibility = 'visible';
 
@@ -438,6 +441,8 @@ export class BrowserView extends GridLayout {
         }).then(()=>{
             if (layer.webView.ios)
                 layer.webView.ios.layer.masksToBounds = false;
+            if (layer.container.ios)
+                layer.container.ios.layer.masksToBounds = false;
         });
         // Hide titlebars
         layer.titleBar.animate({

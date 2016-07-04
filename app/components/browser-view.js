@@ -313,6 +313,8 @@ var BrowserView = (function (_super) {
         var idx = this.layers.indexOf(layer);
         if (layer.webView.ios)
             layer.webView.ios.layer.masksToBounds = true;
+        if (layer.container.ios)
+            layer.container.ios.layer.masksToBounds = true;
         layer.touchOverlay.style.visibility = 'visible';
         // For transparent webviews, add a little bit of opacity
         layer.container.isUserInteractionEnabled = true;
@@ -356,6 +358,8 @@ var BrowserView = (function (_super) {
         }).then(function () {
             if (layer.webView.ios)
                 layer.webView.ios.layer.masksToBounds = false;
+            if (layer.container.ios)
+                layer.container.ios.layer.masksToBounds = false;
         });
         // Hide titlebars
         layer.titleBar.animate({
