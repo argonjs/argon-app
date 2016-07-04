@@ -563,7 +563,9 @@ declare class VuforiaSession extends NSObject {
 
 	static setRotation(rotation: VuforiaRotation): void;
 
-	static systemBoottime(): number;
+	static scaleFactor() : number;
+
+	static setScaleFactor(f:number);
 
 	constructor(); // inherited from NSObject
 

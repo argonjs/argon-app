@@ -143,10 +143,14 @@ export class API extends common.APIBase {
         }
         return false;
     }
-	
-	getSystemBootTime() : number {
-		return VuforiaSession.systemBoottime();
-	}
+
+    setScaleFactor(f:number) {
+        VuforiaSession.setScaleFactor && VuforiaSession.setScaleFactor(f);
+    }
+
+    getScaleFactor() : number {
+        return VuforiaSession.scaleFactor();
+    }
 }
 
 function createMatrix44(mat:VuforiaMatrix44) : def.Matrix44 {
@@ -549,6 +553,7 @@ export class Device {
         return VuforiaDevice.getInstance().selectViewer(viewer.ios);
     }
     getSelectedViewer() : ViewerParameters {
+        if (!this.isViewerActive()) return undefined;
         return new ViewerParameters(VuforiaDevice.getInstance().getSelectedViewer());
     }
     getRenderingPrimitives(): RenderingPrimitives {
@@ -568,6 +573,7 @@ export class Renderer {
     }
     setVideoBackgroundConfig(cfg: def.VideoBackgroundConfig): void {
         VuforiaRenderer.setVideoBackgroundConfig(<VuforiaVideoBackgroundConfig>cfg);
+        configureVuforiaSurface();
     }
 }
 

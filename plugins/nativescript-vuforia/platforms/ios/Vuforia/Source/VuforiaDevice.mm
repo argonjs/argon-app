@@ -90,6 +90,7 @@
 }
 
 - (void)dealloc {
+    delete self.cpp;
     self.cpp = nil;
 }
 
@@ -277,7 +278,7 @@
 /// Returns the projection matrix to use for the given view and the specified coordinate system
 -(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType {
     Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,(Vuforia::COORDINATE_SYSTEM_TYPE)csType);
-    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000000);
+    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.001, 10000000);
     return (VuforiaMatrix44&)m44;
 }
 
@@ -393,9 +394,9 @@
 
 /// Returns the ViewerParameters for the currently selected viewer.
 -(VuforiaViewerParameters*)getSelectedViewer {
-    Vuforia::ViewerParameters vp = Vuforia::Device::getInstance().getSelectedViewer();
     VuforiaViewerParameters *viewerParameters = [[VuforiaViewerParameters alloc] init];
-    viewerParameters.cpp = &vp;
+    const Vuforia::ViewerParameters *vp = new Vuforia::ViewerParameters(Vuforia::Device::getInstance().getSelectedViewer());
+    viewerParameters.cpp = vp;
     return viewerParameters;
 }
 

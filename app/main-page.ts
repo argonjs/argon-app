@@ -294,8 +294,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
 })
 
-// frames.Frame.prototype['_setNativeViewFrame'] = View.prototype['_setNativeViewFrame'];
-
 export function pageLoaded(args) {
     
     page = args.object;

@@ -382,6 +382,8 @@ var BrowserView = (function (_super) {
         this.scrollView.scrollToVerticalOffset(0, true);
         // animate the views
         this._intervalId = setInterval(this._animate.bind(this), 20);
+        // disable pinch-zoom
+        this.layerContainer.off(gestures_1.GestureTypes.pinch, this._handlePinch, this);
     };
     BrowserView.prototype.hideOverview = function () {
         var _this = this;
@@ -401,6 +403,29 @@ var BrowserView = (function (_super) {
         // stop animating the views
         clearInterval(this._intervalId);
         this._intervalId = null;
+        // enable pinch-zoom
+        this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
+    };
+    BrowserView.prototype._handlePinch = function (event) {
+        var manager = Argon.ArgonSystem.instance;
+        var view = manager.view;
+        var focussedSession = manager.focus.getSession();
+        if (focussedSession.info['argon.disablePinchZoom']) {
+            view.scaleFactor = 1;
+        }
+        else {
+            switch (event.state) {
+                case gestures_1.GestureStateTypes.began:
+                    this._pinchStartScaleFactor = view.scaleFactor;
+                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
+                    break;
+                case gestures_1.GestureStateTypes.changed:
+                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
+                    break;
+                default:
+                    break;
+            }
+        }
     };
     BrowserView.prototype.loadUrl = function (url) {
         this.focussedLayer.webView.src = url;

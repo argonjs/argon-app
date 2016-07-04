@@ -21,6 +21,7 @@ import {
   GestureTypes,
   GestureStateTypes,
   PanGestureEventData,
+  PinchGestureEventData,
   GestureEventData,
 } from 'ui/gestures';
 import {Util} from '../util';
@@ -37,6 +38,8 @@ import {appViewModel, LayerDetails} from './common/AppViewModel'
 import * as bookmarks from './common/bookmarks'
 
 import * as Argon from 'argon'
+
+import {NativescriptViewService} from '../argon-view-service'
 
 const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;
@@ -128,7 +131,9 @@ export class BrowserView extends GridLayout {
                 this.realityLayer.webView.visibility = 'visible';
             }
         })
-        
+
+        // enable pinch-zoom
+        this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
     }
 
     addLayer() {
@@ -462,6 +467,9 @@ export class BrowserView extends GridLayout {
         
         // animate the views
         this._intervalId = setInterval(this._animate.bind(this), 20);
+
+        // disable pinch-zoom
+        this.layerContainer.off(GestureTypes.pinch, this._handlePinch, this);
     }
 
     hideOverview() {
@@ -483,8 +491,35 @@ export class BrowserView extends GridLayout {
         // stop animating the views
         clearInterval(this._intervalId);
         this._intervalId = null;
+
+        // enable pinch-zoom
+        this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
     }
+
+    private _pinchStartScaleFactor:number;
     
+    private _handlePinch(event: PinchGestureEventData) {
+        const manager = Argon.ArgonSystem.instance;
+        const view = manager.view as NativescriptViewService;
+        const focussedSession = manager.focus.getSession();
+
+        if (focussedSession.info['argon.disablePinchZoom']) {
+            view.scaleFactor = 1;
+        } else {
+            switch (event.state) {
+                case GestureStateTypes.began: 
+                    this._pinchStartScaleFactor = view.scaleFactor;
+                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
+                    break;
+                case GestureStateTypes.changed: 
+                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
+                    break;
+                default:
+                    break;  
+            }
+        }
+    }
+
     public loadUrl(url:string) {
         this.focussedLayer.webView.src = url;
         this.focussedLayer.details.set('url',url);

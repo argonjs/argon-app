@@ -267,7 +267,6 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
         }
     }
 });
-// frames.Frame.prototype['_setNativeViewFrame'] = View.prototype['_setNativeViewFrame'];
 function pageLoaded(args) {
     exports.page = args.object;
     exports.page.bindingContext = AppViewModel_1.appViewModel;

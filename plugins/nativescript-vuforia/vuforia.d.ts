@@ -1,7 +1,7 @@
 declare module "nativescript-vuforia" {
     
     import views = require('ui/core/view')
-    
+
     export const api:API;
     export const videoView:views.View;
     
@@ -27,7 +27,7 @@ declare module "nativescript-vuforia" {
         EXTERNAL_DEVICE_NOT_DETECTED = -10
     }
     
-    export class API extends Observable {
+    export class API {
         setLicenseKey(licenseKey:string) : boolean;
         setHint(hint:Hint,value:number) : boolean;
         init() : Promise<InitResult>;
@@ -39,6 +39,9 @@ declare module "nativescript-vuforia" {
         getObjectTracker() : ObjectTracker;
         deinitObjectTracker() : boolean;
         setStateUpdateCallback(cb:(state:State)=>void);
+        getViewerScaleFactor() : number;
+        setScaleFactor(f:number);
+        getScaleFactor() : number;
     }
     
     interface Vec2 {

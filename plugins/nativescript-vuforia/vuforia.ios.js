@@ -123,8 +123,11 @@ var API = (function (_super) {
         }
         return false;
     };
-    API.prototype.getSystemBootTime = function () {
-        return VuforiaSession.systemBoottime();
+    API.prototype.setScaleFactor = function (f) {
+        VuforiaSession.setScaleFactor && VuforiaSession.setScaleFactor(f);
+    };
+    API.prototype.getScaleFactor = function () {
+        return VuforiaSession.scaleFactor();
     };
     return API;
 }(common.APIBase));
@@ -594,6 +597,8 @@ var Device = (function () {
         return VuforiaDevice.getInstance().selectViewer(viewer.ios);
     };
     Device.prototype.getSelectedViewer = function () {
+        if (!this.isViewerActive())
+            return undefined;
         return new ViewerParameters(VuforiaDevice.getInstance().getSelectedViewer());
     };
     Device.prototype.getRenderingPrimitives = function () {
@@ -616,6 +621,7 @@ var Renderer = (function () {
     };
     Renderer.prototype.setVideoBackgroundConfig = function (cfg) {
         VuforiaRenderer.setVideoBackgroundConfig(cfg);
+        configureVuforiaSurface();
     };
     return Renderer;
 }());
