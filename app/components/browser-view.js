@@ -83,6 +83,8 @@ var BrowserView = (function (_super) {
                 _this.realityLayer.webView.visibility = 'visible';
             }
         });
+        // enable pinch-zoom
+        this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
     }
     BrowserView.prototype.addLayer = function () {
         var _this = this;
@@ -410,8 +412,7 @@ var BrowserView = (function (_super) {
         var manager = Argon.ArgonSystem.instance;
         var view = manager.view;
         var focussedSession = manager.focus.getSession();
-        if (focussedSession.info['argon.disablePinchZoom']) {
-            view.scaleFactor = 1;
+        if (focussedSession.info['app.disablePinchZoom']) {
         }
         else {
             switch (event.state) {
@@ -423,6 +424,8 @@ var BrowserView = (function (_super) {
                     view.scaleFactor = this._pinchStartScaleFactor * event.scale;
                     break;
                 default:
+                    if (Math.abs(view.scaleFactor - 1) < 0.1)
+                        view.scaleFactor = 1;
                     break;
             }
         }

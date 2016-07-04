@@ -503,8 +503,8 @@ export class BrowserView extends GridLayout {
         const view = manager.view as NativescriptViewService;
         const focussedSession = manager.focus.getSession();
 
-        if (focussedSession.info['argon.disablePinchZoom']) {
-            view.scaleFactor = 1;
+        if (focussedSession.info['app.disablePinchZoom']) {
+            // view.scaleFactor = 1;
         } else {
             switch (event.state) {
                 case GestureStateTypes.began: 
@@ -515,6 +515,7 @@ export class BrowserView extends GridLayout {
                     view.scaleFactor = this._pinchStartScaleFactor * event.scale;
                     break;
                 default:
+                    if (Math.abs(view.scaleFactor-1) < 0.1) view.scaleFactor = 1;
                     break;  
             }
         }
