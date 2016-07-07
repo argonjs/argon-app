@@ -4,51 +4,53 @@ var Argon = require('argon');
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
-        _super.apply(this, arguments);
+        _super.call(this);
+        this.isArgonApp = false;
         this.log = [];
     }
-    Object.defineProperty(ArgonWebView.prototype, "progress", {
-        get: function () { },
-        enumerable: true,
-        configurable: true
-    });
+    ArgonWebView.prototype._didCommitNavigation = function () {
+        if (this.session)
+            this.session.close();
+        this.session = null;
+        this._outputPort = null;
+    };
     ArgonWebView.prototype._handleArgonMessage = function (message) {
         var _this = this;
-        if (typeof this._sessionMessagePort == 'undefined') {
-            console.log('Connecting to argon.js application at ' + this.src);
+        if (this.session && !this.session.isConnected)
+            return;
+        if (!this.session) {
+            // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
+            var sessionUrl_1 = this.url;
+            console.log('Connecting to argon.js session at ' + sessionUrl_1);
             var manager = Argon.ArgonSystem.instance;
-            var messageChannel = manager.session.createMessageChannel();
-            var remoteSession_1 = manager.session.addManagedSessionPort();
-            ArgonWebView.sessionUrlMap.set(remoteSession_1, this.src);
-            this._sessionMessagePort = messageChannel.port2;
-            this._sessionMessagePort.onmessage = function (msg) {
+            var messageChannel = manager.session.createSynchronousMessageChannel();
+            var session_1 = manager.session.addManagedSessionPort();
+            ArgonWebView.sessionUrlMap.set(session_1, sessionUrl_1);
+            var port = messageChannel.port2;
+            port.onmessage = function (msg) {
                 if (!_this.session)
                     return;
                 var injectedMessage = "__ARGON_PORT__.postMessage(" + JSON.stringify(msg.data) + ")";
                 _this.evaluateJavascript(injectedMessage);
             };
-            remoteSession_1.connectEvent.addEventListener(function () {
-                _this.session = remoteSession_1;
-                var args = {
-                    eventName: ArgonWebView.sessionConnectEvent,
-                    object: _this,
-                    session: remoteSession_1
-                };
-                _this.notify(args);
+            session_1.connectEvent.addEventListener(function () {
+                session_1.info.name = sessionUrl_1;
             });
-            remoteSession_1.closeEvent.addEventListener(function () {
-                if (_this.session === remoteSession_1) {
-                    _this._sessionMessagePort = null;
-                    _this.session = null;
-                }
-            });
-            remoteSession_1.open(messageChannel.port1, manager.session.configuration);
+            var args = {
+                eventName: ArgonWebView.sessionEvent,
+                object: this,
+                session: session_1
+            };
+            this.notify(args);
+            this.session = session_1;
+            this._outputPort = port;
+            session_1.open(messageChannel.port1, manager.session.configuration);
         }
-        console.log(message);
-        this._sessionMessagePort.postMessage(JSON.parse(message));
+        // console.log(message);
+        this._outputPort.postMessage(JSON.parse(message));
     };
     ArgonWebView.prototype._handleLogMessage = function (message) {
-        var logMessage = this.src + ': ' + message;
+        var logMessage = this.url + ': ' + message;
         console.log(logMessage);
         this.log.push(logMessage);
         var args = {
@@ -59,7 +61,7 @@ var ArgonWebView = (function (_super) {
         this.notify(args);
     };
     ArgonWebView.sessionUrlMap = new WeakMap();
-    ArgonWebView.sessionConnectEvent = 'sessionConnect';
+    ArgonWebView.sessionEvent = 'session';
     ArgonWebView.logEvent = 'log';
     return ArgonWebView;
 }(web_view_1.WebView));

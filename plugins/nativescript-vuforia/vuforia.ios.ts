@@ -3,25 +3,58 @@ import def = require('nativescript-vuforia');
 import application = require('application');
 import http = require('http');
 import file = require('file-system');
-import frames = require('ui/frame')
+import frames = require('ui/frame');
+import views = require('ui/core/view');
+import placeholder = require('ui/placeholder');
 
 global.moduleMerge(common, exports);
 
-export const ios = <VuforiaVideoView> (VuforiaVideoView ? VuforiaVideoView.new() : undefined);
+const VUFORIA_AVAILABLE = typeof VuforiaSession !== 'undefined';
+
+const iosVideoView = <VuforiaVideoView> (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
+
+export const videoView = new placeholder.Placeholder();
+videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
+    evt.view = iosVideoView;
+})
+
+videoView.onLoaded = function() {
+    if (VUFORIA_AVAILABLE) VuforiaSession.onSurfaceCreated();
+}
+
+videoView.onLayout = function(left, top, right, bottom) {
+    if (VUFORIA_AVAILABLE) configureVuforiaSurface();
+}
 
 application.on(application.suspendEvent, ()=> {
-    if (VuforiaSession) {
+    if (VUFORIA_AVAILABLE) {
+        console.log('Pausing Vuforia');
         VuforiaSession.onPause();
-        ios.finishOpenGLESCommands();
-        ios.freeOpenGLESResources();
+        iosVideoView.finishOpenGLESCommands();
+        iosVideoView.freeOpenGLESResources();
     }
 })
 
-function setVuforiaRotation() {
-    const contentScaleFactor = ios.contentScaleFactor;
+application.on(application.orientationChangedEvent, () => {
+    if (VUFORIA_AVAILABLE) {
+        Promise.resolve().then(configureVuforiaSurface); // delay until the interface orientation actually changes
+    }
+});
+
+application.on(application.resumeEvent, ()=> {
+    if (VUFORIA_AVAILABLE) {
+        console.log('Resuming Vuforia');
+        VuforiaSession.onResume();
+        VuforiaSession.onSurfaceCreated();
+        configureVuforiaSurface();
+    }
+})
+
+function configureVuforiaSurface() {
+    const contentScaleFactor = iosVideoView.contentScaleFactor;
     VuforiaSession.onSurfaceChanged({
-        x: ios.frame.size.width * contentScaleFactor,
-        y: ios.frame.size.height * contentScaleFactor
+        x: iosVideoView.frame.size.width * contentScaleFactor,
+        y: iosVideoView.frame.size.height * contentScaleFactor
     });
     VuforiaSession.setRotation(VuforiaRotation.IOS_90);
     const orientation:UIInterfaceOrientation = UIApplication.sharedApplication().statusBarOrientation;
@@ -40,18 +73,6 @@ function setVuforiaRotation() {
             break;
     }
 }
-
-// doesn't seem to work: ? 
-//application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarOrientationNotification, setVuforiaRotation);
-
-application.on(application.orientationChangedEvent, () => {
-    Promise.resolve().then(setVuforiaRotation); // delay until the interface orientation actually changes
-});
-
-application.on(application.resumeEvent, ()=> {
-    VuforiaSession && VuforiaSession.onResume();
-    setVuforiaRotation();
-})
 
 export class API extends common.APIBase {
     
@@ -72,11 +93,15 @@ export class API extends common.APIBase {
     init() : Promise<def.InitResult> {
         return new Promise<def.InitResult>((resolve, reject) => {
             VuforiaSession.initDone((result)=>{
-				VuforiaSession.onSurfaceCreated();
-				setVuforiaRotation();
-                VuforiaSession.registerCallback((state)=>{
-                    this._stateUpdateCallback(new State(state));
-                });
+                if (result === VuforiaInitResult.SUCCESS) {
+                    VuforiaSession.onSurfaceCreated();
+                    configureVuforiaSurface();
+                    VuforiaSession.registerCallback((state)=>{
+                        if (this.callback)
+                         this.callback(new State(state));
+                    });
+                    VuforiaSession.onResume();
+                }
                 resolve(<number>result);
             })
         })
@@ -84,6 +109,7 @@ export class API extends common.APIBase {
     
     deinit() : void {
         VuforiaSession.deinit();
+        VuforiaSession.onPause();
     }
     
     getCameraDevice() : CameraDevice {
@@ -117,13 +143,17 @@ export class API extends common.APIBase {
         }
         return false;
     }
-	
-	getSystemBootTime() : number {
-		return VuforiaSession.systemBoottime();
-	}
+
+    setScaleFactor(f:number) {
+        VuforiaSession.setScaleFactor && VuforiaSession.setScaleFactor(f);
+    }
+
+    getScaleFactor() : number {
+        return VuforiaSession.scaleFactor();
+    }
 }
 
-function createMatrix44(mat:VuforiaMatrix34) : def.Matrix44 {
+function createMatrix44(mat:VuforiaMatrix44) : def.Matrix44 {
     return  [
                 mat._0, 
                 mat._1,
@@ -137,10 +167,10 @@ function createMatrix44(mat:VuforiaMatrix34) : def.Matrix44 {
                 mat._9,
                 mat._10,
                 mat._11,
-                0,
-                0,
-                0,
-                1
+                mat._12,
+                mat._13,
+                mat._14,
+                mat._15
             ];
 }
 
@@ -241,7 +271,7 @@ export class ObjectTarget extends Trackable {
         return this.ios.getUniqueTargetId();
     }
     
-    getSize(): def.Vec3 { 
+    getSize(): def.Vec3 {
         return this.ios.getSize();
     }
 }
@@ -523,6 +553,7 @@ export class Device {
         return VuforiaDevice.getInstance().selectViewer(viewer.ios);
     }
     getSelectedViewer() : ViewerParameters {
+        if (!this.isViewerActive()) return undefined;
         return new ViewerParameters(VuforiaDevice.getInstance().getSelectedViewer());
     }
     getRenderingPrimitives(): RenderingPrimitives {
@@ -542,6 +573,7 @@ export class Renderer {
     }
     setVideoBackgroundConfig(cfg: def.VideoBackgroundConfig): void {
         VuforiaRenderer.setVideoBackgroundConfig(<VuforiaVideoBackgroundConfig>cfg);
+        configureVuforiaSurface();
     }
 }
 
@@ -702,4 +734,4 @@ export class ObjectTracker extends Tracker {
     }
 }
 
-export const api = VuforiaSession ? new API() : undefined;
+export const api = VUFORIA_AVAILABLE ? new API() : undefined;

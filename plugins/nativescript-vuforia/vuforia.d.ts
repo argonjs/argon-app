@@ -1,11 +1,9 @@
 declare module "nativescript-vuforia" {
     
+    import views = require('ui/core/view')
+
     export const api:API;
-    
-    // native objects
-    
-    export const ios:any; // VuforiaVideoView
-    export const android:any;
+    export const videoView:views.View;
     
     // api
     
@@ -40,8 +38,10 @@ declare module "nativescript-vuforia" {
         initObjectTracker() : boolean;
         getObjectTracker() : ObjectTracker;
         deinitObjectTracker() : boolean;
-        onNextStateUpdate(cb:(state:State)=>void);
-		getSystemBootTime() : number;
+        setStateUpdateCallback(cb:(state:State)=>void);
+        getViewerScaleFactor() : number;
+        setScaleFactor(f:number);
+        getScaleFactor() : number;
     }
     
     interface Vec2 {

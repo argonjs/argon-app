@@ -156,19 +156,14 @@ namespace  {
     Vuforia::onSurfaceChanged(size.x, size.y);
 }
 
+static float scaleFactorValue = 1;
 
-+ (long) systemBoottime {
-#define MIB_SIZE 2
-    int mib[MIB_SIZE];
-    size_t size;
-    struct timeval  boottime;
-    
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_BOOTTIME;
-    size = sizeof(boottime);
-    sysctl(mib, MIB_SIZE, &boottime, &size, NULL, 0);
-    
-    return boottime.tv_sec;
++ (void) setScaleFactor:(float)f {
+    scaleFactorValue = f;
+}
+
++ (float) scaleFactor {
+    return scaleFactorValue;
 }
 
 + (void) Vuforia_onUpdate:(Vuforia::State*)state {

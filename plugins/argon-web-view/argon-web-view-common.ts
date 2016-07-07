@@ -6,56 +6,73 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
     public static sessionUrlMap = new WeakMap<Argon.SessionPort, string>();
     
-    public static sessionConnectEvent = 'sessionConnect';
+    public static sessionEvent = 'session';
     public static logEvent = 'log';
 
-    public abstract get progress() : number;
+    public isArgonApp = false;
+
+    public title : string;
+    public progress : number;
+
+    public log:string[] = [];    
 
     public session:Argon.SessionPort;
-    private _sessionMessagePort:Argon.MessagePortLike;
+    private _outputPort:Argon.MessagePortLike;
 
-    public log:string[] = [];
+    constructor() {
+        super();
+    }
+
+    public _didCommitNavigation() {
+        if (this.session) this.session.close();
+        this.session = null;
+        this._outputPort = null;
+    }
 
     public _handleArgonMessage(message:string) {
-        if (typeof this._sessionMessagePort == 'undefined') {
-            console.log('Connecting to argon.js application at ' + this.src);
-            const manager = Argon.ArgonSystem.instance;
-            const messageChannel = manager.session.createMessageChannel();
-            const remoteSession = manager.session.addManagedSessionPort();
-            ArgonWebView.sessionUrlMap.set(remoteSession, this.src);
+
+        if (this.session && !this.session.isConnected) return;
+
+        if (!this.session) { 
+            // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
+            const sessionUrl = this.url;
             
-            this._sessionMessagePort = messageChannel.port2;
-            this._sessionMessagePort.onmessage = (msg:Argon.MessageEventLike) => {
+            console.log('Connecting to argon.js session at ' + sessionUrl);
+            const manager = Argon.ArgonSystem.instance;
+            const messageChannel = manager.session.createSynchronousMessageChannel();
+            const session = manager.session.addManagedSessionPort();
+            
+            ArgonWebView.sessionUrlMap.set(session, sessionUrl);
+            
+            const port = messageChannel.port2;
+            port.onmessage = (msg:Argon.MessageEventLike) => {
                 if (!this.session) return;
                 const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
                 this.evaluateJavascript(injectedMessage);
             }
 
-            remoteSession.connectEvent.addEventListener(()=>{
-                this.session = remoteSession;
-                const args:def.SessionConnectEventData = {
-                    eventName: ArgonWebView.sessionConnectEvent,
-                    object: this,
-                    session: remoteSession
-                }
-                this.notify(args);
+            session.connectEvent.addEventListener(()=>{            
+                session.info.name = sessionUrl;
             });
+                 
+            const args:def.SessionEventData = {
+                eventName: ArgonWebView.sessionEvent,
+                object: this,
+                session: session
+            }
+            this.notify(args);
 
-            remoteSession.closeEvent.addEventListener(()=>{
-                if (this.session === remoteSession) {
-                    this._sessionMessagePort = null;
-                    this.session = null;
-                }
-            })
+            this.session = session;
+            this._outputPort = port;
 
-            remoteSession.open(messageChannel.port1, manager.session.configuration);
+            session.open(messageChannel.port1, manager.session.configuration)
         }
-        console.log(message);
-        this._sessionMessagePort.postMessage(JSON.parse(message));
+        // console.log(message);
+        this._outputPort.postMessage(JSON.parse(message));
     }
 
     public _handleLogMessage(message:string) {
-        const logMessage = this.src + ': ' + message;
+        const logMessage = this.url + ': ' + message;
         console.log(logMessage); 
         this.log.push(logMessage);
         const args:def.LogEventData = {

@@ -12,28 +12,32 @@ var ArgonWebView = (function (_super) {
         // We want to replace the UIWebView created by superclass with WKWebView instance
         this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate; // remove reference to UIWebView delegate created by super class
+        this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         configuration.processPool = processPool;
-        configuration.userContentController = WKUserContentController.alloc().init();
-        configuration.userContentController.addScriptMessageHandlerName(this, "argon");
-        configuration.userContentController.addScriptMessageHandlerName(this, "log");
-        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n            }\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
-        this._ios.navigationDelegate = this;
+        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
+        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
+        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            };\n            function _sendArgonCheck(event) {\n                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {\n                    if (event.persisted) window.location.reload(false);\n                    else webkit.messageHandlers.argoncheck.postMessage(\"true\");\n                } else {\n                    webkit.messageHandlers.argoncheck.postMessage(\"false\");\n                }\n            }\n\t        document.addEventListener(\"DOMContentLoaded\", _sendArgonCheck);\n\t        window.addEventListener(\"pageshow\", _sendArgonCheck);\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
         this._ios.allowsBackForwardNavigationGestures = true;
         this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
         this._ios.scrollView.layer.masksToBounds = false;
         this._ios.layer.masksToBounds = false;
-        this._ios.scrollView.backgroundColor = UIColor.clearColor();
-        this._ios.backgroundColor = UIColor.clearColor();
-        this._ios.opaque = false;
     }
-    Object.defineProperty(ArgonWebView.prototype, "progress", {
-        get: function () {
-            return this._ios.estimatedProgress;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    ArgonWebView.prototype._setIsArgonApp = function (flag) {
+        if (!this.isArgonApp && flag) {
+            this._ios.scrollView.backgroundColor = UIColor.clearColor();
+            this._ios.backgroundColor = UIColor.clearColor();
+            this._ios.opaque = false;
+            this.set("isArgonApp", true);
+        }
+        else if (this.isArgonApp && !flag) {
+            this._ios.scrollView.backgroundColor = UIColor.whiteColor();
+            this._ios.backgroundColor = UIColor.whiteColor();
+            this._ios.opaque = true;
+            this.set("isArgonApp", false);
+        }
+    };
     ArgonWebView.prototype.evaluateJavascript = function (script) {
         var _this = this;
         return new Promise(function (resolve, reject) {
@@ -50,13 +54,54 @@ var ArgonWebView = (function (_super) {
     };
     ArgonWebView.prototype.onLoaded = function () {
         _super.prototype.onLoaded.call(this);
-        this._ios.navigationDelegate = this;
+        this._ios.navigationDelegate = this._argonDelegate;
     };
     ArgonWebView.prototype.onUnloaded = function () {
         this._ios.navigationDelegate = null;
         _super.prototype.onUnloaded.call(this);
     };
-    ArgonWebView.prototype.webViewDecidePolicyForNavigationActionDecisionHandler = function (webview, navigationAction, decisionHandler) {
+    return ArgonWebView;
+}(common.ArgonWebView));
+exports.ArgonWebView = ArgonWebView;
+var ArgonWebViewDelegate = (function (_super) {
+    __extends(ArgonWebViewDelegate, _super);
+    function ArgonWebViewDelegate() {
+        _super.apply(this, arguments);
+    }
+    ArgonWebViewDelegate.initWithOwner = function (owner) {
+        var delegate = ArgonWebViewDelegate.new();
+        delegate._owner = owner;
+        return delegate;
+    };
+    // WKScriptMessageHandler
+    ArgonWebViewDelegate.prototype.userContentControllerDidReceiveScriptMessage = function (userContentController, message) {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        if (message.name === 'argon') {
+            if (!owner.session) {
+                // just in case we thought below that the page was not an
+                // argon page, perhaps because argon.js loaded asyncronously 
+                // and the programmer didn't set up an argon meta tag
+                owner._setIsArgonApp(true);
+            }
+            owner._handleArgonMessage(message.body);
+        }
+        else if (message.name === 'log') {
+            owner._handleLogMessage(message.body);
+        }
+        else if (message.name === 'argoncheck') {
+            if (!owner.session) {
+                if (message.body === "true") {
+                    owner._setIsArgonApp(true);
+                }
+                else {
+                    owner._setIsArgonApp(false);
+                }
+            }
+        }
+    };
+    ArgonWebViewDelegate.prototype.webViewDecidePolicyForNavigationActionDecisionHandler = function (webview, navigationAction, decisionHandler) {
         if (navigationAction.targetFrame && navigationAction.targetFrame.mainFrame) {
             var navigationType = navigationAction.navigationType;
             var navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('other');
@@ -77,49 +122,61 @@ var ArgonWebView = (function (_super) {
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('formResubmitted');
                     break;
             }
-            this['_onLoadStarted'](navigationAction.request.URL.absoluteString, web_view_1.WebView.navigationTypes[navTypeIndex]);
+            var owner = this._owner.get();
+            if (owner)
+                owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, web_view_1.WebView.navigationTypes[navTypeIndex]);
         }
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);
         decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyAllow);
     };
-    ArgonWebView.prototype.webViewDecidePolicyForNavigationResponseDecisionHandler = function (webview, navigationResponse, decisionHandler) {
-        if (navigationResponse.forMainFrame) {
-            this['_suspendLoading'] = true;
-            // this.url = navigationResponse.response.URL.absoluteString;
-            this['_suspendLoading'] = kCFNumberFormatterAlwaysShowDecimalSeparator;
-        }
+    ArgonWebViewDelegate.prototype.webViewDecidePolicyForNavigationResponseDecisionHandler = function (webview, navigationResponse, decisionHandler) {
         decisionHandler(WKNavigationResponsePolicy.WKNavigationResponsePolicyAllow);
     };
-    ArgonWebView.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
-        this._provisionalURL = this._ios.URL.absoluteString;
+    ArgonWebViewDelegate.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
+        this._provisionalURL = webView.URL.absoluteString;
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        owner.set('progress', webView.estimatedProgress);
     };
-    ArgonWebView.prototype.webViewDidFailProvisionalNavigation = function (webView, navigation) {
-        this['_onLoadFinished'](this._provisionalURL);
-        this['_suspendLoading'] = true;
-        // this.url = this._ios.URL.absoluteString;
-        this['_suspendLoading'] = kCFNumberFormatterAlwaysShowDecimalSeparator;
+    ArgonWebViewDelegate.prototype.webViewDidFailProvisionalNavigation = function (webView, navigation) {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
-    ArgonWebView.prototype.webViewDidCommitNavigation = function (webView, navigation) {
-        this.log = [];
-        this.session.close();
+    ArgonWebViewDelegate.prototype.webViewDidCommitNavigation = function (webView, navigation) {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        owner.log = [];
+        owner._didCommitNavigation();
+        owner['_suspendLoading'] = true;
+        owner.url = webView.URL.absoluteString;
+        owner['_suspendLoading'] = false;
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
-    ArgonWebView.prototype.webViewDidFinishNavigation = function (webView, navigation) {
-        this['_onLoadFinished'](this._ios.URL.absoluteString);
+    ArgonWebViewDelegate.prototype.webViewDidFinishNavigation = function (webView, navigation) {
+        var owner = this._owner.get();
+        if (owner)
+            owner['_onLoadFinished'](webView.URL.absoluteString);
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
-    ArgonWebView.prototype.webViewDidFailNavigationWithError = function (webView, navigation, error) {
-        this['_onLoadFinished'](this._ios.URL.absoluteString, error.localizedDescription);
+    ArgonWebViewDelegate.prototype.webViewDidFailNavigationWithError = function (webView, navigation, error) {
+        var owner = this._owner.get();
+        if (owner)
+            owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        owner.set('title', webView.title);
+        owner.set('progress', webView.estimatedProgress);
     };
-    // WKScriptMessageHandler
-    ArgonWebView.prototype.userContentControllerDidReceiveScriptMessage = function (userContentController, message) {
-        if (message.name === 'argon') {
-            this._handleArgonMessage(message.body);
-        }
-        else if (message.name === 'log') {
-            this._handleLogMessage(message.body);
-        }
-    };
-    ArgonWebView.ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
-    return ArgonWebView;
-}(common.ArgonWebView));
-exports.ArgonWebView = ArgonWebView;
+    ArgonWebViewDelegate.ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
+    return ArgonWebViewDelegate;
+}(NSObject));
 //# sourceMappingURL=argon-web-view.ios.js.map

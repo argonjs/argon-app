@@ -44,6 +44,8 @@
     
 }
 
+// -(float) getSceneScaleFactor;
+
 @end
 
 #endif

@@ -57,6 +57,7 @@
 
 @interface VuforiaCameraDevice ()
 @property (nonatomic, assign) Vuforia::CameraDevice *cpp;
+@property (nonatomic, assign) BOOL started;
 @end
 
 @implementation VuforiaCameraDevice : NSObject
@@ -87,19 +88,27 @@ static VuforiaCameraDevice *cameraDevice = nil;
     return self.cpp->deinit();
 }
 
+-(BOOL)isStarted {
+    return self.started;
+}
+
 /// Starts the camera. Frames are being delivered.
 /**
  *  Depending on the type of the camera it may be necessary to perform
  *  configuration tasks before it can be started.
  */
 -(BOOL)start {
-    return self.cpp->start();
+    BOOL result = self.cpp->start();
+    if (result) self.started = true;
+    return result;
 }
 
 /// Stops the camera if video feed is not required (e.g. in non-AR mode
 /// of an application).
 -(BOOL)stop {
-    return self.cpp->stop();
+    BOOL result = self.cpp->stop();
+    if (result) self.started = false;
+    return result;
 }
 
 /// Returns the number of available video modes.

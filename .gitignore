@@ -3,3 +3,4 @@
 /hooks
 /typings
 .DS_Store
+*.js.map

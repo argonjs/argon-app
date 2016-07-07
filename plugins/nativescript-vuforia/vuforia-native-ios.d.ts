@@ -318,7 +318,23 @@ declare class VuforiaMarkerResult extends VuforiaTrackableResult {
 	getTrackable(): VuforiaMarker;
 }
 
-interface VuforiaMatrix34 {
+// interface VuforiaMatrix34 {
+// 	_0: number;
+// 	_1: number;
+// 	_2: number;
+// 	_3: number;
+// 	_4: number;
+// 	_5: number;
+// 	_6: number;
+// 	_7: number;
+// 	_8: number;
+// 	_9: number;
+// 	_10: number;
+// 	_11: number;
+// }
+// declare var VuforiaMatrix34: interop.StructType<VuforiaMatrix34>;
+
+interface VuforiaMatrix44 {
 	_0: number;
 	_1: number;
 	_2: number;
@@ -331,8 +347,12 @@ interface VuforiaMatrix34 {
 	_9: number;
 	_10: number;
 	_11: number;
+	_12: number;
+	_13: number;
+	_14: number;
+	_15: number;
 }
-declare var VuforiaMatrix34: interop.StructType<VuforiaMatrix34>;
+declare var VuforiaMatrix44: interop.StructType<VuforiaMatrix44>;
 
 declare class VuforiaMesh extends NSObject {
 
@@ -462,17 +482,17 @@ declare class VuforiaRenderingPrimitives extends NSObject {
 
 	getDistortionTextureViewport(viewID: VuforiaView): VuforiaVec4I;
 
-	getEyeDisplayAdjustmentMatrix(viewID: VuforiaView): VuforiaMatrix34;
+	getEyeDisplayAdjustmentMatrix(viewID: VuforiaView): VuforiaMatrix44;
 
 	getNormalizedViewport(viewID: VuforiaView): VuforiaVec4F;
 
-	getProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
+	getProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix44;
 
 	getRenderingViews(): VuforiaViewList;
 
 	getVideoBackgroundMesh(viewID: VuforiaView): VuforiaMesh;
 
-	getVideoBackgroundProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
+	getVideoBackgroundProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix44;
 
 	getViewport(viewID: VuforiaView): VuforiaVec4I;
 
@@ -543,7 +563,9 @@ declare class VuforiaSession extends NSObject {
 
 	static setRotation(rotation: VuforiaRotation): void;
 
-	static systemBoottime(): number;
+	static scaleFactor() : number;
+
+	static setScaleFactor(f:number);
 
 	constructor(); // inherited from NSObject
 
@@ -629,7 +651,7 @@ declare class VuforiaTrackableResult extends NSObject {
 
 	constructor(); // inherited from NSObject
 
-	getPose(): VuforiaMatrix34;
+	getPose(): VuforiaMatrix44;
     
     getTimeStamp(): number;
 

@@ -1,17 +1,41 @@
 ﻿.menuItem {
-    padding: 15px 40px 15px 15px;
+    padding: 15px 15px 15px 15px;
+    color: #545454;
 }
 
 #menu {
-    background-color: #BBFFFFFF;
+    background-color: #DDFAFAFA;
 }
 
 .action-btn {
-  font-size: 22px;
-  color: #545454;
-  width: 11%;
+    color: #545454;
+}
+
+.action-btn-disabled {
+    color: #BBBBBB;
+}
+
+.toggle-btn-on {
+    color: #EEAA00;
+}
+
+.toggle-btn-off {
+    color: #545454;
 }
 
 .material-icon {
-	font-family: "MaterialIcons-Regular";
+    font-family: "MaterialIcons-Regular";
+    font-size: 22px;
+}
+
+.bookmark-title {
+    font-size: 18px;
+}
+
+.bookmark-subtitle {
+    font-size: 10px;
+}
+
+.delete-btn {
+    color: white;
 }

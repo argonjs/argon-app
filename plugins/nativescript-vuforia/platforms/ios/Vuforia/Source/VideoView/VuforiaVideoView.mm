@@ -37,6 +37,7 @@
 #import <Vuforia/View.h>
 
 #import "VuforiaSession.h"
+#import "VuforiaCameraDevice.h"
 #import "VuforiaVideoView.h"
 
 //******************************************************************************
@@ -223,12 +224,13 @@ namespace{
 // *** Vuforia will call this method periodically on a background thread ***
 - (void)renderFrameVuforia
 {
+    if (![[VuforiaCameraDevice getInstance] isStarted]) return;
+    
     // test if the layout has changed
     if (self.mDoLayoutSubviews) {
         [self doLayoutSubviews];
         self.mDoLayoutSubviews = NO;
     }
-    
 
     Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
     
@@ -319,25 +321,19 @@ namespace{
     Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(
                                                                             renderingPrimitives.getVideoBackgroundProjectionMatrix(viewId, Vuforia::COORDINATE_SYSTEM_CAMERA));
     
-    // Apply the scene scale on video see-through eyewear, to scale the video background and augmentation
-    // so that the display lines up with the real world
-    // This should not be applied on optical see-through devices, as there is no video background,
-    // and the calibration ensures that the augmentation matches the real world
-    if (Vuforia::Device::getInstance().isViewerActive())
-    {
-        float sceneScaleFactor = [self getSceneScaleFactor];
-        scalePoseMatrix(sceneScaleFactor, sceneScaleFactor, 1.0f, vbProjectionMatrix.data);
-        
-        // Apply a scissor around the video background, so that the augmentation doesn't 'bleed' outside it
-        int videoWidth = viewport.data[2] * sceneScaleFactor;
-        int videoHeight = viewport.data[3] * sceneScaleFactor;
-        int videoX = (viewport.data[2] - videoWidth) / 2 + viewport.data[0];
-        int videoY = (viewport.data[3] - videoHeight) / 2 + viewport.data[1];
-        
-        glEnable(GL_SCISSOR_TEST);
-        glScissor(videoX, videoY, videoWidth, videoHeight);
-        glDisable(GL_SCISSOR_TEST);
-    }
+    // Scale the video background as necessary
+    float scaleFactor = [VuforiaSession scaleFactor];
+    scalePoseMatrix(scaleFactor, scaleFactor, 1.0f, vbProjectionMatrix.data);
+    
+    // Apply a scissor around the video background, so that the augmentation doesn't 'bleed' outside it
+    // int videoWidth = viewport.data[2] * scaleFactor;
+    // int videoHeight = viewport.data[3] * scaleFactor;
+    // int videoX = (viewport.data[2] - videoWidth) / 2 + viewport.data[0];
+    // int videoY = (viewport.data[3] - videoHeight) / 2 + viewport.data[1];
+    
+    // glEnable(GL_SCISSOR_TEST);
+    // glScissor(videoX, videoY, videoWidth, videoHeight);
+    // glDisable(GL_SCISSOR_TEST);
     
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
@@ -372,35 +368,34 @@ namespace{
 
 
 
--(float) getSceneScaleFactor
-{
-//    static const float VIRTUAL_FOV_Y_DEGS = 85.0f;
+// -(float) getSceneScaleFactor
+// {
+// //    static const float VIRTUAL_FOV_Y_DEGS = 85.0f;
     
-    // Get the y-dimension of the physical camera field of view
-    Vuforia::Vec2F fovVector = Vuforia::CameraDevice::getInstance().getCameraCalibration().getFieldOfViewRads();
-    float cameraFovYRads = fovVector.data[1];
+//     // Get the y-dimension of the physical camera field of view
+//     Vuforia::Vec2F fovVector = Vuforia::CameraDevice::getInstance().getCameraCalibration().getFieldOfViewRads();
+//     float cameraFovYRads = fovVector.data[1];
     
-    // Get the y-dimension of the virtual camera field of view
-    Vuforia::ViewerParameters viewer = Vuforia::Device::getInstance().getSelectedViewer();
-    float viewerFOVy = viewer.getFieldOfView().data[2] + viewer.getFieldOfView().data[3];
-    NSLog(@"FOVY for selected viewer:%f", viewerFOVy);
-    float virtualFovYRads = viewerFOVy * M_PI / 180;
-    //    float virtualFovYRads = VIRTUAL_FOV_Y_DEGS * M_PI / 180;
+//     // Get the y-dimension of the virtual camera field of view
+//     Vuforia::ViewerParameters viewer = Vuforia::Device::getInstance().getSelectedViewer();
+//     float viewerFOVy = viewer.getFieldOfView().data[2] + viewer.getFieldOfView().data[3];
+//     float virtualFovYRads = viewerFOVy * M_PI / 180;
+//     //    float virtualFovYRads = VIRTUAL_FOV_Y_DEGS * M_PI / 180;
     
-    // The scene-scale factor represents the proportion of the viewport that is filled by
-    // the video background when projected onto the same plane.
-    // In order to calculate this, let 'd' be the distance between the cameras and the plane.
-    // The height of the projected image 'h' on this plane can then be calculated:
-    //   tan(fov/2) = h/2d
-    // which rearranges to:
-    //   2d = h/tan(fov/2)
-    // Since 'd' is the same for both cameras, we can combine the equations for the two cameras:
-    //   hPhysical/tan(fovPhysical/2) = hVirtual/tan(fovVirtual/2)
-    // Which rearranges to:
-    //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
-    // ... which is the scene-scale factor
-    return tan(cameraFovYRads / 2) / tan(virtualFovYRads / 2);
-}
+//     // The scene-scale factor represents the proportion of the viewport that is filled by
+//     // the video background when projected onto the same plane.
+//     // In order to calculate this, let 'd' be the distance between the cameras and the plane.
+//     // The height of the projected image 'h' on this plane can then be calculated:
+//     //   tan(fov/2) = h/2d
+//     // which rearranges to:
+//     //   2d = h/tan(fov/2)
+//     // Since 'd' is the same for both cameras, we can combine the equations for the two cameras:
+//     //   hPhysical/tan(fovPhysical/2) = hVirtual/tan(fovVirtual/2)
+//     // Which rearranges to:
+//     //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
+//     // ... which is the scene-scale factor
+//     return tan(cameraFovYRads / 2) / tan(virtualFovYRads / 2);
+// }
 
 - (void)initShaders
 {
