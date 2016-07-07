@@ -11,12 +11,17 @@
   "dependencies": {
     "argon": "file:../argon",
     "argon-web-view": "file:plugins/argon-web-view",
+    "nativescript-screen-orientation": "git+https://github.com/bionictk/nativescript-screen-orientation.git",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
     "tns-core-modules": "^1.7.1",
     "urijs": "^1.17.1"
   },
   "devDependencies": {
+    "babel-traverse": "6.10.4",
+    "babel-types": "6.11.1",
+    "babylon": "6.8.3",
+    "lazy": "1.0.11",
     "nativescript-dev-typescript": "^0.3.1",
     "openpgp": "^2.3.0",
     "typescript": "^1.9.0-dev.20160313"
