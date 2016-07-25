@@ -28,6 +28,11 @@ import {NativescriptDeviceService} from './argon-device-service';
 import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 
+import * as vuforia from 'nativescript-vuforia';
+
+//import * as orientationModule from 'nativescript-screen-orientation';
+var orientationModule = require("nativescript-screen-orientation");
+
 export let manager:Argon.ArgonSystem;
 
 export let page:Page;
@@ -122,6 +127,13 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
     else if (evt.propertyName === 'viewerEnabled') {
         vuforiaDelegate.viewerEnabled = evt.value;
+        if (evt.value) {
+            orientationModule.setCurrentOrientation("landscape");
+        } else {
+            orientationModule.setCurrentOrientation("portrait");
+            orientationModule.setCurrentOrientation("all");
+        }
+
     }
     else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {

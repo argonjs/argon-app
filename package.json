@@ -11,6 +11,7 @@
   "dependencies": {
     "argon": "file:../argon",
     "argon-web-view": "file:plugins/argon-web-view",
+    "nativescript-screen-orientation": "git+https://github.com/bionictk/nativescript-screen-orientation.git",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
     "tns-core-modules": "^1.7.1",

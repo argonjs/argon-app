@@ -12,6 +12,8 @@ var AppViewModel_1 = require('./components/common/AppViewModel');
 var argon_device_service_1 = require('./argon-device-service');
 var argon_reality_service_1 = require('./argon-reality-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');
+//import * as orientationModule from 'nativescript-screen-orientation';
+var orientationModule = require("nativescript-screen-orientation");
 var searchBar;
 var iosSearchBarController;
 var pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
@@ -93,6 +95,13 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
     }
     else if (evt.propertyName === 'viewerEnabled') {
         vuforiaDelegate.viewerEnabled = evt.value;
+        if (evt.value) {
+            orientationModule.setCurrentOrientation("landscape");
+        }
+        else {
+            orientationModule.setCurrentOrientation("portrait");
+            orientationModule.setCurrentOrientation("all");
+        }
     }
     else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {
