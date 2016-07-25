@@ -14,10 +14,11 @@ export abstract class APIBase implements def.API {
     abstract getDevice() : def.Device;
     abstract getRenderer() : def.Renderer;
     abstract initObjectTracker() : boolean;
-    abstract getObjectTracker() : def.ObjectTracker;
+    abstract getObjectTracker() : def.ObjectTracker|undefined;
     abstract deinitObjectTracker() : boolean;
     abstract setScaleFactor(f:number);
     abstract getScaleFactor() : number; 
+    abstract onSurfaceChanged(width:number, height:number) : void;
     
     protected callback:(state:def.State)=>void;
 
@@ -30,16 +31,17 @@ export abstract class APIBase implements def.API {
 
         // Get the y-dimension of the physical camera field of view
         const cameraCalibration = this.getCameraDevice().getCameraCalibration();
-        if (!cameraCalibration) return undefined;
+        if (!cameraCalibration) throw new Error('Unable to get camera calibration');
         const device = this.getDevice();
-        if (!device) return undefined;
-        if (!device.isViewerActive()) return undefined;
+        if (!device.isViewerActive()) throw new Error('Viewer is not active');
 
         const fov = cameraCalibration.getFieldOfViewRads();
         const cameraFovYRad = fov.y;
-        const viewerFOV = device.getSelectedViewer().getFieldOfView();
-        
+        const viewer = device.getSelectedViewer();
+        if (!viewer)  throw new Error('No viewer is selected');
+
         // Get the y-dimension of the virtual camera field of view
+        const viewerFOV = viewer.getFieldOfView();
         const viewerFOVy = viewerFOV.y + viewerFOV.z;
         const virtualFovYRad = viewerFOVy * Math.PI / 180;
         //    float virtualFovYRad = VIRTUAL_FOV_Y_DEGS * M_PI / 180;

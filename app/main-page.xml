@@ -34,7 +34,7 @@
                 <Button col="2" id="interaction" class="{{ interactionModeButtonEnabled ? 'material-icon action-btn' : 'material-icon action-btn-disabled' }}" text="{{interactionMode === 'immersive' ? 'description' : 'public'}}" isEnabled="{{interactionModeButtonEnabled}}" tap="onInteractionToggle"/>
             </GridLayout>
             <Label class="menuItem" text="Select Reality..." tap="onSelectReality"/>
-            <Label class="menuItem" text="Settings" tap="onSettings"/>
+            <!--<Label class="menuItem" text="Settings" tap="onSettings"/>-->
             <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer Mode' }}" tap="onViewerToggle"/>
             <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
         </StackLayout>

@@ -11,8 +11,8 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype._didCommitNavigation = function () {
         if (this.session)
             this.session.close();
-        this.session = null;
-        this._outputPort = null;
+        this.session = undefined;
+        this._outputPort = undefined;
     };
     ArgonWebView.prototype._handleArgonMessage = function (message) {
         var _this = this;
@@ -47,7 +47,7 @@ var ArgonWebView = (function (_super) {
             session_1.open(messageChannel.port1, manager.session.configuration);
         }
         // console.log(message);
-        this._outputPort.postMessage(JSON.parse(message));
+        this._outputPort && this._outputPort.postMessage(JSON.parse(message));
     };
     ArgonWebView.prototype._handleLogMessage = function (message) {
         var logMessage = this.url + ': ' + message;

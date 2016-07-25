@@ -10,7 +10,7 @@ declare module "argon-web-view" {
         static sessionConnectEvent:string;
         static logEvent:string;
         
-        session: SessionPort;
+        session?: SessionPort;
         log: string[];
         
         title: string;

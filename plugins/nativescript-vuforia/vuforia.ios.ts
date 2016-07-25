@@ -51,27 +51,12 @@ application.on(application.resumeEvent, ()=> {
 })
 
 function configureVuforiaSurface() {
+    if (!api) throw new Error();
     const contentScaleFactor = iosVideoView.contentScaleFactor;
-    VuforiaSession.onSurfaceChanged({
-        x: iosVideoView.frame.size.width * contentScaleFactor,
-        y: iosVideoView.frame.size.height * contentScaleFactor
-    });
-    VuforiaSession.setRotation(VuforiaRotation.IOS_90);
-    const orientation:UIInterfaceOrientation = UIApplication.sharedApplication().statusBarOrientation;
-    switch (orientation) {
-        case UIInterfaceOrientation.UIInterfaceOrientationPortrait: 
-            VuforiaSession.setRotation(VuforiaRotation.IOS_90);
-            break;
-        case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: 
-            VuforiaSession.setRotation(VuforiaRotation.IOS_270);
-            break;
-        case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: 
-            VuforiaSession.setRotation(VuforiaRotation.IOS_180);
-            break;
-        case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: 
-            VuforiaSession.setRotation(VuforiaRotation.IOS_0);
-            break;
-    }
+    api.onSurfaceChanged(
+        iosVideoView.frame.size.width * contentScaleFactor,
+        iosVideoView.frame.size.height * contentScaleFactor
+    );
 }
 
 export class API extends common.APIBase {
@@ -80,7 +65,7 @@ export class API extends common.APIBase {
     private device = new Device();
     private renderer = new Renderer();
     
-    private objectTracker:ObjectTracker;
+    private objectTracker:ObjectTracker|undefined;
     
     setLicenseKey(licenseKey:string) : boolean {
         return VuforiaSession.setLicenseKey(licenseKey) === 0;
@@ -132,13 +117,13 @@ export class API extends common.APIBase {
         return false;
     }
     
-    getObjectTracker() : ObjectTracker {
+    getObjectTracker() {
         return this.objectTracker;
     }
     
     deinitObjectTracker() : boolean {
         if (VuforiaObjectTracker.deinitTracker()) {
-            this.objectTracker = null;
+            this.objectTracker = undefined;
             return true;
         }
         return false;
@@ -150,6 +135,30 @@ export class API extends common.APIBase {
 
     getScaleFactor() : number {
         return VuforiaSession.scaleFactor();
+    }
+
+    onSurfaceChanged(width:number, height:number) : void {
+        VuforiaSession.onSurfaceChanged({
+            x: width,
+            y: height
+        });
+        const orientation:UIInterfaceOrientation = UIApplication.sharedApplication().statusBarOrientation;
+        switch (orientation) {
+            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: 
+                VuforiaSession.setRotation(VuforiaRotation.IOS_90);
+                break;
+            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: 
+                VuforiaSession.setRotation(VuforiaRotation.IOS_270);
+                break;
+            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: 
+                VuforiaSession.setRotation(VuforiaRotation.IOS_180);
+                break;
+            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: 
+                VuforiaSession.setRotation(VuforiaRotation.IOS_0);
+                break;
+            default: 
+                VuforiaSession.setRotation(VuforiaRotation.IOS_90);
+        }
     }
 }
 
@@ -190,6 +199,7 @@ export class Trackable {
         } else if (ios instanceof VuforiaTrackable) {
             return new Trackable(ios);
         }
+        throw new Error();
     }
     
     constructor(public ios:VuforiaTrackable) {}
@@ -227,6 +237,7 @@ export class TrackableResult {
         } else if (ios instanceof VuforiaTrackableResult) {
             return new TrackableResult(ios);
         }
+        throw new Error();
     }
     
     constructor(public ios:VuforiaTrackableResult) {}
@@ -338,12 +349,12 @@ export class Image {
 
 export class Frame {
     constructor(public ios:VuforiaFrame) {}
-    getImage(idx: number): Image {
+    getImage(idx: number): Image|undefined {
         const img = this.ios.getImage(idx);
         if (img) {
             return new Image(img);
         }
-        return null;
+        return undefined;
     }
     getIndex(): number {
         return this.ios.getIndex();
@@ -360,10 +371,7 @@ export class State {
     constructor(public ios:VuforiaState) {}
     getFrame(): Frame {
         const frame = this.ios.getFrame();
-        if (frame) {
-            return new Frame(frame);
-        }
-        return null;
+        return new Frame(frame);
     }
     getNumTrackableResults(): number {
         return this.ios.getNumTrackableResults();
@@ -371,19 +379,19 @@ export class State {
     getNumTrackables(): number {
         return this.ios.getNumTrackables();
     }
-    getTrackable(idx: number): def.Trackable {
+    getTrackable(idx: number): def.Trackable|undefined {
         const trackable = this.ios.getTrackable(idx);
         if (trackable) {
             return Trackable.createTrackable(trackable);
         }
-        return null;
+        return undefined;
     }
-    getTrackableResult(idx: number): def.TrackableResult {
+    getTrackableResult(idx: number): def.TrackableResult|undefined {
         const result = this.ios.getTrackableResult(idx);
         if (result) {
             return TrackableResult.createTrackableResult(result);
         }
-        return null;
+        return undefined;
     }
 }
 
@@ -513,15 +521,15 @@ export class ViewerParameters {
 
 export class ViewerParametersList {
     constructor(public ios:VuforiaViewerParametersList) {}
-    get(idx: number): ViewerParameters {
+    get(idx: number): ViewerParameters|undefined {
         const vp = this.ios.get(idx);
         if (vp) return new ViewerParameters(vp);
-        return null;
+        return undefined;
     }
-    getNameManufacturer(name: string, manufacturer: string): ViewerParameters {
+    getNameManufacturer(name: string, manufacturer: string): ViewerParameters|undefined {
         const vp = this.ios.getNameManufacturer(name, manufacturer);
         if (vp) return new ViewerParameters(vp);
-        return null;
+        return undefined;
     }
     setSDKFilter(filter: string): void {
         this.ios.setSDKFilter(filter);
@@ -552,7 +560,7 @@ export class Device {
     selectViewer(viewer:ViewerParameters) {
         return VuforiaDevice.getInstance().selectViewer(viewer.ios);
     }
-    getSelectedViewer() : ViewerParameters {
+    getSelectedViewer() : ViewerParameters|undefined {
         if (!this.isViewerActive()) return undefined;
         return new ViewerParameters(VuforiaDevice.getInstance().getSelectedViewer());
     }
@@ -573,7 +581,6 @@ export class Renderer {
     }
     setVideoBackgroundConfig(cfg: def.VideoBackgroundConfig): void {
         VuforiaRenderer.setVideoBackgroundConfig(<VuforiaVideoBackgroundConfig>cfg);
-        configureVuforiaSurface();
     }
 }
 
@@ -633,8 +640,7 @@ export class RenderingPrimitives {
     
     getDistortionTextureMesh(viewID: def.View): Mesh {
         const mesh = this.ios.getDistortionTextureMesh(<number>viewID);
-        if (mesh) return new Mesh(mesh);
-        return null;
+        return new Mesh(mesh);
     }
     
     getDistortionTextureSize(viewID: def.View): def.Vec2 {
@@ -663,8 +669,7 @@ export class RenderingPrimitives {
     
     getVideoBackgroundMesh(viewID: def.View): Mesh {
         const mesh = this.ios.getVideoBackgroundMesh(<number>viewID);
-        if (mesh) return new Mesh(mesh);
-        return null;
+        return new Mesh(mesh);
     }
     
     getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
@@ -681,10 +686,10 @@ export class Tracker {}
 
 class DataSet {
     constructor(public ios:VuforiaDataSet){}
-    createMultiTarget(name: string): MultiTarget {
+    createMultiTarget(name: string): MultiTarget|undefined {
         const mt = this.ios.createMultiTarget(name);
         if (mt) return new MultiTarget(mt);
-        return null;
+        return undefined;
     }
     destroy(trackable: Trackable): boolean {
         return this.ios.destroy(trackable.ios);
@@ -695,10 +700,10 @@ class DataSet {
     getNumTrackables(): number {
         return this.ios.getNumTrackables();
     }
-    getTrackable(idx: number): Trackable {
+    getTrackable(idx: number): Trackable|undefined {
         const trackable = this.ios.getTrackable(idx);
         if (trackable) return Trackable.createTrackable(trackable);
-        return null;
+        return undefined;
     }
     hasReachedTrackableLimit(): boolean {
         return this.ios.hasReachedTrackableLimit();
@@ -718,10 +723,10 @@ export class ObjectTracker extends Tracker {
     stop() : void {
         VuforiaObjectTracker.getInstance().stop();
     }
-    createDataSet() : DataSet {
+    createDataSet() : DataSet|undefined {
         const ds = VuforiaObjectTracker.getInstance().createDataSet();
         if (ds) return new DataSet(ds);
-        return null;
+        return undefined;
     }
 	destroyDataSet(dataSet:DataSet) : boolean {
 		return VuforiaObjectTracker.getInstance().destroyDataSet(dataSet.ios);

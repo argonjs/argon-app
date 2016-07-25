@@ -8,6 +8,7 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 import {getDisplayOrientation} from './argon-device-service'
+import {NativescriptRealityService, vuforiaCameraDeviceMode} from './argon-reality-service';
 
 export const VIDEO_DELAY = -0.5/60;
 
@@ -23,13 +24,12 @@ const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 
-const cameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor = cameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
-        1 : platform.screen.mainScreen.scale;
-}
 
-@Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
+@Argon.DI.inject(
+    Argon.DeviceService, 
+    Argon.RealityService, 
+    Argon.ContextService, 
+    Argon.ViewService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
         
     private scratchDate = new Argon.Cesium.JulianDate();
@@ -44,10 +44,18 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
     });
 	
-	constructor(private deviceService:Argon.DeviceService, private contextService:Argon.ContextService) {
+	constructor(
+        private deviceService:Argon.DeviceService, 
+        private realityService:NativescriptRealityService,
+        private contextService:Argon.ContextService,
+        private viewService:Argon.ViewService) {
         super();
         
         if (!vuforia.api) return;
+        
+        vuforia.videoView.on('propertyChange', ()=>{
+            
+        })
         
         const stateUpdateCallback = (state:vuforia.State) => { 
             
@@ -68,7 +76,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // update trackable results in context entity collection
             const numTrackableResults = state.getNumTrackableResults();
             for (let i=0; i < numTrackableResults; i++) {
-                const trackableResult = state.getTrackableResult(i);
+                const trackableResult = <vuforia.TrackableResult>state.getTrackableResult(i);
                 const trackable = trackableResult.getTrackable();
                 const name = trackable.getName();
                 
@@ -118,7 +126,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 index,
                 time,
                 eye: {
-                    pose
+                    pose,
                 }
             });
         };
@@ -233,7 +241,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         if (!cameraDevice.init(vuforia.CameraDeviceDirection.Default))
             return false;
             
-        if (!cameraDevice.selectVideoMode(cameraDeviceMode))
+        if (!cameraDevice.selectVideoMode(vuforiaCameraDeviceMode))
             return false;
             
         const device = vuforia.api.getDevice();
@@ -242,7 +250,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             device.setViewerActive(true);
         }
             
-        configureVideoBackground(this.videoEnabled);
+        this.realityService.configureVuforiaVideoBackground();
         this._configureCameraAndTrackers();
         return true;
     }
@@ -282,9 +290,9 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     private idDataSetMap = new Map<string, vuforia.DataSet>();
-    private dataSetUrlMap = new WeakMap<vuforia.DataSet, string>();
+    private dataSetUrlMap = new WeakMap<vuforia.DataSet, string|undefined>();
     
-    objectTrackerCreateDataSet(url?: string): string {        
+    objectTrackerCreateDataSet(url?: string): string|undefined {        
         console.log("Vuforia creating dataset...");
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
@@ -297,7 +305,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 return id;
             }
         }
-        return null;
+        return undefined;
     }
     
     objectTrackerDestroyDataSet(id: string): boolean {       
@@ -358,7 +366,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                     const numTrackables = dataSet.getNumTrackables();
                     const trackables:Argon.VuforiaTrackables = {};
                     for (let i=0; i < numTrackables; i++) {
-                        const trackable = dataSet.getTrackable(i);
+                        const trackable = <vuforia.Trackable>dataSet.getTrackable(i);
                         trackables[trackable.getName()] = {
                             id: this._getIdForTrackable(trackable),
                             size: trackable instanceof vuforia.ObjectTarget ? trackable.getSize() : {x:0,y:0,z:0}
@@ -376,51 +384,6 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
 }
 
-function configureVideoBackground(enabled=true) {
-    const frame = (frames.topmost().currentPage && frames.topmost().currentPage.content) || frames.topmost();
-    const viewWidth = frame.getMeasuredWidth();
-    const viewHeight = frame.getMeasuredHeight();
-    const contentScaleFactor = vuforia.videoView.ios ? vuforia.videoView.ios.contentScaleFactor : 1;
-    
-    const videoMode = vuforia.api.getCameraDevice().getVideoMode(cameraDeviceMode);
-    let videoWidth = videoMode.width;
-    let videoHeight = videoMode.height;
-    
-    const orientation = getDisplayOrientation();
-    if (orientation === 0 || orientation === 180) {
-        videoWidth = videoMode.height;
-        videoHeight = videoMode.width;
-    }
-    
-    let scale:number;
-    // aspect fill
-    scale = Math.max(viewWidth / videoWidth, viewHeight / videoHeight);
-    // aspect fit
-    // scale = Math.min(viewWidth / videoWidth, viewHeight / videoHeight);
-    
-    const config = {
-        enabled,
-        positionX:0,
-        positionY:0,
-        sizeX: Math.round(videoWidth * scale * contentScaleFactor),
-        sizeY: Math.round(videoHeight * scale * contentScaleFactor),
-        reflection: vuforia.VideoBackgroundReflection.Default
-    }
-    
-    console.log(`Vuforia configuring video background...
-        contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
-        viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
-        config: ${JSON.stringify(config)}
-    `);
-    
-    vuforia.api.getRenderer().setVideoBackgroundConfig(config)
-}
-
-if (vuforia.api) application.on(application.orientationChangedEvent, ()=>{
-    configureVideoBackground();
-    setTimeout(configureVideoBackground, 0); // delay callback until the interface orientation is updated
-})
-
 // TODO: make this cross platform somehow
 export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
     const xmlUrl = NSURL.URLWithString(xmlUrlString);
@@ -437,7 +400,7 @@ export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
     const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
     
     function downloadIfNeeded(url:string, destPath:string) {
-        let lastModified:Date;
+        let lastModified:Date|undefined;
         if (file.File.exists(destPath)) {
             const f = file.File.fromPath(destPath);
             lastModified = f.lastModified;
@@ -452,7 +415,7 @@ export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
             if (response.statusCode === 304) {
                 console.log(`Verified that cached version of file ${url} at ${destPath} is up-to-date.`)
                 return destPath;
-            } else if (response.statusCode >= 200 && response.statusCode < 300) {                
+            } else if (response.content && response.statusCode >= 200 && response.statusCode < 300) {                
                 console.log(`Downloaded file ${url} to ${destPath}`)
                 return response.content.toFile(destPath).path;
             } else {

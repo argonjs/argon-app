@@ -36,12 +36,13 @@ declare module "nativescript-vuforia" {
         getDevice() : Device;
         getRenderer() : Renderer;
         initObjectTracker() : boolean;
-        getObjectTracker() : ObjectTracker;
+        getObjectTracker() : ObjectTracker|undefined;
         deinitObjectTracker() : boolean;
         setStateUpdateCallback(cb:(state:State)=>void);
         getViewerScaleFactor() : number;
-        setScaleFactor(f:number);
+        setScaleFactor(f:number) : void;
         getScaleFactor() : number;
+        onSurfaceChanged(width:number, height:number) : void;
     }
     
     interface Vec2 {
@@ -164,7 +165,7 @@ declare module "nativescript-vuforia" {
     }
     
     export class Frame {
-        getImage(idx: number): Image;
+        getImage(idx: number): Image|undefined;
         getIndex(): number;
         getNumImages(): number;
         getTimeStamp(): number;
@@ -174,8 +175,8 @@ declare module "nativescript-vuforia" {
         getFrame(): Frame;
         getNumTrackableResults(): number;
         getNumTrackables(): number;
-        getTrackable(idx: number): Trackable;
-        getTrackableResult(idx: number): TrackableResult;
+        getTrackable(idx: number): Trackable|undefined;
+        getTrackableResult(idx: number): TrackableResult|undefined;
     }
     
     export const enum CameraDeviceDirection {
@@ -280,8 +281,8 @@ declare module "nativescript-vuforia" {
     }
 
     export class ViewerParametersList {
-        get(idx: number): ViewerParameters;
-        getNameManufacturer(name: string, manufacturer: string): ViewerParameters;
+        get(idx: number): ViewerParameters|undefined;
+        getNameManufacturer(name: string, manufacturer: string): ViewerParameters|undefined;
         setSDKFilter(filter: string): void;
         size(): number;
     }
@@ -293,7 +294,7 @@ declare module "nativescript-vuforia" {
         isViewerActive() : boolean;
         getViewerList() : ViewerParametersList;
         selectViewer(viewer:ViewerParameters);
-        getSelectedViewer() : ViewerParameters;
+        getSelectedViewer() : ViewerParameters|undefined;
         getRenderingPrimitives(): RenderingPrimitives;
     }
     
@@ -364,11 +365,11 @@ declare module "nativescript-vuforia" {
     }
     
     export class DataSet {
-        createMultiTarget(name: string): MultiTarget;
+        createMultiTarget(name: string): MultiTarget|undefined;
         destroy(trackable: Trackable): boolean;
         exists(path: string, storageType: StorageType): boolean;
         getNumTrackables(): number;
-        getTrackable(idx: number): Trackable;
+        getTrackable(idx: number): Trackable|undefined;
         hasReachedTrackableLimit(): boolean;
         isActive(): boolean;
         load(path: string, storageType: StorageType): boolean;
@@ -377,7 +378,7 @@ declare module "nativescript-vuforia" {
     export class ObjectTracker extends Tracker {
         start() : boolean;
         stop() : void;
-        createDataSet() : DataSet;
+        createDataSet() : DataSet|undefined;
 		destroyDataSet(dataSet: DataSet) : boolean;
         activateDataSet(dataSet:DataSet) : boolean;
         deactivateDataSet(dataSet:DataSet) : boolean;

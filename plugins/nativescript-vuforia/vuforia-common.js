@@ -11,16 +11,17 @@ var APIBase = (function () {
         // Get the y-dimension of the physical camera field of view
         var cameraCalibration = this.getCameraDevice().getCameraCalibration();
         if (!cameraCalibration)
-            return undefined;
+            throw new Error('Unable to get camera calibration');
         var device = this.getDevice();
-        if (!device)
-            return undefined;
         if (!device.isViewerActive())
-            return undefined;
+            throw new Error('Viewer is not active');
         var fov = cameraCalibration.getFieldOfViewRads();
         var cameraFovYRad = fov.y;
-        var viewerFOV = device.getSelectedViewer().getFieldOfView();
+        var viewer = device.getSelectedViewer();
+        if (!viewer)
+            throw new Error('No viewer is selected');
         // Get the y-dimension of the virtual camera field of view
+        var viewerFOV = viewer.getFieldOfView();
         var viewerFOVy = viewerFOV.y + viewerFOV.z;
         var virtualFovYRad = viewerFOVy * Math.PI / 180;
         //    float virtualFovYRad = VIRTUAL_FOV_Y_DEGS * M_PI / 180;

@@ -565,7 +565,7 @@ declare class VuforiaSession extends NSObject {
 
 	static scaleFactor() : number;
 
-	static setScaleFactor(f:number);
+	static setScaleFactor(f:number) : void;
 
 	constructor(); // inherited from NSObject
 

@@ -16,8 +16,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public log:string[] = [];    
 
-    public session:Argon.SessionPort;
-    private _outputPort:Argon.MessagePortLike;
+    public session?:Argon.SessionPort;
+    private _outputPort?:Argon.MessagePortLike;
 
     constructor() {
         super();
@@ -25,8 +25,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public _didCommitNavigation() {
         if (this.session) this.session.close();
-        this.session = null;
-        this._outputPort = null;
+        this.session = undefined;
+        this._outputPort = undefined;
     }
 
     public _handleArgonMessage(message:string) {
@@ -68,7 +68,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             session.open(messageChannel.port1, manager.session.configuration)
         }
         // console.log(message);
-        this._outputPort.postMessage(JSON.parse(message));
+        this._outputPort && this._outputPort.postMessage(JSON.parse(message));
     }
 
     public _handleLogMessage(message:string) {

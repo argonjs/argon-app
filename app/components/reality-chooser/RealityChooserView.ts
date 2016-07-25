@@ -32,6 +32,6 @@ export function onLoaded(args) {
 export function onTap(args) {
     if (editing) return
     var item:RealityBookmarkItem = (args.object as View).bindingContext;
-    Argon.ArgonSystem.instance.reality.setDesired(item.reality)
+    Argon.ArgonSystem.instance.reality.setDesired(item.reality);
     appViewModel.hideRealityChooser();
 }

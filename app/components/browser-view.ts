@@ -3,6 +3,7 @@ import {ScrollView} from 'ui/scroll-view'
 import {Page} from 'ui/page';
 import {Color} from 'color';
 import {Layout} from 'ui/layouts/layout';
+import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
 import {StackLayout} from 'ui/layouts/stack-layout';
 import {Label} from 'ui/label';
@@ -39,8 +40,6 @@ import * as bookmarks from './common/bookmarks'
 
 import * as Argon from 'argon'
 
-import {NativescriptViewService} from '../argon-view-service'
-
 const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;
 const OVERVIEW_ANIMATION_DURATION = 250;
@@ -69,7 +68,7 @@ export class BrowserView extends GridLayout {
     private _scrollOffset = 0;
     private _panStartOffset = 0;
     
-    private _intervalId:number;
+    private _intervalId?:number;
 
     constructor() {
         super();
@@ -89,7 +88,10 @@ export class BrowserView extends GridLayout {
         this.videoView.horizontalAlignment = 'stretch';
         this.videoView.verticalAlignment = 'stretch';
         if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
-        this.realityLayer.container.addChild(this.videoView);
+        const videoViewLayout = new AbsoluteLayout();
+        videoViewLayout.addChild(this.videoView);
+        this.realityLayer.container.addChild(videoViewLayout);
+
         Util.bringToFront(this.realityLayer.webView);
         Util.bringToFront(this.realityLayer.touchOverlay);
         Util.bringToFront(this.realityLayer.titleBar);
@@ -129,6 +131,15 @@ export class BrowserView extends GridLayout {
                 this.realityLayer.webView.visibility = 'collapse';
             } else {
                 this.realityLayer.webView.visibility = 'visible';
+            }
+        })
+
+        Argon.ArgonSystem.instance.focus.sessionFocusEvent.addEventListener(({previous, current})=>{
+            if (!current || (current && current.info['app.disablePinchZoom'])) {
+                this.layerContainer.off(GestureTypes.pinch);
+            } else if ( this.layerContainer.getGestureObservers(GestureTypes.pinch) &&
+                        this.layerContainer.getGestureObservers(GestureTypes.pinch).length === 0) {
+                this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
             }
         })
 
@@ -210,10 +221,6 @@ export class BrowserView extends GridLayout {
                     if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
                         e.session.close();
                         alert("Only a reality can be loaded in the reality layer");
-                    } else {
-                        e.session.closeEvent.addEventListener(()=>{
-                            webView.src = '';
-                        })
                     }
                 } else {
                     if (e.session.info.role !== Argon.Role.APPLICATION) {
@@ -494,35 +501,48 @@ export class BrowserView extends GridLayout {
         this.scrollView.scrollToVerticalOffset(0, true);
         
         // stop animating the views
-        clearInterval(this._intervalId);
-        this._intervalId = null;
+        if (this._intervalId) clearInterval(this._intervalId);
+        this._intervalId = undefined;
 
         // enable pinch-zoom
         this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
     }
 
-    private _pinchStartScaleFactor:number;
+    private _pinchStartFov?:number;
     
     private _handlePinch(event: PinchGestureEventData) {
         const manager = Argon.ArgonSystem.instance;
-        const view = manager.view as NativescriptViewService;
-        const focussedSession = manager.focus.getSession();
-
-        if (focussedSession.info['app.disablePinchZoom']) {
-            // view.scaleFactor = 1;
-        } else {
-            switch (event.state) {
-                case GestureStateTypes.began: 
-                    this._pinchStartScaleFactor = view.scaleFactor;
-                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
-                    break;
-                case GestureStateTypes.changed: 
-                    view.scaleFactor = this._pinchStartScaleFactor * event.scale;
-                    break;
-                default:
-                    if (Math.abs(view.scaleFactor-1) < 0.1) view.scaleFactor = 1;
-                    break;  
-            }
+        switch (event.state) {
+            case GestureStateTypes.began: 
+                const state = manager.context.serializedFrameState
+                if (state) {
+                    this._pinchStartFov = state.view.subviews[0].frustum.fov;
+                } else {
+                    this._pinchStartFov = undefined;
+                }
+                if (this._pinchStartFov === undefined) return;
+                manager.reality.zoom({
+                    zoom: 1, 
+                    fov: this._pinchStartFov,
+                    state: Argon.RealityZoomState.START
+                })
+                break;
+            case GestureStateTypes.changed: 
+                if (this._pinchStartFov === undefined) return;
+                manager.reality.zoom({
+                    zoom: event.scale, 
+                    fov: this._pinchStartFov,
+                    state: Argon.RealityZoomState.CHANGE
+                })
+                break;
+            default:
+                if (this._pinchStartFov === undefined) return;
+                manager.reality.zoom({
+                    zoom: event.scale, 
+                    fov: this._pinchStartFov,
+                    state: Argon.RealityZoomState.END
+                })
+                break;  
         }
     }
 
@@ -539,10 +559,10 @@ export class BrowserView extends GridLayout {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.url);
-            Argon.ArgonSystem.instance.focus.setSession(layer.webView.session);
+            const manager = Argon.ArgonSystem.instance;
+            manager.focus.setSession(layer.webView.session);
             appViewModel.setLayerDetails(this.focussedLayer.details);
             appViewModel.hideOverview();
-            
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
                 this.layers.push(layer);

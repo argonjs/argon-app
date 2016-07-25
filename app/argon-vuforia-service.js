@@ -1,12 +1,9 @@
 "use strict";
-var application = require('application');
-var frames = require('ui/frame');
 var Argon = require('argon');
 var vuforia = require('nativescript-vuforia');
 var http = require('http');
 var file = require('file-system');
-var platform = require('platform');
-var argon_device_service_1 = require('./argon-device-service');
+var argon_reality_service_1 = require('./argon-reality-service');
 exports.VIDEO_DELAY = -0.5 / 60;
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
@@ -18,18 +15,15 @@ var zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO
 var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 var x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
-var cameraDeviceMode = -3 /* OpimizeQuality */;
-if (vuforia.videoView.ios) {
-    vuforia.videoView.ios.contentScaleFactor = cameraDeviceMode === -2 /* OptimizeSpeed */ ?
-        1 : platform.screen.mainScreen.scale;
-}
 var NativescriptVuforiaServiceDelegate = (function (_super) {
     __extends(NativescriptVuforiaServiceDelegate, _super);
-    function NativescriptVuforiaServiceDelegate(deviceService, contextService) {
+    function NativescriptVuforiaServiceDelegate(deviceService, realityService, contextService, viewService) {
         var _this = this;
         _super.call(this);
         this.deviceService = deviceService;
+        this.realityService = realityService;
         this.contextService = contextService;
+        this.viewService = viewService;
         this.scratchDate = new Argon.Cesium.JulianDate();
         this.scratchCartesian = new Argon.Cesium.Cartesian3();
         this.scratchCartesian2 = new Argon.Cesium.Cartesian3();
@@ -47,6 +41,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this.dataSetUrlMap = new WeakMap();
         if (!vuforia.api)
             return;
+        vuforia.videoView.on('propertyChange', function () {
+        });
         var stateUpdateCallback = function (state) {
             var time = JulianDate.now();
             // subtract a few ms, since the video frame represents a time slightly in the past.
@@ -105,7 +101,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 index: index,
                 time: time,
                 eye: {
-                    pose: pose
+                    pose: pose,
                 }
             });
         };
@@ -215,14 +211,14 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         console.log("Vuforia initializing camera device");
         if (!cameraDevice.init(0 /* Default */))
             return false;
-        if (!cameraDevice.selectVideoMode(cameraDeviceMode))
+        if (!cameraDevice.selectVideoMode(argon_reality_service_1.vuforiaCameraDeviceMode))
             return false;
         var device = vuforia.api.getDevice();
         device.setMode(0 /* AR */);
         if (this.viewerEnabled) {
             device.setViewerActive(true);
         }
-        configureVideoBackground(this.videoEnabled);
+        this.realityService.configureVuforiaVideoBackground();
         this._configureCameraAndTrackers();
         return true;
     };
@@ -268,7 +264,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 return id;
             }
         }
-        return null;
+        return undefined;
     };
     NativescriptVuforiaServiceDelegate.prototype.objectTrackerDestroyDataSet = function (id) {
         console.log("Vuforia destroying dataset (" + id + ")");
@@ -344,46 +340,11 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         return Promise.reject("Dataset is not associated with a url");
     };
     NativescriptVuforiaServiceDelegate = __decorate([
-        Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
+        Argon.DI.inject(Argon.DeviceService, Argon.RealityService, Argon.ContextService, Argon.ViewService)
     ], NativescriptVuforiaServiceDelegate);
     return NativescriptVuforiaServiceDelegate;
 }(Argon.VuforiaServiceDelegateBase));
 exports.NativescriptVuforiaServiceDelegate = NativescriptVuforiaServiceDelegate;
-function configureVideoBackground(enabled) {
-    if (enabled === void 0) { enabled = true; }
-    var frame = (frames.topmost().currentPage && frames.topmost().currentPage.content) || frames.topmost();
-    var viewWidth = frame.getMeasuredWidth();
-    var viewHeight = frame.getMeasuredHeight();
-    var contentScaleFactor = vuforia.videoView.ios ? vuforia.videoView.ios.contentScaleFactor : 1;
-    var videoMode = vuforia.api.getCameraDevice().getVideoMode(cameraDeviceMode);
-    var videoWidth = videoMode.width;
-    var videoHeight = videoMode.height;
-    var orientation = argon_device_service_1.getDisplayOrientation();
-    if (orientation === 0 || orientation === 180) {
-        videoWidth = videoMode.height;
-        videoHeight = videoMode.width;
-    }
-    var scale;
-    // aspect fill
-    scale = Math.max(viewWidth / videoWidth, viewHeight / videoHeight);
-    // aspect fit
-    // scale = Math.min(viewWidth / videoWidth, viewHeight / videoHeight);
-    var config = {
-        enabled: enabled,
-        positionX: 0,
-        positionY: 0,
-        sizeX: Math.round(videoWidth * scale * contentScaleFactor),
-        sizeY: Math.round(videoHeight * scale * contentScaleFactor),
-        reflection: 0 /* Default */
-    };
-    console.log("Vuforia configuring video background...\n        contentScaleFactor: " + contentScaleFactor + " orientation: " + orientation + " \n        viewWidth: " + viewWidth + " viewHeight: " + viewHeight + " videoWidth: " + videoWidth + " videoHeight: " + videoHeight + " \n        config: " + JSON.stringify(config) + "\n    ");
-    vuforia.api.getRenderer().setVideoBackgroundConfig(config);
-}
-if (vuforia.api)
-    application.on(application.orientationChangedEvent, function () {
-        configureVideoBackground();
-        setTimeout(configureVideoBackground, 0); // delay callback until the interface orientation is updated
-    });
 // TODO: make this cross platform somehow
 function _getDataSetLocation(xmlUrlString) {
     var xmlUrl = NSURL.URLWithString(xmlUrlString);
@@ -412,7 +373,7 @@ function _getDataSetLocation(xmlUrlString) {
                 console.log("Verified that cached version of file " + url + " at " + destPath + " is up-to-date.");
                 return destPath;
             }
-            else if (response.statusCode >= 200 && response.statusCode < 300) {
+            else if (response.content && response.statusCode >= 200 && response.statusCode < 300) {
                 console.log("Downloaded file " + url + " to " + destPath);
                 return response.content.toFile(destPath).path;
             }

@@ -25,8 +25,8 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 
 import {NativescriptDeviceService} from './argon-device-service';
+import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
-import {NativescriptViewService} from './argon-view-service';
 
 export let manager:Argon.ArgonSystem;
 
@@ -51,13 +51,16 @@ const privateKeyPromise = pgpFolder.contains('private.key') ?
 
 const container = new Argon.DI.Container;
 container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
+container.registerSingleton(Argon.RealityService, NativescriptRealityService);
 container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
-container.registerSingleton(Argon.ViewService, NativescriptViewService);
 
-manager = Argon.init({container, config: {
-    role: Argon.Role.MANAGER,
-    name: 'ArgonApp'
-}});
+manager = Argon.init({
+    container, 
+    configuration: {
+        role: Argon.Role.MANAGER,
+        name: 'ArgonApp'
+    }
+});
 
 const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
 
@@ -72,14 +75,15 @@ manager.vuforia.init({
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
     type = 'hosted';
     load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
-        var url:string = reality['url'];
+        const url:string = reality['url'];
+        const webView = browserView.realityLayer.webView;
         var sessionCallback = (data:SessionEventData)=>{
-            browserView.realityLayer.webView.off('session', sessionCallback);
+            webView.off('session', sessionCallback);
             callback(data.session);
         }
-        browserView.realityLayer.webView.on('session', sessionCallback);
-        browserView.realityLayer.webView.src = '';
-        browserView.realityLayer.webView.src = url;
+        webView.on('session', sessionCallback);
+        if (webView.src === url) webView.reload();
+        else webView.src = url;
     }
 });
 
@@ -439,7 +443,11 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    browserView.focussedLayer.webView.reload();
+    if (browserView.focussedLayer === browserView.realityLayer) {
+        manager.reality.setDesired(manager.reality.getCurrent());
+    } else {
+        browserView.focussedLayer.webView.reload();
+    }
 }
 
 export function onFavoriteToggle(args) {
@@ -521,7 +529,7 @@ class IOSSearchBarController {
                 setTimeout(()=>{
                     if (this.uiSearchBar.text === "") {
                         this.uiSearchBar.text = appViewModel.layerDetails.url;
-                        this.setPlaceholderText(null);
+                        this.setPlaceholderText("");
                         this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
                     }
                 }, 500)

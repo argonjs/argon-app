@@ -28,9 +28,9 @@ const scratchMatrix3 = new Matrix3;
 @Argon.DI.inject(Argon.ContextService)
 export class NativescriptDeviceService extends Argon.DeviceService {
     
-    private locationWatchId:number;
-    private locationManager:CLLocationManager;
-    private motionManager:CMMotionManager;
+    private locationWatchId?:number;
+    private locationManager?:CLLocationManager;
+    private motionManager?:CMMotionManager;
     
     constructor(context:Argon.ContextService) {
         super(context);
@@ -150,7 +150,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         
         const time = JulianDate.now();
     
-        if (application.ios) {
+        if (application.ios && this.motionManager) {
             
             const motion = this.motionManager.deviceMotion;
 

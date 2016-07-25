@@ -121,7 +121,7 @@ var NativescriptDeviceService = (function (_super) {
         this.ensureGeolocation();
         this.ensureDeviceOrientation();
         var time = JulianDate.now();
-        if (application.ios) {
+        if (application.ios && this.motionManager) {
             var motion = this.motionManager.deviceMotion;
             if (motion) {
                 var motionQuaternion = motion.attitude.quaternion;

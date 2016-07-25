@@ -12,7 +12,7 @@ export class Util {
     }
   }
   static linearGradient(view:View, colors:(Color|string)[]) {
-    var _colors = [];
+    var _colors:any[] = [];
     var nativeView = view['_nativeView'];
 
     if (!nativeView) {
