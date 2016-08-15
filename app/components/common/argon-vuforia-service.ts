@@ -1,14 +1,11 @@
 
-import * as uri from 'urijs';
-import * as application from 'application';
-import * as frames from 'ui/frame';
 import * as Argon from 'argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as http from 'http';
 import * as file from 'file-system';
-import * as platform from 'platform';
-import {getDisplayOrientation} from './argon-device-service'
 import {NativescriptRealityService, vuforiaCameraDeviceMode} from './argon-reality-service';
+import {Util} from './util'
+import * as minimatch from 'minimatch'
 
 export const VIDEO_DELAY = -0.5/60;
 
@@ -24,6 +21,10 @@ const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 
+interface VuforiaLicenseData {
+    key?: string
+    origins?:string[]
+}
 
 @Argon.DI.inject(
     Argon.DeviceService, 
@@ -32,7 +33,7 @@ const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
     Argon.ViewService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
         
-    private scratchDate = new Argon.Cesium.JulianDate();
+    private scratchDate = new Argon.Cesium.JulianDate(0,0);
     private scratchCartesian = new Argon.Cesium.Cartesian3();
     private scratchCartesian2 = new Argon.Cesium.Cartesian3();
     private scratchQuaternion = new Argon.Cesium.Quaternion();
@@ -52,10 +53,6 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         super();
         
         if (!vuforia.api) return;
-        
-        vuforia.videoView.on('propertyChange', ()=>{
-            
-        })
         
         const stateUpdateCallback = (state:vuforia.State) => { 
             
@@ -90,12 +87,14 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                         position: new Argon.Cesium.SampledPositionProperty(this.vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
-                    entity.position.maxNumSamples = 10;
-                    entity.orientation.maxNumSamples = 10;
-                    entity.position.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-                    entity.orientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-                    entity.position.forwardExtrapolationDuration = 2/60;
-                    entity.orientation.forwardExtrapolationDuration = 2/60;
+                    const entityPosition = entity.position as Argon.Cesium.SampledPositionProperty;
+                    const entityOrientation = entity.orientation as Argon.Cesium.SampledProperty;
+                    entityPosition.maxNumSamples = 10;
+                    entityOrientation.maxNumSamples = 10;
+                    entityPosition.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entityOrientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                    entityPosition.forwardExtrapolationDuration = 2/60;
+                    entityOrientation.forwardExtrapolationDuration = 2/60;
                     contextService.subscribedEntities.add(entity);
                 }
                 
@@ -105,13 +104,13 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
                 if (trackableTimeDiff !== 0) JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
                 
-                const pose = trackableResult.getPose();
+                const pose = <Argon.Cesium.Matrix4><any>trackableResult.getPose();
                 const position = Matrix4.getTranslation(pose, this.scratchCartesian);
                 const rotationMatrix = Matrix4.getRotation(pose, this.scratchMatrix3);
                 const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this.scratchQuaternion);
                 
-                entity.position.addSample(trackableTime, position);
-                entity.orientation.addSample(trackableTime, orientation);
+                (entity.position as Argon.Cesium.SampledPositionProperty).addSample(trackableTime, position);
+                (entity.orientation as Argon.Cesium.SampledProperty).addSample(trackableTime, orientation);
             }
             
             // if no one is listening, don't bother calculating the view state or raising an event. 
@@ -204,21 +203,35 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     setHint(hint: Argon.VuforiaHint, value: number): boolean {
         return vuforia.api.setHint(<number>hint, value);
     }
+
+    decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
+        return Util.decrypt<{key:string,origins:string[]}>(encryptedLicenseData).then(({key,origins})=>{
+            if (!session.uri) throw new Error('Invalid origin');
+
+            const origin = Argon.URI.parse(session.uri);
+            if (!Array.isArray(<any>origins)) {
+                throw new Error("Vuforia License Data must specify allowed origins");
+            }
+
+            const match = origins.find((o) => {
+                const parts = o.split(/\/(.*)/);
+                let domainPattern = parts[0];
+                let pathPattern = parts[1];
+                return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
+            })
+
+            if (!match) {
+                throw new Error('Invalid origin');
+            }
+
+            return key;
+        });
+    }
     
-    init(options: Argon.VuforiaInitOptions): Promise<Argon.VuforiaInitResult> {
-        let licenseKey;
-        if (options.licenseKey) {
-            licenseKey = options.licenseKey;
-        } else if (options.encryptedLicenseData) {
-            // decrypt
-        } else {
-            return Promise.reject(new Error("License key must be provided"));
+    init(options: Argon.VuforiaServiceDelegateInitOptions): Promise<Argon.VuforiaInitResult> {
+        if (!vuforia.api.setLicenseKey(options.key)) {
+            return Promise.reject(new Error("Unable to set the license key"));
         }
-        
-        if (!vuforia.api.setLicenseKey(licenseKey)) {
-            return Promise.reject(new Error("Unable to set the license key"))
-        }
-        
         console.log("Vuforia initializing...")
         return vuforia.api.init().then((result)=>{
             console.log("Vuforia Init Result: " + result);
@@ -290,7 +303,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     private idDataSetMap = new Map<string, vuforia.DataSet>();
-    private dataSetUrlMap = new WeakMap<vuforia.DataSet, string|undefined>();
+    private dataSetUrlMap = new WeakMap<vuforia.DataSet|undefined, string|undefined>();
     
     objectTrackerCreateDataSet(url?: string): string|undefined {        
         console.log("Vuforia creating dataset...");
@@ -359,9 +372,9 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     dataSetLoad(id: string): Promise<Argon.VuforiaTrackables> {
         const dataSet = this.idDataSetMap.get(id);
         const url = this.dataSetUrlMap.get(dataSet);
-        if (url) {
+        if (dataSet && url) {
             console.log(`Vuforia loading dataset (${id}) at ${url}`);
-            return _getDataSetLocation(url).then((location)=>{
+            return _getDataSetLocation(url).then<Argon.VuforiaTrackables>((location)=>{
                 if (dataSet.load(location, vuforia.StorageType.Absolute)) {
                     const numTrackables = dataSet.getNumTrackables();
                     const trackables:Argon.VuforiaTrackables = {};

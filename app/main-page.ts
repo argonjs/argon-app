@@ -1,7 +1,13 @@
-import * as URI from "urijs";
+import * as URI from 'urijs';
+import * as Argon from 'argon';
+
+// hack: make crypto.getRandomValues available to openpgp
+global.crypto = { getRandomValues: require('polyfill-crypto.getrandomvalues') };
+// hack: ensure openpgp does not think we are running in nodejs (we arent)
+global.window = global; 
+global.openpgp = require('./lib/openpgp.js');
 
 import * as application from 'application';
-import * as frames from 'ui/frame';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';
 import {CreateViewEventData} from 'ui/placeholder';
@@ -10,30 +16,31 @@ import {View, getViewById} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
 import {PropertyChangeData} from 'data/observable';
-import * as fs from 'file-system';
-import dialogs = require("ui/dialogs");
-import applicationSettings = require("application-settings");
 import {AnimationCurve} from 'ui/enums'
 import {GestureTypes} from 'ui/gestures'
 
-import * as Argon from 'argon';
-
-import {Util} from './util';
-import {ArgonWebView, SessionEventData} from 'argon-web-view';
+import {SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
-import {appViewModel, LoadUrlEventData} from './components/common/AppViewModel';
+import {manager, appViewModel, AppViewModel, LoadUrlEventData, vuforiaDelegate} from './components/common/AppViewModel';
 
-import {NativescriptDeviceService} from './argon-device-service';
-import {NativescriptRealityService} from './argon-reality-service';
-import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
-
-import * as vuforia from 'nativescript-vuforia';
+manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
+    type = 'hosted';
+    load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
+        const url:string = reality.uri;
+        const webView = browserView.realityLayer.webView;
+        let sessionCallback = (data:SessionEventData)=>{
+            webView.off('session', sessionCallback);
+            callback(data.session);
+        }
+        webView.on('session', sessionCallback);
+        if (webView.src === url) webView.reload();
+        else webView.src = url;
+    }
+});
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
-
-export let manager:Argon.ArgonSystem;
 
 export let page:Page;
 export let layout:View;
@@ -47,83 +54,9 @@ export let realityChooserView:View;
 let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
 
-const pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
-
-const publicKeyPromise = pgpFolder.contains('public.key') ? 
-    pgpFolder.getFile('public.key').readText() : Promise.reject(null);
-const privateKeyPromise = pgpFolder.contains('private.key') ? 
-    pgpFolder.getFile('private.key').readText() : Promise.reject(null);
-
-const container = new Argon.DI.Container;
-container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
-container.registerSingleton(Argon.RealityService, NativescriptRealityService);
-container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
-
-manager = Argon.init({
-    container, 
-    configuration: {
-        role: Argon.Role.MANAGER,
-        name: 'ArgonApp'
-    }
-});
-
-const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
-
-manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
-
-manager.vuforia.init({
-    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
-}).catch((err)=>{
-    console.log(err);
-});
-
-manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
-    type = 'hosted';
-    load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
-        const url:string = reality['url'];
-        const webView = browserView.realityLayer.webView;
-        var sessionCallback = (data:SessionEventData)=>{
-            webView.off('session', sessionCallback);
-            callback(data.session);
-        }
-        webView.on('session', sessionCallback);
-        if (webView.src === url) webView.reload();
-        else webView.src = url;
-    }
-});
-
-manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current, session})=>{
-    if (session === manager.session.manager) return;
-    
-    if (previous) {
-        const previousRealityItem = bookmarks.realityMap.get(previous);
-        if (!previousRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(previousRealityItem);
-            bookmarks.realityList.splice(i, 1);
-        }
-    } 
-    if (current) {        
-        const currentRealityItem = bookmarks.realityMap.get(current)
-        if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
-    }
-    session.closeEvent.addEventListener(()=>{
-       const sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
-       const sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality);
-       if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-            bookmarks.realityList.splice(i, 1);
-       }
-    });
-})
-
-manager.focus.sessionFocusEvent.addEventListener(()=>{
-    const focussedSession = manager.focus.getSession();    
-    console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
-})
-
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
-    if (evt.propertyName === 'currentUrl') {
-        setSearchBarText(appViewModel.currentUrl);
+    if (evt.propertyName === 'currentUri') {
+        setSearchBarText(appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
         vuforiaDelegate.viewerEnabled = evt.value;
@@ -191,7 +124,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             })
         } else {
             browserView.hideOverview();
-            if (!appViewModel.layerDetails.url) appViewModel.showBookmarks();
+            if (!appViewModel.layerDetails.uri) appViewModel.showBookmarks();
             searchBar.visibility = 'visible';
             searchBar.animate({
                 translate: {x:0, y:0},
@@ -314,10 +247,7 @@ export function pageLoaded(args) {
     
     page = args.object;
     page.bindingContext = appViewModel;
-    
-    appViewModel.on('loadUrl', (data:LoadUrlEventData)=>{
-        browserView.loadUrl(data.url);
-    })
+    appViewModel.setReady();
 
     // Set the icon for the menu button
     const menuButton = <Button> page.getViewById("menuButton");
@@ -398,6 +328,10 @@ function blurSearchBar() {
 
 export function browserViewLoaded(args) {
     browserView = args.object;
+    
+    appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
+        browserView.loadUrl(data.url);
+    })
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
@@ -443,7 +377,7 @@ export function onSearchBarTap(args) {
 }
 
 export function onCancel(args) {
-    if (!!appViewModel.layerDetails.url) appViewModel.hideBookmarks();
+    if (!!appViewModel.layerDetails.uri) appViewModel.hideBookmarks();
     appViewModel.hideRealityChooser();
     appViewModel.hideCancelButton();
     blurSearchBar();
@@ -463,12 +397,12 @@ export function onReload(args) {
 }
 
 export function onFavoriteToggle(args) {
-    const url = appViewModel.layerDetails.url;
+    const url = appViewModel.layerDetails.uri;
     const bookmarkItem = bookmarks.favoriteMap.get(url);
     if (!bookmarkItem) {
         bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
-            url,
-            name: browserView.focussedLayer.webView.title
+            uri: url,
+            title: browserView.focussedLayer.webView.title
         }));
     } else {
         var i = bookmarks.favoriteList.indexOf(bookmarkItem);
@@ -540,7 +474,7 @@ class IOSSearchBarController {
                 
                 setTimeout(()=>{
                     if (this.uiSearchBar.text === "") {
-                        this.uiSearchBar.text = appViewModel.layerDetails.url;
+                        this.uiSearchBar.text = appViewModel.layerDetails.uri;
                         this.setPlaceholderText("");
                         this.textField.selectedTextRange = this.textField.textRangeFromPositionToPosition(this.textField.beginningOfDocument, this.textField.endOfDocument);
                     }
@@ -552,7 +486,7 @@ class IOSSearchBarController {
                     if (!browserView.focussedLayer.webView.url) appViewModel.hideCancelButton();
                 });
             } else {
-                this.setPlaceholderText(appViewModel.layerDetails.url);
+                this.setPlaceholderText(appViewModel.layerDetails.uri);
                 this.uiSearchBar.text = "";
             }
         }

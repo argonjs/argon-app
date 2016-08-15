@@ -6,39 +6,30 @@ import {Observable, PropertyChangeData} from 'data/observable';
 import * as Argon from 'argon'
 
 class BookmarkItem extends Observable {
-    key = 'url';
-    name:string;
-    url:string;
+    title?:string;
+    uri:string;
     builtin = false;
     
     constructor(item:{
-        name:string,
-        url:string,
-        [other:string]:any
+        title?:string,
+        uri:string
     }) {
         super(item)
     }
     
     toJSON() {
         return {
-            name: this.name,
-            url: this.url
+            title: this.title,
+            uri: this.uri
         }
     }
 }
 
 class RealityBookmarkItem extends BookmarkItem {
-    key = 'reality';
-    reality: Argon.RealityView
-    
     constructor(
-        reality:Argon.RealityView
+        public reality:Argon.RealityView
     ) {
-        super({
-            reality,
-            name: reality.name,
-            url: reality['url'] || 'reality:' + reality.type
-        })
+        super(reality)
     }
 }
 
@@ -48,16 +39,16 @@ const realityList = new ObservableArray<RealityBookmarkItem>();
 
 const favoriteMap = new Map<string, BookmarkItem>();
 const historyMap = new Map<string, BookmarkItem>();
-const realityMap = new WeakMap<Argon.RealityView, RealityBookmarkItem>();
+const realityMap = new Map<string, RealityBookmarkItem>();
 
-function updateMap(data:ChangedData<BookmarkItem>, map:WeakMap<any, BookmarkItem>) {
+function updateMap(data:ChangedData<BookmarkItem>, map:Map<string, BookmarkItem>) {
     const list = <ObservableArray<BookmarkItem>>data.object
     for (let i=0; i < data.addedCount; i++) {
         var item = list.getItem(data.index + i);
-        map.set(item[item.key], item);
+        map.set(item.uri, item);
     }
     data.removed && data.removed.forEach((item)=>{
-        map.delete(item[item.key]);
+        map.delete(item.uri);
     })
 }
 
@@ -67,8 +58,8 @@ realityList.on('change', (data) => updateMap(data, realityMap));
 
 const builtinFavorites:Array<BookmarkItem> = [
     new BookmarkItem({
-        name: 'Argon Samples',
-        url: 'http://argonjs.io/samples/'
+        title: 'Argon Samples',
+        uri: 'http://argonjs.io/samples/'
     })
 ]
 
@@ -78,8 +69,8 @@ builtinFavorites.forEach((item)=> {
 });
 
 const LIVE_VIDEO_REALITY = {
-    name: 'Live Video',
-    type: 'live-video'
+    title: 'Live Video',
+    uri: 'reality:live-video'
 }
 
 const builtinRealities:Array<RealityBookmarkItem> = [

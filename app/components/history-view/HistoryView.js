@@ -26,7 +26,7 @@ function onTap(args) {
         return;
     closeAllCells();
     var item = args.object.bindingContext;
-    AppViewModel_1.appViewModel.loadUrl(item.url);
+    AppViewModel_1.appViewModel.loadUrl(item.uri);
 }
 exports.onTap = onTap;
 function onDelete(args) {

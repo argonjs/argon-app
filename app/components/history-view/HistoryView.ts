@@ -30,7 +30,7 @@ export function onTap(args) {
     if (editing) return
     closeAllCells();
     var item:BookmarkItem = (args.object as View).bindingContext;
-    appViewModel.loadUrl(item.url);
+    appViewModel.loadUrl(item.uri);
 }
 
 export function onDelete(args) {

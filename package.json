@@ -5,21 +5,26 @@
       "version": "1.7.1"
     },
     "tns-ios": {
-      "version": "2.1.1"
+      "version": "2.2.0"
     }
   },
   "dependencies": {
     "argon": "file:../argon",
     "argon-web-view": "file:plugins/argon-web-view",
-    "nativescript-screen-orientation": "git+https://github.com/bionictk/nativescript-screen-orientation.git",
+    "minimatch": "^3.0.3",
+    "nativescript-screen-orientation": "github:bionictk/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
+    "nativescript-webworkers": "file:plugins/nativescript-webworkers",
+    "polyfill-crypto.getrandomvalues": "^1.0.0",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^1.7.1",
+    "tns-core-modules": "^2.1.0",
     "urijs": "^1.17.1"
   },
   "devDependencies": {
     "nativescript-dev-typescript": "^0.3.1",
-    "openpgp": "^2.3.0",
-    "typescript": "^1.9.0-dev.20160313"
+    "typescript": "^2.0.0"
+  },
+  "scripts": {
+    "postinstall": "npm install @types/openpgp @types/minimatch"
   }
 }

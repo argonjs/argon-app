@@ -6,6 +6,8 @@ import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
 
+declare const window : any;
+
 export class ArgonWebView extends common.ArgonWebView {
 
     private static layersById: {

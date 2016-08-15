@@ -5,7 +5,12 @@
         "sourceMap": true,
         "experimentalDecorators": true,
         "noEmitHelpers": true,
-        "strictNullChecks": true
+        "noEmitOnError": true,
+        "strictNullChecks": true,
+        "skipLibCheck": true,
+        "lib": [
+            "es2015"
+        ]
     },
     "exclude": [
         "node_modules",

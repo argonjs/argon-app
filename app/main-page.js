@@ -1,52 +1,26 @@
 "use strict";
-var URI = require("urijs");
+var URI = require('urijs');
+var Argon = require('argon');
+// hack: make crypto.getRandomValues available to openpgp
+global.crypto = { getRandomValues: require('polyfill-crypto.getrandomvalues') };
+// hack: ensure openpgp does not think we are running in nodejs (we arent)
+global.window = global;
+global.openpgp = require('./lib/openpgp.js');
 var application = require('application');
 var search_bar_1 = require('ui/search-bar');
 var color_1 = require('color');
-var fs = require('file-system');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
-var Argon = require('argon');
 var bookmarks = require('./components/common/bookmarks');
 var AppViewModel_1 = require('./components/common/AppViewModel');
-var argon_device_service_1 = require('./argon-device-service');
-var argon_reality_service_1 = require('./argon-reality-service');
-var argon_vuforia_service_1 = require('./argon-vuforia-service');
-//import * as orientationModule from 'nativescript-screen-orientation';
-var orientationModule = require("nativescript-screen-orientation");
-var searchBar;
-var iosSearchBarController;
-var pgpFolder = fs.knownFolders.currentApp().getFolder('pgp');
-var publicKeyPromise = pgpFolder.contains('public.key') ?
-    pgpFolder.getFile('public.key').readText() : Promise.reject(null);
-var privateKeyPromise = pgpFolder.contains('private.key') ?
-    pgpFolder.getFile('private.key').readText() : Promise.reject(null);
-var container = new Argon.DI.Container;
-container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
-container.registerSingleton(Argon.RealityService, argon_reality_service_1.NativescriptRealityService);
-container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
-exports.manager = Argon.init({
-    container: container,
-    configuration: {
-        role: Argon.Role.MANAGER,
-        name: 'ArgonApp'
-    }
-});
-var vuforiaDelegate = container.get(Argon.VuforiaServiceDelegate);
-exports.manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
-exports.manager.vuforia.init({
-    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
-}).catch(function (err) {
-    console.log(err);
-});
-exports.manager.reality.registerLoader(new (function (_super) {
+AppViewModel_1.manager.reality.registerLoader(new (function (_super) {
     __extends(HostedRealityLoader, _super);
     function HostedRealityLoader() {
         _super.apply(this, arguments);
         this.type = 'hosted';
     }
     HostedRealityLoader.prototype.load = function (reality, callback) {
-        var url = reality['url'];
+        var url = reality.uri;
         var webView = exports.browserView.realityLayer.webView;
         var sessionCallback = function (data) {
             webView.off('session', sessionCallback);
@@ -60,41 +34,16 @@ exports.manager.reality.registerLoader(new (function (_super) {
     };
     return HostedRealityLoader;
 }(Argon.RealityLoader)));
-exports.manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
-    var previous = _a.previous, current = _a.current, session = _a.session;
-    if (session === exports.manager.session.manager)
-        return;
-    if (previous) {
-        var previousRealityItem = bookmarks.realityMap.get(previous);
-        if (!previousRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(previousRealityItem);
-            bookmarks.realityList.splice(i, 1);
-        }
-    }
-    if (current) {
-        var currentRealityItem = bookmarks.realityMap.get(current);
-        if (!currentRealityItem)
-            bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
-    }
-    session.closeEvent.addEventListener(function () {
-        var sessionDesiredReality = exports.manager.reality.desiredRealityMap.get(session);
-        var sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality);
-        if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-            bookmarks.realityList.splice(i, 1);
-        }
-    });
-});
-exports.manager.focus.sessionFocusEvent.addEventListener(function () {
-    var focussedSession = exports.manager.focus.getSession();
-    console.log("Argon focus changed: " + (focussedSession ? focussedSession.info.name : undefined));
-});
+//import * as orientationModule from 'nativescript-screen-orientation';
+var orientationModule = require("nativescript-screen-orientation");
+var searchBar;
+var iosSearchBarController;
 AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
-    if (evt.propertyName === 'currentUrl') {
-        setSearchBarText(AppViewModel_1.appViewModel.currentUrl);
+    if (evt.propertyName === 'currentUri') {
+        setSearchBarText(AppViewModel_1.appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
-        vuforiaDelegate.viewerEnabled = evt.value;
+        AppViewModel_1.vuforiaDelegate.viewerEnabled = evt.value;
         if (evt.value) {
             orientationModule.setCurrentOrientation("landscape");
         }
@@ -161,7 +110,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
         }
         else {
             exports.browserView.hideOverview();
-            if (!AppViewModel_1.appViewModel.layerDetails.url)
+            if (!AppViewModel_1.appViewModel.layerDetails.uri)
                 AppViewModel_1.appViewModel.showBookmarks();
             searchBar.visibility = 'visible';
             searchBar.animate({
@@ -285,9 +234,7 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
 function pageLoaded(args) {
     exports.page = args.object;
     exports.page.bindingContext = AppViewModel_1.appViewModel;
-    AppViewModel_1.appViewModel.on('loadUrl', function (data) {
-        exports.browserView.loadUrl(data.url);
-    });
+    AppViewModel_1.appViewModel.setReady();
     // Set the icon for the menu button
     var menuButton = exports.page.getViewById("menuButton");
     menuButton.text = String.fromCharCode(0xe5d4);
@@ -306,7 +253,7 @@ function pageLoaded(args) {
         });
     }
     AppViewModel_1.appViewModel.showBookmarks();
-    exports.manager.session.errorEvent.addEventListener(function (error) {
+    AppViewModel_1.manager.session.errorEvent.addEventListener(function (error) {
         alert(error.message);
         if (error.stack)
             console.log(error.stack);
@@ -360,6 +307,9 @@ function blurSearchBar() {
 }
 function browserViewLoaded(args) {
     exports.browserView = args.object;
+    AppViewModel_1.appViewModel.on(AppViewModel_1.AppViewModel.loadUrlEvent, function (data) {
+        exports.browserView.loadUrl(data.url);
+    });
     // Setup the debug view
     var debug = exports.browserView.page.getViewById("debug");
     debug.horizontalAlignment = 'stretch';
@@ -403,7 +353,7 @@ function onSearchBarTap(args) {
 }
 exports.onSearchBarTap = onSearchBarTap;
 function onCancel(args) {
-    if (!!AppViewModel_1.appViewModel.layerDetails.url)
+    if (!!AppViewModel_1.appViewModel.layerDetails.uri)
         AppViewModel_1.appViewModel.hideBookmarks();
     AppViewModel_1.appViewModel.hideRealityChooser();
     AppViewModel_1.appViewModel.hideCancelButton();
@@ -417,7 +367,7 @@ function onAddChannel(args) {
 exports.onAddChannel = onAddChannel;
 function onReload(args) {
     if (exports.browserView.focussedLayer === exports.browserView.realityLayer) {
-        exports.manager.reality.setDesired(exports.manager.reality.getCurrent());
+        AppViewModel_1.manager.reality.setDesired(AppViewModel_1.manager.reality.getCurrent());
     }
     else {
         exports.browserView.focussedLayer.webView.reload();
@@ -425,12 +375,12 @@ function onReload(args) {
 }
 exports.onReload = onReload;
 function onFavoriteToggle(args) {
-    var url = AppViewModel_1.appViewModel.layerDetails.url;
+    var url = AppViewModel_1.appViewModel.layerDetails.uri;
     var bookmarkItem = bookmarks.favoriteMap.get(url);
     if (!bookmarkItem) {
         bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
-            url: url,
-            name: exports.browserView.focussedLayer.webView.title
+            uri: url,
+            title: exports.browserView.focussedLayer.webView.title
         }));
     }
     else {
@@ -497,7 +447,7 @@ var IOSSearchBarController = (function () {
                 AppViewModel_1.appViewModel.showCancelButton();
                 setTimeout(function () {
                     if (_this.uiSearchBar.text === "") {
-                        _this.uiSearchBar.text = AppViewModel_1.appViewModel.layerDetails.url;
+                        _this.uiSearchBar.text = AppViewModel_1.appViewModel.layerDetails.uri;
                         _this.setPlaceholderText("");
                         _this.textField.selectedTextRange = _this.textField.textRangeFromPositionToPosition(_this.textField.beginningOfDocument, _this.textField.endOfDocument);
                     }
@@ -510,7 +460,7 @@ var IOSSearchBarController = (function () {
                 });
             }
             else {
-                _this.setPlaceholderText(AppViewModel_1.appViewModel.layerDetails.url);
+                _this.setPlaceholderText(AppViewModel_1.appViewModel.layerDetails.uri);
                 _this.uiSearchBar.text = "";
             }
         };

@@ -20,12 +20,11 @@ var ArgonWebView = (function (_super) {
             return;
         if (!this.session) {
             // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
-            var sessionUrl_1 = this.url;
-            console.log('Connecting to argon.js session at ' + sessionUrl_1);
+            var sessionUrl = this.url;
+            console.log('Connecting to argon.js session at ' + sessionUrl);
             var manager = Argon.ArgonSystem.instance;
             var messageChannel = manager.session.createSynchronousMessageChannel();
-            var session_1 = manager.session.addManagedSessionPort();
-            ArgonWebView.sessionUrlMap.set(session_1, sessionUrl_1);
+            var session = manager.session.addManagedSessionPort(sessionUrl);
             var port = messageChannel.port2;
             port.onmessage = function (msg) {
                 if (!_this.session)
@@ -33,18 +32,15 @@ var ArgonWebView = (function (_super) {
                 var injectedMessage = "__ARGON_PORT__.postMessage(" + JSON.stringify(msg.data) + ")";
                 _this.evaluateJavascript(injectedMessage);
             };
-            session_1.connectEvent.addEventListener(function () {
-                session_1.info.name = sessionUrl_1;
-            });
             var args = {
                 eventName: ArgonWebView.sessionEvent,
                 object: this,
-                session: session_1
+                session: session
             };
             this.notify(args);
-            this.session = session_1;
+            this.session = session;
             this._outputPort = port;
-            session_1.open(messageChannel.port1, manager.session.configuration);
+            session.open(messageChannel.port1, manager.session.configuration);
         }
         // console.log(message);
         this._outputPort && this._outputPort.postMessage(JSON.parse(message));
@@ -60,7 +56,6 @@ var ArgonWebView = (function (_super) {
         };
         this.notify(args);
     };
-    ArgonWebView.sessionUrlMap = new WeakMap();
     ArgonWebView.sessionEvent = 'session';
     ArgonWebView.logEvent = 'log';
     return ArgonWebView;

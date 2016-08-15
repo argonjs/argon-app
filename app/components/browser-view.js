@@ -8,7 +8,7 @@ var button_1 = require('ui/button');
 var argon_web_view_1 = require('argon-web-view');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
-var util_1 = require('../util');
+var util_1 = require('./common/util');
 var vuforia = require('nativescript-vuforia');
 var application = require('application');
 var utils = require('utils/utils');
@@ -72,12 +72,12 @@ var BrowserView = (function (_super) {
             _this.requestLayout();
             _this.scrollView.scrollToVerticalOffset(0, false);
         });
-        Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(function (_a) {
+        AppViewModel_1.manager.reality.changeEvent.addEventListener(function (_a) {
             var current = _a.current;
-            var realityListItem = bookmarks.realityMap.get(current);
+            // const realityListItem = bookmarks.realityMap.get(current.uri);
             var details = _this.realityLayer.details;
-            details.set('title', 'Reality: ' + realityListItem.name);
-            details.set('url', realityListItem.url);
+            details.set('title', 'Reality: ' + current.title);
+            details.set('uri', current.uri);
             details.set('supportedInteractionModes', ['page', 'immersive']);
             if (current === bookmarks.LIVE_VIDEO_REALITY) {
                 _this.realityLayer.webView.visibility = 'collapse';
@@ -86,7 +86,7 @@ var BrowserView = (function (_super) {
                 _this.realityLayer.webView.visibility = 'visible';
             }
         });
-        Argon.ArgonSystem.instance.focus.sessionFocusEvent.addEventListener(function (_a) {
+        AppViewModel_1.manager.focus.sessionFocusEvent.addEventListener(function (_a) {
             var previous = _a.previous, current = _a.current;
             if (!current || (current && current.info['app.disablePinchZoom'])) {
                 _this.layerContainer.off(gestures_1.GestureTypes.pinch);
@@ -106,10 +106,12 @@ var BrowserView = (function (_super) {
         container.horizontalAlignment = 'left';
         container.verticalAlignment = 'top';
         var webView = new argon_web_view_1.ArgonWebView;
+        webView.horizontalAlignment = 'stretch';
+        webView.verticalAlignment = 'stretch';
         webView.on('propertyChange', function (eventData) {
             switch (eventData.propertyName) {
                 case 'url':
-                    layer.details.set('url', eventData.value);
+                    layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
                     var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
@@ -137,18 +139,6 @@ var BrowserView = (function (_super) {
                 default: break;
             }
         });
-        webView.on('session', function (eventData) {
-            var session = eventData.session;
-            session.connectEvent.addEventListener(function () {
-                if (!_this.focussedLayer)
-                    return;
-                if (webView === _this.focussedLayer.webView) {
-                    Argon.ArgonSystem.instance.focus.setSession(session);
-                }
-            });
-        });
-        webView.horizontalAlignment = 'stretch';
-        webView.verticalAlignment = 'stretch';
         webView.on("loadFinished", function (eventData) {
             if (!eventData.error && webView !== _this.realityLayer.webView) {
                 var historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
@@ -159,24 +149,28 @@ var BrowserView = (function (_super) {
                 }
                 else {
                     bookmarks.historyList.unshift(new bookmarks.BookmarkItem({
-                        url: eventData.url,
-                        name: webView.title
+                        uri: eventData.url,
+                        title: webView.title
                     }));
                 }
             }
         });
         webView.on('session', function (e) {
-            e.session.connectEvent.addEventListener(function () {
+            var session = e.session;
+            session.connectEvent.addEventListener(function () {
+                if (webView === _this.focussedLayer.webView) {
+                    AppViewModel_1.manager.focus.setSession(session);
+                }
                 if (layer === _this.realityLayer) {
-                    if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
-                        e.session.close();
+                    if (session.info.role !== Argon.Role.REALITY_VIEW) {
+                        session.close();
                         alert("Only a reality can be loaded in the reality layer");
                     }
                 }
                 else {
-                    if (e.session.info.role !== Argon.Role.APPLICATION) {
-                        e.session.close();
-                        alert("Unable to load a reality in an app layer");
+                    if (session.info.role !== Argon.Role.APPLICATION) {
+                        session.close();
+                        alert("A reality can only be loaded in the reality layer");
                     }
                 }
             });
@@ -422,10 +416,9 @@ var BrowserView = (function (_super) {
         this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
     };
     BrowserView.prototype._handlePinch = function (event) {
-        var manager = Argon.ArgonSystem.instance;
         switch (event.state) {
             case gestures_1.GestureStateTypes.began:
-                var state = manager.context.serializedFrameState;
+                var state = AppViewModel_1.manager.context.serializedFrameState;
                 if (state) {
                     this._pinchStartFov = state.view.subviews[0].frustum.fov;
                 }
@@ -434,7 +427,7 @@ var BrowserView = (function (_super) {
                 }
                 if (this._pinchStartFov === undefined)
                     return;
-                manager.reality.zoom({
+                AppViewModel_1.manager.reality.zoom({
                     zoom: 1,
                     fov: this._pinchStartFov,
                     state: Argon.RealityZoomState.START
@@ -443,7 +436,7 @@ var BrowserView = (function (_super) {
             case gestures_1.GestureStateTypes.changed:
                 if (this._pinchStartFov === undefined)
                     return;
-                manager.reality.zoom({
+                AppViewModel_1.manager.reality.zoom({
                     zoom: event.scale,
                     fov: this._pinchStartFov,
                     state: Argon.RealityZoomState.CHANGE
@@ -452,7 +445,7 @@ var BrowserView = (function (_super) {
             default:
                 if (this._pinchStartFov === undefined)
                     return;
-                manager.reality.zoom({
+                AppViewModel_1.manager.reality.zoom({
                     zoom: event.scale,
                     fov: this._pinchStartFov,
                     state: Argon.RealityZoomState.END
@@ -461,19 +454,23 @@ var BrowserView = (function (_super) {
         }
     };
     BrowserView.prototype.loadUrl = function (url) {
-        this.focussedLayer.webView.src = url;
-        this.focussedLayer.details.set('url', url);
-        this.focussedLayer.details.set('title', '');
-        this.focussedLayer.details.set('isFavorite', false);
-        this.focussedLayer.details.set('supportedInteractionModes', ['page', 'immersive']);
+        if (this.focussedLayer !== this.realityLayer) {
+            this.focussedLayer.details.set('uri', url);
+            this.focussedLayer.details.set('title', '');
+            this.focussedLayer.details.set('isFavorite', false);
+            this.focussedLayer.details.set('supportedInteractionModes', ['page', 'immersive']);
+        }
+        if (this.focussedLayer.webView.src === url)
+            this.focussedLayer.webView.reload();
+        else
+            this.focussedLayer.webView.src = url;
     };
     BrowserView.prototype.setFocussedLayer = function (layer) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            console.log("Set focussed layer: " + layer.details.url);
-            var manager = Argon.ArgonSystem.instance;
-            manager.focus.setSession(layer.webView.session);
+            console.log("Set focussed layer: " + layer.details.uri || "New Channel");
+            AppViewModel_1.manager.focus.setSession(layer.webView.session);
             AppViewModel_1.appViewModel.setLayerDetails(this.focussedLayer.details);
             AppViewModel_1.appViewModel.hideOverview();
             if (layer !== this.realityLayer) {

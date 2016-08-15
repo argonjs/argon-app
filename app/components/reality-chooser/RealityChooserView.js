@@ -2,7 +2,6 @@
 var observable_1 = require('data/observable');
 var bookmarks_1 = require('../common/bookmarks');
 var AppViewModel_1 = require('../common/AppViewModel');
-var Argon = require('argon');
 var RealityChooserViewModel = (function (_super) {
     __extends(RealityChooserViewModel, _super);
     function RealityChooserViewModel() {
@@ -24,7 +23,7 @@ function onTap(args) {
     if (editing)
         return;
     var item = args.object.bindingContext;
-    Argon.ArgonSystem.instance.reality.setDesired(item.reality);
+    AppViewModel_1.manager.reality.setDesired(item.reality);
     AppViewModel_1.appViewModel.hideRealityChooser();
 }
 exports.onTap = onTap;

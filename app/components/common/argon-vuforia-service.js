@@ -5,6 +5,7 @@ var http = require('http');
 var file = require('file-system');
 var argon_reality_service_1 = require('./argon-reality-service');
 var util_1 = require('./util');
+var minimatch = require('minimatch');
 exports.VIDEO_DELAY = -0.5 / 60;
 var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
@@ -42,8 +43,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         this.dataSetUrlMap = new WeakMap();
         if (!vuforia.api)
             return;
-        vuforia.videoView.on('propertyChange', function () {
-        });
         var stateUpdateCallback = function (state) {
             var time = JulianDate.now();
             // subtract a few ms, since the video frame represents a time slightly in the past.
@@ -61,13 +60,13 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             for (var i = 0; i < numTrackableResults; i++) {
                 var trackableResult = state.getTrackableResult(i);
                 var trackable = trackableResult.getTrackable();
-                var name_1 = trackable.getName();
+                var name = trackable.getName();
                 var id = _this._getIdForTrackable(trackable);
                 var entity = contextService.subscribedEntities.getById(id);
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
                         id: id,
-                        name: name_1,
+                        name: name,
                         position: new Argon.Cesium.SampledPositionProperty(_this.vuforiaTrackerEntity),
                         orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
                     });
@@ -89,9 +88,9 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var pose_1 = trackableResult.getPose();
                 var position = Matrix4.getTranslation(pose_1, _this.scratchCartesian);
                 var rotationMatrix = Matrix4.getRotation(pose_1, _this.scratchMatrix3);
-                var orientation_1 = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
+                var orientation = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
                 entity.position.addSample(trackableTime, position);
-                entity.orientation.addSample(trackableTime, orientation_1);
+                entity.orientation.addSample(trackableTime, orientation);
             }
             // if no one is listening, don't bother calculating the view state or raising an event. 
             // (this can happen when the vuforia video reality is not the current reality, though
@@ -183,27 +182,35 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
     NativescriptVuforiaServiceDelegate.prototype.setHint = function (hint, value) {
         return vuforia.api.setHint(hint, value);
     };
-    NativescriptVuforiaServiceDelegate.prototype.init = function (options) {
-        var licenseData;
-        if (options.licenseKey) {
-            licenseData = { key: options.licenseKey };
-        }
-        else if (options.encryptedLicenseData) {
-            licenseData = util_1.Util.decrypt(options.encryptedLicenseData);
-        }
-        // attempt to initialize after the license data resolves
-        return Promise.resolve(licenseData).then(function (licenseData) {
-            if (!licenseData || !licenseData.key) {
-                return Promise.reject(new Error("License data must be provided"));
+    NativescriptVuforiaServiceDelegate.prototype.decryptLicenseKey = function (encryptedLicenseData, session) {
+        return util_1.Util.decrypt(encryptedLicenseData).then(function (_a) {
+            var key = _a.key, origins = _a.origins;
+            if (!session.uri)
+                throw new Error('Invalid origin');
+            var origin = Argon.URI.parse(session.uri);
+            if (!Array.isArray(origins)) {
+                throw new Error("Vuforia License Data must specify allowed origins");
             }
-            if (!vuforia.api.setLicenseKey(licenseData.key)) {
-                return Promise.reject(new Error("Unable to set the license key"));
-            }
-            console.log("Vuforia initializing...");
-            return vuforia.api.init().then(function (result) {
-                console.log("Vuforia Init Result: " + result);
-                return result;
+            var match = origins.find(function (o) {
+                var parts = o.split(/\/(.*)/);
+                var domainPattern = parts[0];
+                var pathPattern = parts[1];
+                return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             });
+            if (!match) {
+                throw new Error('Invalid origin');
+            }
+            return key;
+        });
+    };
+    NativescriptVuforiaServiceDelegate.prototype.init = function (options) {
+        if (!vuforia.api.setLicenseKey(options.key)) {
+            return Promise.reject(new Error("Unable to set the license key"));
+        }
+        console.log("Vuforia initializing...");
+        return vuforia.api.init().then(function (result) {
+            console.log("Vuforia Init Result: " + result);
+            return result;
         });
     };
     NativescriptVuforiaServiceDelegate.prototype.deinit = function () {
@@ -322,7 +329,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         var _this = this;
         var dataSet = this.idDataSetMap.get(id);
         var url = this.dataSetUrlMap.get(dataSet);
-        if (url) {
+        if (dataSet && url) {
             console.log("Vuforia loading dataset (" + id + ") at " + url);
             return _getDataSetLocation(url).then(function (location) {
                 if (dataSet.load(location, 2 /* Absolute */)) {

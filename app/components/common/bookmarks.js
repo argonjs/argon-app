@@ -7,13 +7,12 @@ var BookmarkItem = (function (_super) {
     __extends(BookmarkItem, _super);
     function BookmarkItem(item) {
         _super.call(this, item);
-        this.key = 'url';
         this.builtin = false;
     }
     BookmarkItem.prototype.toJSON = function () {
         return {
-            name: this.name,
-            url: this.url
+            title: this.title,
+            uri: this.uri
         };
     };
     return BookmarkItem;
@@ -22,12 +21,8 @@ exports.BookmarkItem = BookmarkItem;
 var RealityBookmarkItem = (function (_super) {
     __extends(RealityBookmarkItem, _super);
     function RealityBookmarkItem(reality) {
-        _super.call(this, {
-            reality: reality,
-            name: reality.name,
-            url: reality['url'] || 'reality:' + reality.type
-        });
-        this.key = 'reality';
+        _super.call(this, reality);
+        this.reality = reality;
     }
     return RealityBookmarkItem;
 }(BookmarkItem));
@@ -42,16 +37,16 @@ var favoriteMap = new Map();
 exports.favoriteMap = favoriteMap;
 var historyMap = new Map();
 exports.historyMap = historyMap;
-var realityMap = new WeakMap();
+var realityMap = new Map();
 exports.realityMap = realityMap;
 function updateMap(data, map) {
     var list = data.object;
     for (var i = 0; i < data.addedCount; i++) {
         var item = list.getItem(data.index + i);
-        map.set(item[item.key], item);
+        map.set(item.uri, item);
     }
     data.removed && data.removed.forEach(function (item) {
-        map.delete(item[item.key]);
+        map.delete(item.uri);
     });
 }
 favoriteList.on('change', function (data) { return updateMap(data, favoriteMap); });
@@ -59,8 +54,8 @@ historyList.on('change', function (data) { return updateMap(data, historyMap); }
 realityList.on('change', function (data) { return updateMap(data, realityMap); });
 var builtinFavorites = [
     new BookmarkItem({
-        name: 'Argon Samples',
-        url: 'http://argonjs.io/samples/'
+        title: 'Argon Samples',
+        uri: 'http://argonjs.io/samples/'
     })
 ];
 builtinFavorites.forEach(function (item) {
@@ -68,8 +63,8 @@ builtinFavorites.forEach(function (item) {
     favoriteList.push(item);
 });
 var LIVE_VIDEO_REALITY = {
-    name: 'Live Video',
-    type: 'live-video'
+    title: 'Live Video',
+    uri: 'reality:live-video'
 };
 exports.LIVE_VIDEO_REALITY = LIVE_VIDEO_REALITY;
 var builtinRealities = [

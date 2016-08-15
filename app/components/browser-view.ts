@@ -25,7 +25,7 @@ import {
   PinchGestureEventData,
   GestureEventData,
 } from 'ui/gestures';
-import {Util} from '../util';
+import {Util} from './common/util';
 import {PropertyChangeData} from 'data/observable'
 import {Placeholder, CreateViewEventData} from 'ui/placeholder'
 import {Observable} from 'data/observable';
@@ -35,7 +35,7 @@ import * as frames from 'ui/frame';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 
-import {appViewModel, LayerDetails} from './common/AppViewModel'
+import {manager, appViewModel, LayerDetails} from './common/AppViewModel'
 import * as bookmarks from './common/bookmarks'
 
 import * as Argon from 'argon'
@@ -121,11 +121,11 @@ export class BrowserView extends GridLayout {
             this.scrollView.scrollToVerticalOffset(0, false);
         })
         
-        Argon.ArgonSystem.instance.reality.changeEvent.addEventListener(({current})=>{
-            const realityListItem = bookmarks.realityMap.get(current);
+        manager.reality.changeEvent.addEventListener(({current})=>{
+            // const realityListItem = bookmarks.realityMap.get(current.uri);
             const details = this.realityLayer.details;
-            details.set('title', 'Reality: ' + realityListItem.name);
-            details.set('url', realityListItem.url);
+            details.set('title', 'Reality: ' + current.title);
+            details.set('uri', current.uri);
             details.set('supportedInteractionModes', ['page','immersive']);
             if (current === bookmarks.LIVE_VIDEO_REALITY) {
                 this.realityLayer.webView.visibility = 'collapse';
@@ -134,7 +134,7 @@ export class BrowserView extends GridLayout {
             }
         })
 
-        Argon.ArgonSystem.instance.focus.sessionFocusEvent.addEventListener(({previous, current})=>{
+        manager.focus.sessionFocusEvent.addEventListener(({previous, current})=>{
             if (!current || (current && current.info['app.disablePinchZoom'])) {
                 this.layerContainer.off(GestureTypes.pinch);
             } else if ( this.layerContainer.getGestureObservers(GestureTypes.pinch) &&
@@ -155,10 +155,13 @@ export class BrowserView extends GridLayout {
         container.verticalAlignment = 'top';
         
         const webView = new ArgonWebView;
+        webView.horizontalAlignment = 'stretch';
+        webView.verticalAlignment = 'stretch';
+
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
             switch(eventData.propertyName) {
                 case 'url':
-                    layer.details.set('url', eventData.value);
+                    layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
                     var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
@@ -186,18 +189,6 @@ export class BrowserView extends GridLayout {
                 default: break;
             }
         });
-        webView.on('session', (eventData) => {
-            const session = eventData.session;
-            session.connectEvent.addEventListener(()=>{
-                if (!this.focussedLayer) return;
-                if (webView === this.focussedLayer.webView) {
-                    Argon.ArgonSystem.instance.focus.setSession(session);
-                }
-            })
-        });
-        webView.horizontalAlignment = 'stretch';
-        webView.verticalAlignment = 'stretch';
-        
         
         webView.on("loadFinished", (eventData: LoadEventData) => {
             if (!eventData.error && webView !== this.realityLayer.webView) {
@@ -208,24 +199,28 @@ export class BrowserView extends GridLayout {
                     bookmarks.historyList.unshift(historyBookmarkItem);
                 } else {
                     bookmarks.historyList.unshift(new bookmarks.BookmarkItem({
-                        url: eventData.url,
-                        name: webView.title
+                        uri: eventData.url,
+                        title: webView.title
                     }))
                 }
             }
         });
         
         webView.on('session', (e)=>{
-            e.session.connectEvent.addEventListener(()=>{
+            const session = e.session;
+            session.connectEvent.addEventListener(()=>{
+                if (webView === this.focussedLayer.webView) {
+                    manager.focus.setSession(session);
+                }
                 if (layer === this.realityLayer) {
-                    if (e.session.info.role !== Argon.Role.REALITY_VIEW) {
-                        e.session.close();
+                    if (session.info.role !== Argon.Role.REALITY_VIEW) {
+                        session.close();
                         alert("Only a reality can be loaded in the reality layer");
                     }
                 } else {
-                    if (e.session.info.role !== Argon.Role.APPLICATION) {
-                        e.session.close();
-                        alert("Unable to load a reality in an app layer");
+                    if (session.info.role !== Argon.Role.APPLICATION) {
+                        session.close();
+                        alert("A reality can only be loaded in the reality layer");
                     }
                 }
             })
@@ -511,7 +506,6 @@ export class BrowserView extends GridLayout {
     private _pinchStartFov?:number;
     
     private _handlePinch(event: PinchGestureEventData) {
-        const manager = Argon.ArgonSystem.instance;
         switch (event.state) {
             case GestureStateTypes.began: 
                 const state = manager.context.serializedFrameState
@@ -547,19 +541,21 @@ export class BrowserView extends GridLayout {
     }
 
     public loadUrl(url:string) {
-        this.focussedLayer.webView.src = url;
-        this.focussedLayer.details.set('url',url);
-        this.focussedLayer.details.set('title','');
-        this.focussedLayer.details.set('isFavorite',false);
-        this.focussedLayer.details.set('supportedInteractionModes',['page', 'immersive']);
+        if (this.focussedLayer !== this.realityLayer) {
+            this.focussedLayer.details.set('uri',url);
+            this.focussedLayer.details.set('title','');
+            this.focussedLayer.details.set('isFavorite',false);
+            this.focussedLayer.details.set('supportedInteractionModes',['page', 'immersive']);
+        }
+        if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload();
+        else this.focussedLayer.webView.src = url;
     }
 
     public setFocussedLayer(layer:Layer) {
         if (this._focussedLayer !== layer) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
-            console.log("Set focussed layer: " + layer.details.url);
-            const manager = Argon.ArgonSystem.instance;
+            console.log("Set focussed layer: " + layer.details.uri || "New Channel");
             manager.focus.setSession(layer.webView.session);
             appViewModel.setLayerDetails(this.focussedLayer.details);
             appViewModel.hideOverview();

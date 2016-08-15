@@ -4,8 +4,6 @@ import * as Argon from 'argon'
 
 export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
-    public static sessionUrlMap = new WeakMap<Argon.SessionPort, string>();
-    
     public static sessionEvent = 'session';
     public static logEvent = 'log';
 
@@ -38,11 +36,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             const sessionUrl = this.url;
             
             console.log('Connecting to argon.js session at ' + sessionUrl);
-            const manager = Argon.ArgonSystem.instance;
+            const manager = Argon.ArgonSystem.instance!;
             const messageChannel = manager.session.createSynchronousMessageChannel();
-            const session = manager.session.addManagedSessionPort();
-            
-            ArgonWebView.sessionUrlMap.set(session, sessionUrl);
+            const session = manager.session.addManagedSessionPort(sessionUrl);
             
             const port = messageChannel.port2;
             port.onmessage = (msg:Argon.MessageEventLike) => {
@@ -50,10 +46,6 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
                 const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
                 this.evaluateJavascript(injectedMessage);
             }
-
-            session.connectEvent.addEventListener(()=>{            
-                session.info.name = sessionUrl;
-            });
                  
             const args:def.SessionEventData = {
                 eventName: ArgonWebView.sessionEvent,

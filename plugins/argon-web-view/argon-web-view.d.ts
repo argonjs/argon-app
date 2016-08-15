@@ -6,7 +6,6 @@ declare module "argon-web-view" {
     import {SessionPort} from 'argon';
 
     export class ArgonWebView extends WebView {
-        static sessionUrlMap:WeakMap<SessionPort, string>;
         static sessionConnectEvent:string;
         static logEvent:string;
         
