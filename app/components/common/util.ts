@@ -49,7 +49,6 @@ export class Util {
     }).then((plaintext)=>{
       const jsonString = plaintext['data'];
       const json = JSON.parse(jsonString);
-      alert(jsonString);
       return json;
     });
   }
