@@ -3,41 +3,31 @@ import * as platform from "platform";
 import {Color} from "color";
 import * as file from 'file-system'
 
+try {
+  var ArgonPrivate = require('argon-private');
+} catch (e) {}
+
 require( 'nativescript-webworkers' );
 openpgp.initWorker({path: '~/lib/openpgp.worker.js'});
 
-const privateFolder = file.knownFolders.currentApp().getFolder('private');
-const privatePGPKeyFileName = 'argonjs-priv.asc';
-const configFileName = "config.json";
-
 const privateKeyPromise = new Promise<openpgp.key.Key>((resolve, reject) => {
-  if (!privateFolder.contains(privatePGPKeyFileName)) reject(new Error("This build of Argon is incapable of decrypting messages."))
-  const privateKeyFile = privateFolder.getFile(privatePGPKeyFileName);
-  resolve(privateKeyFile.readText().then((privateKeyArmored)=>{
-    let privateKey = openpgp.key.readArmored(privateKeyArmored).keys[0];
-    const passphrase = Util.getConfigToken('argonjs.pgpKeyPassword')!;
-    return openpgp.decryptKey({
+  if (!ArgonPrivate) reject(new Error("This build of Argon is incapable of decrypting messages."))
+    let privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
+    const passphrase = ArgonPrivate.getPrivateKeyPassphrase();
+    resolve(openpgp.decryptKey({
       privateKey,
       passphrase
     }).then(({key}) => {
       return key;
-    });
-  }))
+    }).catch((err)=>{
+      alert(err.message);
+    }));
 })
 
 export class Util {
 
-  static getConfigToken(key:string) : string|undefined {
-    const containsPrivateKey = privateFolder.contains(configFileName);
-    if (!containsPrivateKey) 
-      return undefined;
-    const keysFile = privateFolder.getFile(configFileName);
-    const keys = JSON.parse(keysFile.readTextSync());
-    return keys && keys[key];
-  }
-
   static canDecrypt() : boolean { 
-    return privateFolder.contains(privatePGPKeyFileName);
+    return !!ArgonPrivate;
   }
 
   static decrypt<T>(encryptedData:string) : Promise<T> {
@@ -54,7 +44,7 @@ export class Util {
   }
 
   static getInternalVuforiaKey() : string|undefined {
-    return Util.getConfigToken('vuforia.key');
+    return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey();
   }
 
   static bringToFront(view: View) {

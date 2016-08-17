@@ -4,5 +4,3 @@
 /lib
 .DS_Store
 *.js.map
-app/private/*
-!app/private/*.sample

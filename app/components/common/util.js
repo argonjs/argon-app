@@ -1,41 +1,32 @@
 "use strict";
 var platform = require("platform");
 var color_1 = require("color");
-var file = require('file-system');
+try {
+    var ArgonPrivate = require('argon-private');
+}
+catch (e) { }
 require('nativescript-webworkers');
 openpgp.initWorker({ path: '~/lib/openpgp.worker.js' });
-var privateFolder = file.knownFolders.currentApp().getFolder('private');
-var privatePGPKeyFileName = 'argonjs-priv.asc';
-var configFileName = "config.json";
 var privateKeyPromise = new Promise(function (resolve, reject) {
-    if (!privateFolder.contains(privatePGPKeyFileName))
+    if (!ArgonPrivate)
         reject(new Error("This build of Argon is incapable of decrypting messages."));
-    var privateKeyFile = privateFolder.getFile(privatePGPKeyFileName);
-    resolve(privateKeyFile.readText().then(function (privateKeyArmored) {
-        var privateKey = openpgp.key.readArmored(privateKeyArmored).keys[0];
-        var passphrase = Util.getConfigToken('argonjs.pgpKeyPassword');
-        return openpgp.decryptKey({
-            privateKey: privateKey,
-            passphrase: passphrase
-        }).then(function (_a) {
-            var key = _a.key;
-            return key;
-        });
+    var privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
+    var passphrase = ArgonPrivate.getPrivateKeyPassphrase();
+    resolve(openpgp.decryptKey({
+        privateKey: privateKey,
+        passphrase: passphrase
+    }).then(function (_a) {
+        var key = _a.key;
+        return key;
+    }).catch(function (err) {
+        alert(err.message);
     }));
 });
 var Util = (function () {
     function Util() {
     }
-    Util.getConfigToken = function (key) {
-        var containsPrivateKey = privateFolder.contains(configFileName);
-        if (!containsPrivateKey)
-            return undefined;
-        var keysFile = privateFolder.getFile(configFileName);
-        var keys = JSON.parse(keysFile.readTextSync());
-        return keys && keys[key];
-    };
     Util.canDecrypt = function () {
-        return privateFolder.contains(privatePGPKeyFileName);
+        return !!ArgonPrivate;
     };
     Util.decrypt = function (encryptedData) {
         return privateKeyPromise.then(function (key) {
@@ -46,12 +37,11 @@ var Util = (function () {
         }).then(function (plaintext) {
             var jsonString = plaintext['data'];
             var json = JSON.parse(jsonString);
-            alert(jsonString);
             return json;
         });
     };
     Util.getInternalVuforiaKey = function () {
-        return Util.getConfigToken('vuforia.key');
+        return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey();
     };
     Util.bringToFront = function (view) {
         if (view.android) {
