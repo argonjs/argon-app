@@ -36,15 +36,16 @@ function updateLogListener(webView) {
     if (webView === previousWebView && AppViewModel_1.appViewModel.debugEnabled)
         return;
     if (previousWebView) {
-        previousWebView.logs.removeEventListener("change", logListener);
+        previousWebView.logs.removeEventListener("change", updateLog);
         previousWebView = undefined;
     }
     if (!webView || !AppViewModel_1.appViewModel.debugEnabled)
         return;
-    webView.logs.addEventListener('change', logListener);
+    webView.logs.addEventListener('change', updateLog);
     previousWebView = webView;
+    updateLog();
 }
-function logListener(evt) {
+function updateLog() {
     var webView = AppViewModel_1.appViewModel.layerDetails.webView;
     if (webView && webView.logs.length > 0) {
         var lines = [];

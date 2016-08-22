@@ -45,15 +45,16 @@ let previousWebView:ArgonWebView|undefined;
 function updateLogListener(webView:ArgonWebView|null) {
     if (webView === previousWebView && appViewModel.debugEnabled) return;
     if (previousWebView) {
-        previousWebView.logs.removeEventListener("change", logListener);
+        previousWebView.logs.removeEventListener("change", updateLog);
         previousWebView = undefined;
     }
     if (!webView || !appViewModel.debugEnabled) return;
-    webView.logs.addEventListener('change', logListener);
+    webView.logs.addEventListener('change', updateLog);
     previousWebView = webView;
+    updateLog();
 }
 
-function logListener(evt:ChangedData<Log>) {
+function updateLog() {
     const webView = appViewModel.layerDetails.webView;
     if (webView && webView.logs.length > 0) {
         var lines:string[] = [];
