@@ -14,7 +14,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public title : string;
     public progress : number;
 
-    public logs = new ObservableArray<def.Log>();
+    private _logs = new ObservableArray<def.Log>();
+    public get logs() {return this._logs};
 
     public session?:Argon.SessionPort;
     private _outputPort?:Argon.MessagePortLike;

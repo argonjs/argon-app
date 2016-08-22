@@ -63,14 +63,20 @@ var ArgonWebView = (function (_super) {
                     return "Array[" + o.length + "]";
                 if (o instanceof Date)
                     return o.toString();
-                return depth > 0 ? o.constructor.name + " {\n" + (Object.keys(o).map(function (key) {
-                    return key + ': ' + inspect(o, depth - 1);
-                }).join('\n') + Object.getPrototypeOf(o) ?
-                    '\n__proto__: ' + Object.getPrototypeOf(o).constructor.name : "") + "\n}" : o.constructor.name;
+                return depth > 0 ? className(o) + " {" + (Object.keys(o).map(function (key) {
+                    return '\n    ' + key + ': ' + inspect(o, depth - 1);
+                }).join() + Object.getPrototypeOf(o) ?
+                    '\n    __proto__: ' + className(Object.getPrototypeOf(o)) : "") + "\n}" : className(o);
             }
             function inspectEach(args) {
                 var argsArray = [].slice.call(args);
                 return argsArray.map(function (arg) { return inspect(arg, 1); }).join(' ');
+            }
+            function className(o) {
+                var name = Object.prototype.toString.call(o).slice(8, -1);
+                if (name === 'Object')
+                    name = o.constructor.name;
+                return name;
             }
         }.toString() + "())", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
         this._ios.allowsBackForwardNavigationGestures = true;

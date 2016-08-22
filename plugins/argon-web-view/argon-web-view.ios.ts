@@ -67,16 +67,21 @@ export class ArgonWebView extends common.ArgonWebView  {
                     if (typeof o === 'string' || o instanceof String) return o;
                     if (Array.isArray(o)) return "Array["+ o.length +"]";
                     if (o instanceof Date) return o.toString();
-                    return depth > 0 ? `${o.constructor.name} {\n${
+                    return depth > 0 ? `${className(o)} {${
                             Object.keys(o).map((key)=>{
-                                return key + ': ' + inspect(o, depth-1);
-                            }).join('\n') + Object.getPrototypeOf(o) ? 
-                                '\n__proto__: ' + Object.getPrototypeOf(o).constructor.name : ""
-                        }\n}` : o.constructor.name;
+                                return '\n    ' + key + ': ' + inspect(o, depth-1);
+                            }).join() + Object.getPrototypeOf(o) ? 
+                                '\n    __proto__: ' + className(Object.getPrototypeOf(o)) : ""
+                        }\n}` : className(o);
                 }
                 function inspectEach(args:IArguments) : string {
                     var argsArray = [].slice.call(args);
                     return argsArray.map((arg)=>inspect(arg,1)).join(' ');
+                }
+                function className(o) {
+                    let name = Object.prototype.toString.call(o).slice(8,-1);
+                    if (name === 'Object') name = o.constructor.name;
+                    return name;
                 }
             }.toString()
         }())`, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));

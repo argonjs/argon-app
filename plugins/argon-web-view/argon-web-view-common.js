@@ -7,8 +7,14 @@ var ArgonWebView = (function (_super) {
     function ArgonWebView() {
         _super.call(this);
         this.isArgonApp = false;
-        this.logs = new observable_array_1.ObservableArray();
+        this._logs = new observable_array_1.ObservableArray();
     }
+    Object.defineProperty(ArgonWebView.prototype, "logs", {
+        get: function () { return this._logs; },
+        enumerable: true,
+        configurable: true
+    });
+    ;
     ArgonWebView.prototype._didCommitNavigation = function () {
         if (this.session)
             this.session.close();
