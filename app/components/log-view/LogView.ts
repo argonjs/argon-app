@@ -9,6 +9,11 @@ import * as utils from 'utils/utils';
 import * as enums from 'ui/enums';
 
 let label:Label;
+let shadow:Label;
+
+export function onLayoutLoaded(args) {
+    args.object.backgroundColor = new Color('transparent');
+}
 
 export function onLoaded(args) {
     label = args.object;
@@ -17,17 +22,33 @@ export function onLoaded(args) {
 
     appViewModel['getRecentLogs'] = function() {
         const webView = appViewModel.layerDetails.webView
-        addLogListener(webView);
+        updateLogListener(webView);
         return label.text;
     };
+    
+    appViewModel.on('propertyChange', (args:PropertyChangeData)=>{
+        if (args.propertyName === 'debugEnabled') {
+            updateLogListener(appViewModel.layerDetails.webView);
+        }
+    })
 }
 
-var previousWebView:ArgonWebView;
+export function onShadowLoaded(args) {
+    shadow = args.object;
+    shadow.verticalAlignment = enums.VerticalAlignment.bottom;
+    shadow.translateX = 0.5;
+    shadow.translateY = 0.5;
+}
 
-function addLogListener(webView:ArgonWebView|null) {
-    if (webView === previousWebView) return;
-    if (previousWebView) previousWebView.logs.removeEventListener("change", logListener);
-    if (!webView) return;
+let previousWebView:ArgonWebView|undefined;
+
+function updateLogListener(webView:ArgonWebView|null) {
+    if (webView === previousWebView && appViewModel.debugEnabled) return;
+    if (previousWebView) {
+        previousWebView.logs.removeEventListener("change", logListener);
+        previousWebView = undefined;
+    }
+    if (!webView || !appViewModel.debugEnabled) return;
     webView.logs.addEventListener('change', logListener);
     previousWebView = webView;
 }
@@ -42,8 +63,10 @@ function logListener(evt:ChangedData<Log>) {
             if (lines.length > 50) break loop;
         }
         label.text = lines.join('\n');
+        shadow.text = label.text;
     } else {
         label.text = "";
+        shadow.text = "";
     }
 }
 
