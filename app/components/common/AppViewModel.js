@@ -8,11 +8,12 @@ var argon_vuforia_service_1 = require('./argon-vuforia-service');
 var util_1 = require('./util');
 var LayerDetails = (function (_super) {
     __extends(LayerDetails, _super);
-    function LayerDetails() {
-        _super.apply(this, arguments);
+    function LayerDetails(webView) {
+        _super.call(this);
         this.uri = '';
         this.title = '';
         this.supportedInteractionModes = [];
+        this.webView = webView;
     }
     return LayerDetails;
 }(observable_1.Observable));
@@ -31,7 +32,7 @@ var AppViewModel = (function (_super) {
         this.viewerEnabled = false;
         this.interactionMode = 'immersive';
         this.interactionModeButtonEnabled = false;
-        this.layerDetails = new LayerDetails();
+        this.layerDetails = new LayerDetails(null);
         this.currentUri = '';
         this.isFavorite = false;
         bookmarks.favoriteList.on('change', function () {

@@ -286,20 +286,17 @@ export class BrowserView extends GridLayout {
             closeButton,
             titleLabel,
             visualIndex: this.layers.length,
-            details: new LayerDetails()
+            details: new LayerDetails(webView)
         };
         this.layers.push(layer);
         
         if (this.isLoaded)
             this.setFocussedLayer(layer);
-        
-        layer.details.addEventListener('propertyChange', (data:PropertyChangeData)=>{
-            switch (data.propertyName) {
-                case 'title': 
-                    titleLabel.text = data.value;
-                    break;
-            }
-        })
+
+        titleLabel.bind({
+            sourceProperty: 'title',
+            targetProperty: 'text'
+        }, layer.details);
         
         if (this._overviewEnabled) this._showLayerInCarousel(layer);
         

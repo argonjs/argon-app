@@ -1,4 +1,5 @@
 "use strict";
+var Argon = require('argon');
 var common = require('./argon-web-view-common');
 var web_view_1 = require('ui/web-view');
 var trace = require('trace');
@@ -17,7 +18,61 @@ var ArgonWebView = (function (_super) {
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
-        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("\n            var _originalLog = console.log;\n            console.log = function(message) {\n                webkit.messageHandlers.log.postMessage(message);\n                _originalLog.apply(console, arguments);\n            };\n            function _sendArgonCheck(event) {\n                if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {\n                    if (event.persisted) window.location.reload(false);\n                    else webkit.messageHandlers.argoncheck.postMessage(\"true\");\n                } else {\n                    webkit.messageHandlers.argoncheck.postMessage(\"false\");\n                }\n            }\n\t        document.addEventListener(\"DOMContentLoaded\", _sendArgonCheck);\n\t        window.addEventListener(\"pageshow\", _sendArgonCheck);\n        ", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
+        configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("(" + function () {
+            var _originalLog = console.log;
+            console.log = function () {
+                webkit.messageHandlers.log.postMessage(JSON.stringify({ type: 'log', message: inspectEach(arguments) }));
+                _originalLog.apply(console, arguments);
+            };
+            var _originalWarn = console.warn;
+            console.warn = function () {
+                webkit.messageHandlers.log.postMessage(JSON.stringify({ type: 'warn', message: inspectEach(arguments) }));
+                _originalWarn.apply(console, arguments);
+            };
+            var _originalError = console.error;
+            console.error = function () {
+                webkit.messageHandlers.log.postMessage(JSON.stringify({ type: 'error', message: inspectEach(arguments) }));
+                _originalError.apply(console, arguments);
+            };
+            window.addEventListener('error', function (e) {
+                console.error('Unhandled Error: ' + e.message + ' (' + e.source + ':' + e.lineno + ')');
+            }, false);
+            function _sendArgonCheck(event) {
+                if (document.head.querySelector('meta[name=argon]') !== null || typeof (Argon) !== 'undefined') {
+                    if (event.persisted)
+                        window.location.reload(false);
+                    else
+                        webkit.messageHandlers.argoncheck.postMessage("true");
+                }
+                else {
+                    webkit.messageHandlers.argoncheck.postMessage("false");
+                }
+            }
+            document.addEventListener("DOMContentLoaded", _sendArgonCheck);
+            window.addEventListener("pageshow", _sendArgonCheck);
+            function inspect(o, depth) {
+                if (o === null)
+                    return "null";
+                if (o === undefined)
+                    return "undefined";
+                if (typeof o === 'number' || o instanceof Number)
+                    return (o).toString();
+                if (typeof o === 'string' || o instanceof String)
+                    return o;
+                if (Array.isArray(o))
+                    return "Array[" + o.length + "]";
+                if (o instanceof Date)
+                    return o.toString();
+                return depth > 0 ? o.constructor.name + " {\n" + (Object.keys(o).map(function (key) {
+                    return key + ': ' + inspect(o, depth - 1);
+                }).join('\n') + Object.getPrototypeOf(o) ?
+                    '\n__proto__: ' + Object.getPrototypeOf(o).constructor.name : "") + "\n}" : o.constructor.name;
+            }
+            function inspectEach(args) {
+                var argsArray = [].slice.call(args);
+                return argsArray.map(function (arg) { return inspect(arg, 1); }).join(' ');
+            }
+        }.toString() + "())", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
         this._ios.allowsBackForwardNavigationGestures = true;
         this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
@@ -154,7 +209,6 @@ var ArgonWebViewDelegate = (function (_super) {
         var owner = this._owner.get();
         if (!owner)
             return;
-        owner.log = [];
         owner._didCommitNavigation();
         owner['_suspendLoading'] = true;
         owner.url = webView.URL.absoluteString;

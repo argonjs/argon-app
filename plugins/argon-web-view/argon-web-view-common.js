@@ -1,16 +1,18 @@
 "use strict";
 var web_view_1 = require('ui/web-view');
 var Argon = require('argon');
+var observable_array_1 = require('data/observable-array');
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
         _super.call(this);
         this.isArgonApp = false;
-        this.log = [];
+        this.logs = new observable_array_1.ObservableArray();
     }
     ArgonWebView.prototype._didCommitNavigation = function () {
         if (this.session)
             this.session.close();
+        this.logs.length = 0;
         this.session = undefined;
         this._outputPort = undefined;
     };
@@ -46,13 +48,14 @@ var ArgonWebView = (function (_super) {
         this._outputPort && this._outputPort.postMessage(JSON.parse(message));
     };
     ArgonWebView.prototype._handleLogMessage = function (message) {
-        var logMessage = this.url + ': ' + message;
-        console.log(logMessage);
-        this.log.push(logMessage);
+        var log = JSON.parse(message);
+        log.lines = log.message.split(/\r\n|\r|\n/);
+        console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > '));
+        this.logs.push(log);
         var args = {
             eventName: ArgonWebView.logEvent,
             object: this,
-            message: logMessage
+            log: log
         };
         this.notify(args);
     };

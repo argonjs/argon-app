@@ -1,6 +1,8 @@
 import * as def from 'argon-web-view'
 import {WebView} from 'ui/web-view'
 import * as Argon from 'argon'
+import {ObservableArray} from 'data/observable-array';
+
 
 export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
@@ -12,7 +14,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public title : string;
     public progress : number;
 
-    public log:string[] = [];    
+    public logs = new ObservableArray<def.Log>();
 
     public session?:Argon.SessionPort;
     private _outputPort?:Argon.MessagePortLike;
@@ -23,6 +25,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public _didCommitNavigation() {
         if (this.session) this.session.close();
+        this.logs.length = 0;
         this.session = undefined;
         this._outputPort = undefined;
     }
@@ -64,13 +67,14 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
-        const logMessage = this.url + ': ' + message;
-        console.log(logMessage); 
-        this.log.push(logMessage);
+        const log:def.Log = JSON.parse(message);
+        log.lines = log.message.split(/\r\n|\r|\n/);
+        console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
+        this.logs.push(log);
         const args:def.LogEventData = {
             eventName: ArgonWebView.logEvent,
             object:this,
-            message: logMessage
+            log: log
         }
         this.notify(args);
     }

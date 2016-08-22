@@ -1,10 +1,12 @@
 import {Observable, PropertyChangeData, EventData} from 'data/observable'
+import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from 'argon';
 import {NativescriptDeviceService} from './argon-device-service';
 import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
 import {Util} from './util'
+import {ArgonWebView} from 'argon-web-view'
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
@@ -15,6 +17,11 @@ export class LayerDetails extends Observable {
     uri = '';
     title = '';
     supportedInteractionModes:Array<InteractionMode> = [];
+    webView:ArgonWebView|null
+    constructor(webView:ArgonWebView|null) {
+        super();
+        this.webView = webView;
+    }
 }
 
 export type InteractionMode = 'immersive'|'page';
@@ -29,7 +36,7 @@ export class AppViewModel extends Observable {
     viewerEnabled = false;
     interactionMode:InteractionMode = 'immersive';
     interactionModeButtonEnabled = false;
-    layerDetails:LayerDetails = new LayerDetails()
+    layerDetails:LayerDetails = new LayerDetails(null)
     currentUri = '';
     isFavorite = false;
 

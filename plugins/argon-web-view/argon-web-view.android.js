@@ -38,20 +38,33 @@ var ArgonWebView = (function (_super) {
         });
         this.on(ArgonWebView.loadStartedEvent, function () {
             // Hook into the logging
-            var injectLogger = function () {
+            var injectLoggers = function () {
                 var logger = window.console.log;
                 window.console.log = function () {
-                    var args = [];
-                    for (var _i = 0; _i < arguments.length; _i++) {
-                        args[_i - 0] = arguments[_i];
-                    }
                     if (window["__argon_android__"]) {
-                        window["__argon_android__"].emit("log", args.join(" "));
+                        window["__argon_android__"].emit("log", JSON.stringify({ type: 'log', args: [].slice.call(arguments) }));
                     }
-                    logger.apply(window.console, args);
+                    logger.apply(window.console, arguments);
                 };
+                var warnLogger = window.console.warn;
+                window.console.warn = function () {
+                    if (window["__argon_android__"]) {
+                        window["__argon_android__"].emit("log", JSON.stringify({ type: 'warn', args: [].slice.call(arguments) }));
+                    }
+                    warnLogger.apply(window.console, arguments);
+                };
+                var errorLogger = window.console.error;
+                window.console.error = function () {
+                    if (window["__argon_android__"]) {
+                        window["__argon_android__"].emit("log", JSON.stringify({ type: 'error', args: [].slice.call(arguments) }));
+                    }
+                    errorLogger.apply(window.console, arguments);
+                };
+                window.addEventListener('error', function (e) {
+                    console.error('Unhandled Error: ' + e.message + ' (' + e.source + ':' + e.lineno + ')');
+                }, false);
             };
-            _this.evaluateJavascript("(" + injectLogger.toString() + ")()");
+            _this.evaluateJavascript("(" + injectLoggers.toString() + ")()");
         });
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {

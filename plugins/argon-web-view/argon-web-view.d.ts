@@ -4,13 +4,20 @@ declare module "argon-web-view" {
     import {WebView} from 'ui/web-view'
     import {EventData} from 'data/observable'
     import {SessionPort} from 'argon';
+    import {ObservableArray} from 'data/observable-array';
+
+    export interface Log {
+        type: 'log'|'warn'|'error',
+        message: string,
+        lines: string[]
+    }
 
     export class ArgonWebView extends WebView {
         static sessionConnectEvent:string;
         static logEvent:string;
         
         session?: SessionPort;
-        log: string[];
+        logs: ObservableArray<Log>;
         
         title: string;
 
@@ -34,6 +41,6 @@ declare module "argon-web-view" {
     }
 
     export interface LogEventData extends EventData {
-        message: string;
+        log: Log;
     }
 }
