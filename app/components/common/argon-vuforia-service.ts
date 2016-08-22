@@ -216,7 +216,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             const match = origins.find((o) => {
                 const parts = o.split(/\/(.*)/);
                 let domainPattern = parts[0];
-                let pathPattern = parts[1];
+                let pathPattern = parts[1] || '**';
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             })
 

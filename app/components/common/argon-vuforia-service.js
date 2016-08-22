@@ -194,7 +194,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             var match = origins.find(function (o) {
                 var parts = o.split(/\/(.*)/);
                 var domainPattern = parts[0];
-                var pathPattern = parts[1];
+                var pathPattern = parts[1] || '**';
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             });
             if (!match) {
