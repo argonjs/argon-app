@@ -112,7 +112,7 @@ hr {
 /* ----- top menu ----- */
 
 {% assign navborder = 3 %}
-{% assign navborder_active = 6 %}
+{% assign navborder_active = 10 %}
 
 nav {
   font-size:15px;
