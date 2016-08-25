@@ -54,6 +54,10 @@ historyList.on('change', function (data) { return updateMap(data, historyMap); }
 realityList.on('change', function (data) { return updateMap(data, realityMap); });
 var builtinFavorites = [
     new BookmarkItem({
+        title: 'Argon Help',
+        uri: 'http://argonjs.io/argon-app/'
+    }),
+    new BookmarkItem({
         title: 'Argon Samples',
         uri: 'http://argonjs.io/samples/'
     })
