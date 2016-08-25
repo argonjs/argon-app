@@ -6,6 +6,7 @@ var grid_layout_1 = require('ui/layouts/grid-layout');
 var label_1 = require('ui/label');
 var button_1 = require('ui/button');
 var argon_web_view_1 = require('argon-web-view');
+var web_view_1 = require('ui/web-view');
 var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var util_1 = require('./common/util');
@@ -86,16 +87,6 @@ var BrowserView = (function (_super) {
                 _this.realityLayer.webView.visibility = 'visible';
             }
         });
-        AppViewModel_1.manager.focus.sessionFocusEvent.addEventListener(function (_a) {
-            var previous = _a.previous, current = _a.current;
-            if (!current || (current && current.info['app.disablePinchZoom'])) {
-                _this.layerContainer.off(gestures_1.GestureTypes.pinch);
-            }
-            else if (_this.layerContainer.getGestureObservers(gestures_1.GestureTypes.pinch) &&
-                _this.layerContainer.getGestureObservers(gestures_1.GestureTypes.pinch).length === 0) {
-                _this.layerContainer.on(gestures_1.GestureTypes.pinch, _this._handlePinch, _this);
-            }
-        });
         // enable pinch-zoom
         this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
     }
@@ -139,7 +130,7 @@ var BrowserView = (function (_super) {
                 default: break;
             }
         });
-        webView.on("loadFinished", function (eventData) {
+        webView.on(web_view_1.WebView.loadFinishedEvent, function (eventData) {
             if (!eventData.error && webView !== _this.realityLayer.webView) {
                 var historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
@@ -152,6 +143,16 @@ var BrowserView = (function (_super) {
                         uri: eventData.url,
                         title: webView.title
                     }));
+                }
+            }
+            if (_this.focussedLayer.webView === webView) {
+                var session = webView.session;
+                var gestureObservers = _this.layerContainer.getGestureObservers(gestures_1.GestureTypes.pinch);
+                if (!session || (session && session.info['app.disablePinchZoom'])) {
+                    _this.layerContainer.off(gestures_1.GestureTypes.pinch);
+                }
+                else if (!gestureObservers || (gestureObservers && gestureObservers.length === 0)) {
+                    _this.layerContainer.on(gestures_1.GestureTypes.pinch, _this._handlePinch, _this);
                 }
             }
         });
@@ -467,7 +468,8 @@ var BrowserView = (function (_super) {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
-            AppViewModel_1.manager.focus.setSession(layer.webView.session);
+            var session = layer.webView.session;
+            AppViewModel_1.manager.focus.setSession(session);
             AppViewModel_1.appViewModel.setLayerDetails(this.focussedLayer.details);
             AppViewModel_1.appViewModel.hideOverview();
             if (layer !== this.realityLayer) {

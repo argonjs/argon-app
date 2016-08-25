@@ -9,7 +9,7 @@ import {StackLayout} from 'ui/layouts/stack-layout';
 import {Label} from 'ui/label';
 import {Button} from 'ui/button';
 import {ArgonWebView} from 'argon-web-view';
-import {LoadEventData} from 'ui/web-view'
+import {WebView, LoadEventData} from 'ui/web-view'
 import {
     AnimationCurve, 
     VerticalAlignment, 
@@ -134,15 +134,6 @@ export class BrowserView extends GridLayout {
             }
         })
 
-        manager.focus.sessionFocusEvent.addEventListener(({previous, current})=>{
-            if (!current || (current && current.info['app.disablePinchZoom'])) {
-                this.layerContainer.off(GestureTypes.pinch);
-            } else if ( this.layerContainer.getGestureObservers(GestureTypes.pinch) &&
-                        this.layerContainer.getGestureObservers(GestureTypes.pinch).length === 0) {
-                this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
-            }
-        })
-
         // enable pinch-zoom
         this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
     }
@@ -190,7 +181,7 @@ export class BrowserView extends GridLayout {
             }
         });
         
-        webView.on("loadFinished", (eventData: LoadEventData) => {
+        webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
             if (!eventData.error && webView !== this.realityLayer.webView) {
                 const historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
                 if (historyBookmarkItem) {
@@ -202,6 +193,16 @@ export class BrowserView extends GridLayout {
                         uri: eventData.url,
                         title: webView.title
                     }))
+                }
+            }
+
+            if (this.focussedLayer.webView === webView) {
+                const session = webView.session;
+                const gestureObservers = this.layerContainer.getGestureObservers(GestureTypes.pinch);
+                if (!session || (session && session.info['app.disablePinchZoom'])) {
+                    this.layerContainer.off(GestureTypes.pinch);
+                } else if ( !gestureObservers || (gestureObservers && gestureObservers.length === 0)) {
+                    this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
                 }
             }
         });
@@ -553,7 +554,9 @@ export class BrowserView extends GridLayout {
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
-            manager.focus.setSession(layer.webView.session);
+
+            const session = layer.webView.session;
+            manager.focus.setSession(session);
             appViewModel.setLayerDetails(this.focussedLayer.details);
             appViewModel.hideOverview();
             if (layer !== this.realityLayer) {
