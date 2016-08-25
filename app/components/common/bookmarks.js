@@ -60,6 +60,10 @@ var builtinFavorites = [
     new BookmarkItem({
         title: 'Argon Samples',
         uri: 'http://argonjs.io/samples/'
+    }),
+    new BookmarkItem({
+        title: 'Argon-AFrame Samples',
+        uri: 'http://argonjs.io/argon-aframe/'
     })
 ];
 builtinFavorites.forEach(function (item) {
