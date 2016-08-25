@@ -183,8 +183,8 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         return vuforia.api.setHint(hint, value);
     };
     NativescriptVuforiaServiceDelegate.prototype.decryptLicenseKey = function (encryptedLicenseData, session) {
-        return util_1.Util.decrypt(encryptedLicenseData).then(function (_a) {
-            var key = _a.key, origins = _a.origins;
+        return util_1.Util.decrypt(encryptedLicenseData).then(function (json) {
+            var _a = JSON.parse(json), key = _a.key, origins = _a.origins;
             if (!session.uri)
                 throw new Error('Invalid origin');
             var origin = Argon.URI.parse(session.uri);

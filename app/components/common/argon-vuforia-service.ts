@@ -205,7 +205,8 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
 
     decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
-        return Util.decrypt<{key:string,origins:string[]}>(encryptedLicenseData).then(({key,origins})=>{
+        return Util.decrypt(encryptedLicenseData.trim()).then((json)=>{
+            const {key,origins} : {key:string,origins:string[]} = JSON.parse(json);
             if (!session.uri) throw new Error('Invalid origin');
 
             const origin = Argon.URI.parse(session.uri);

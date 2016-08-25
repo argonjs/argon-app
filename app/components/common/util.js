@@ -5,23 +5,19 @@ try {
     var ArgonPrivate = require('argon-private');
 }
 catch (e) { }
-require('nativescript-webworkers');
-openpgp.initWorker({ path: '~/lib/openpgp.worker.js' });
-var privateKeyPromise = new Promise(function (resolve, reject) {
-    if (!ArgonPrivate)
-        reject(new Error("This build of Argon is incapable of decrypting messages."));
-    var privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
-    var passphrase = ArgonPrivate.getPrivateKeyPassphrase();
-    resolve(openpgp.decryptKey({
-        privateKey: privateKey,
-        passphrase: passphrase
-    }).then(function (_a) {
-        var key = _a.key;
-        return key;
-    }).catch(function (err) {
-        alert(err.message);
-    }));
-});
+// const privateKeyPromise = new Promise<openpgp.key.Key>((resolve, reject) => {
+//   if (!ArgonPrivate) reject(new Error("This build of Argon is incapable of decrypting messages."))
+//     let privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
+//     const passphrase = ArgonPrivate.getPrivateKeyPassphrase();
+//     resolve(openpgp.decryptKey({
+//       privateKey,
+//       passphrase
+//     }).then(({key}) => {
+//       return key;
+//     }).catch((err)=>{
+//       alert(err.message);
+//     }));
+// })
 var Util = (function () {
     function Util() {
     }
@@ -29,15 +25,10 @@ var Util = (function () {
         return !!ArgonPrivate;
     };
     Util.decrypt = function (encryptedData) {
-        return privateKeyPromise.then(function (key) {
-            return openpgp.decrypt({
-                message: openpgp.message.readArmored(encryptedData),
-                privateKey: key
-            });
-        }).then(function (plaintext) {
-            var jsonString = plaintext['data'];
-            var json = JSON.parse(jsonString);
-            return json;
+        if (!ArgonPrivate)
+            return Promise.reject(new Error("This build of Argon is incapable of decrypting messages."));
+        return Promise.resolve().then(function () {
+            return ArgonPrivate.decrypt(encryptedData);
         });
     };
     Util.getInternalVuforiaKey = function () {

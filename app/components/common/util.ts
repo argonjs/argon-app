@@ -7,22 +7,19 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
-require( 'nativescript-webworkers' );
-openpgp.initWorker({path: '~/lib/openpgp.worker.js'});
-
-const privateKeyPromise = new Promise<openpgp.key.Key>((resolve, reject) => {
-  if (!ArgonPrivate) reject(new Error("This build of Argon is incapable of decrypting messages."))
-    let privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
-    const passphrase = ArgonPrivate.getPrivateKeyPassphrase();
-    resolve(openpgp.decryptKey({
-      privateKey,
-      passphrase
-    }).then(({key}) => {
-      return key;
-    }).catch((err)=>{
-      alert(err.message);
-    }));
-})
+// const privateKeyPromise = new Promise<openpgp.key.Key>((resolve, reject) => {
+//   if (!ArgonPrivate) reject(new Error("This build of Argon is incapable of decrypting messages."))
+//     let privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
+//     const passphrase = ArgonPrivate.getPrivateKeyPassphrase();
+//     resolve(openpgp.decryptKey({
+//       privateKey,
+//       passphrase
+//     }).then(({key}) => {
+//       return key;
+//     }).catch((err)=>{
+//       alert(err.message);
+//     }));
+// })
 
 export class Util {
 
@@ -30,16 +27,10 @@ export class Util {
     return !!ArgonPrivate;
   }
 
-  static decrypt<T>(encryptedData:string) : Promise<T> {
-    return privateKeyPromise.then((key)=>{
-      return openpgp.decrypt({
-        message: openpgp.message.readArmored(encryptedData),
-        privateKey: key
-      });
-    }).then((plaintext)=>{
-      const jsonString = plaintext['data'];
-      const json = JSON.parse(jsonString);
-      return json;
+  static decrypt(encryptedData:string) : Promise<string> {
+    if (!ArgonPrivate) return Promise.reject(new Error("This build of Argon is incapable of decrypting messages."))
+    return Promise.resolve().then(()=>{
+      return ArgonPrivate.decrypt(encryptedData)
     });
   }
 
