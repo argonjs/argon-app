@@ -7,20 +7,6 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
-// const privateKeyPromise = new Promise<openpgp.key.Key>((resolve, reject) => {
-//   if (!ArgonPrivate) reject(new Error("This build of Argon is incapable of decrypting messages."))
-//     let privateKey = openpgp.key.readArmored(ArgonPrivate.getPrivateKey()).keys[0];
-//     const passphrase = ArgonPrivate.getPrivateKeyPassphrase();
-//     resolve(openpgp.decryptKey({
-//       privateKey,
-//       passphrase
-//     }).then(({key}) => {
-//       return key;
-//     }).catch((err)=>{
-//       alert(err.message);
-//     }));
-// })
-
 export class Util {
 
   static canDecrypt() : boolean { 
@@ -86,4 +72,50 @@ export class Util {
       iosView.layer.insertSublayerAtIndex(gradientLayer, 0);
     }
   }
+}
+
+declare const inet_ntoa:any;
+declare const getifaddrs:any;
+declare const sockaddr_in:any;
+declare const freeifaddrs:any;
+
+function ipToString(inAddr) {
+    if (!inAddr) {
+        throw new Error('in == NULL');
+    }
+
+    if (inAddr.s_addr === 0x00000000) {
+        return '*';
+    } else {
+        return NSString.stringWithCStringEncoding(inet_ntoa(inAddr), 1).toString();
+    }
+}
+
+export function getIPAddressOfInterface($interface) {
+    var address = '-';
+    if (!$interface) {
+        return address;
+    }
+
+    var interfacesPtrPtr = new interop.Reference();
+
+    if (getifaddrs(interfacesPtrPtr) === 0) {
+        var interfacesPtr = interfacesPtrPtr[0];
+        var temp_addrPtr = interfacesPtr;
+
+        while (temp_addrPtr != null) {
+            if (temp_addrPtr[0].ifa_addr[0].sa_family === 2) {
+                   var name = NSString.stringWithUTF8String(temp_addrPtr[0].ifa_name).toString().trim();
+                if (NSString.stringWithUTF8String(temp_addrPtr[0].ifa_name).toString() == $interface) {
+                    var ifa_addrPtr = temp_addrPtr[0].ifa_addr;
+                    var ifa_addrPtrAsSockAddtr_in = new interop.Reference(sockaddr_in, ifa_addrPtr);
+                    address = ipToString(ifa_addrPtrAsSockAddtr_in[0].sin_addr);
+                }
+            }
+            temp_addrPtr = temp_addrPtr[0].ifa_next;
+        }
+
+        freeifaddrs(interfacesPtr);
+    }
+    return address;
 }

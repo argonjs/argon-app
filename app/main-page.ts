@@ -1,12 +1,5 @@
 import * as URI from 'urijs';
 import * as Argon from 'argon';
-
-// hack: make crypto.getRandomValues available to openpgp
-global.crypto = { getRandomValues: require('polyfill-crypto.getrandomvalues') };
-// hack: ensure openpgp does not think we are running in nodejs (we arent)
-global.window = global; 
-global.openpgp = require('./lib/openpgp.js');
-
 import * as application from 'application';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';

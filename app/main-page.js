@@ -1,11 +1,6 @@
 "use strict";
 var URI = require('urijs');
 var Argon = require('argon');
-// hack: make crypto.getRandomValues available to openpgp
-global.crypto = { getRandomValues: require('polyfill-crypto.getrandomvalues') };
-// hack: ensure openpgp does not think we are running in nodejs (we arent)
-global.window = global;
-global.openpgp = require('./lib/openpgp.js');
 var application = require('application');
 var search_bar_1 = require('ui/search-bar');
 var color_1 = require('color');
