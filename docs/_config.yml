@@ -1,0 +1,47 @@
+---
+
+port: 4000
+host: 0.0.0.0
+safe: false
+
+
+### site serving configuration ###
+exclude: [CNAME, README.md, .gitignore]
+permalink: /:title ## disables post output
+timezone: null
+lsi: false
+markdown: kramdown
+
+
+### content configuration ###
+title:       "Argon App"
+keywords:    "Argon4, argon, augmented reality, web, javascript"
+description: "The Augmented Reality Web Browser."
+source_link: "https://github.com/argonjs/argon-app"
+favicon:     "img/favicon.png"
+touch_icon:  #put a path like: "img/apple-touch-icon.png"
+google_analytics_key: "UA-63191442-2"
+
+
+### template colors, used site-wide via css ###
+colors:
+  black:     '#111111'
+  white:     '#f8f8f8'
+  blue:      '#49a7e9'
+  green:     '#9bcf2f'
+  purple:    '#c869bf'
+  orange:    '#fab125'
+  turquoise: '#0fbfcf'
+  gtgold:    '#eeb211'
+  gtnavy:    '#00254c'
+  gtmetallic: '#f5d376'
+  buzzgold:   '#eeb211'
+  buzzgold60: '#f5d376'
+  gtblue:     '#00254c'
+  gtblue80:   '#335170'
+  black85:    '#262626'
+  darkgray:   '#545454'
+  mediumgray: '#808080'
+  lightgray:  '#e5e5e5'
+  gtlinkblue: '#004f9f'
+  gtlinkhover: '#1879db'
