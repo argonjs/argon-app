@@ -219,7 +219,7 @@ export class BrowserView extends GridLayout {
                         alert("Only a reality can be loaded in the reality layer");
                     }
                 } else {
-                    if (session.info.role !== Argon.Role.APPLICATION) {
+                    if (session.info.role == Argon.Role.REALITY_VIEW) {
                         session.close();
                         alert("A reality can only be loaded in the reality layer");
                     }
