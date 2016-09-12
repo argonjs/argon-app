@@ -3,7 +3,7 @@ import * as utils from 'utils/utils';
 import * as geolocation from 'speigg-nativescript-geolocation';
 import * as dialogs from 'ui/dialogs';
 
-import Argon = require("argon");
+import * as Argon from "@argonjs/argon";
 
 const JulianDate = Argon.Cesium.JulianDate;
 const Cartesian3 = Argon.Cesium.Cartesian3;

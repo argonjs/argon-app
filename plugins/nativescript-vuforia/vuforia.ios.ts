@@ -87,7 +87,7 @@ export class API extends common.APIBase {
                     });
                     VuforiaSession.onResume();
                 }
-                resolve(<number>result);
+                resolve(<def.InitResult><number>result);
             })
         })
     }

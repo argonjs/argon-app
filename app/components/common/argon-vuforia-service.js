@@ -1,5 +1,5 @@
 "use strict";
-var Argon = require('argon');
+var Argon = require('@argonjs/argon');
 var vuforia = require('nativescript-vuforia');
 var http = require('http');
 var file = require('file-system');

@@ -1,4 +1,4 @@
-import * as Argon from 'argon';
+import * as Argon from '@argonjs/argon';
 import * as common from './argon-web-view-common';
 import {WebView} from 'ui/web-view';
 import * as trace from 'trace';
@@ -64,7 +64,7 @@ export class ArgonWebView extends common.ArgonWebView  {
                     if (o === null) return "null";
                     if (o === undefined) return "undefined";
                     if (typeof o === 'number' || o instanceof Number) return (o).toString();
-                    if (typeof o === 'string' || o instanceof String) return o;
+                    if (typeof o === 'string' || o instanceof String) return <string> o;
                     if (Array.isArray(o)) return "Array["+ o.length +"]";
                     if (o instanceof Date) return o.toString();
                     return depth > 0 ? `${className(o)} {${

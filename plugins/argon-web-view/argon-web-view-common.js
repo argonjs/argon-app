@@ -1,6 +1,6 @@
 "use strict";
 var web_view_1 = require('ui/web-view');
-var Argon = require('argon');
+var Argon = require('@argonjs/argon');
 var observable_array_1 = require('data/observable-array');
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);

@@ -1,5 +1,5 @@
 "use strict";
-var Argon = require('argon');
+var Argon = require('@argonjs/argon');
 var common = require('./argon-web-view-common');
 var web_view_1 = require('ui/web-view');
 var trace = require('trace');

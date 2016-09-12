@@ -1,5 +1,5 @@
 
-import * as Argon from 'argon';
+import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as http from 'http';
 import * as file from 'file-system';

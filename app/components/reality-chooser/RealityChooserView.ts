@@ -14,7 +14,7 @@ import {
 
 import {AnimationCurve} from 'ui/enums'
 
-import * as Argon from 'argon'
+import * as Argon from '@argonjs/argon'
 
 export class RealityChooserViewModel extends Observable {
     realityList = realityList;

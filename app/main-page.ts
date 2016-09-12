@@ -1,5 +1,5 @@
 import * as URI from 'urijs';
-import * as Argon from 'argon';
+import * as Argon from '@argonjs/argon';
 import * as application from 'application';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';

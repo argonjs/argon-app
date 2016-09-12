@@ -7,7 +7,7 @@ import * as platform from 'platform';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {getDisplayOrientation} from './argon-device-service'
 
-import Argon = require("argon");
+import * as Argon from "@argonjs/argon";
 
 const Matrix4 = Argon.Cesium.Matrix4;
 const Cartesian3 = Argon.Cesium.Cartesian3;
@@ -23,7 +23,8 @@ const ONE = new Cartesian3(1,1,1);
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor = vuforiaCameraDeviceMode === vuforia.CameraDeviceMode.OptimizeSpeed ? 
+    (<UIView>vuforia.videoView.ios).contentScaleFactor = 
+        vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
         1 : platform.screen.mainScreen.scale;
 }
 

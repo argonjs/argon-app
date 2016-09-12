@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "argon": "file:../argon",
+    "@argonjs/argon": "argonjs/argon#master",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",
     "nativescript-screen-orientation": "github:bionictk/nativescript-screen-orientation",

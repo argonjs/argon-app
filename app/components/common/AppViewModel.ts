@@ -1,7 +1,7 @@
 import {Observable, PropertyChangeData, EventData} from 'data/observable'
 import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
-import * as Argon from 'argon';
+import * as Argon from '@argonjs/argon';
 import {NativescriptDeviceService} from './argon-device-service';
 import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';

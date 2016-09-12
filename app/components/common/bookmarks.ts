@@ -3,7 +3,7 @@ import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
 import {Observable, PropertyChangeData} from 'data/observable';
 
-import * as Argon from 'argon'
+import * as Argon from '@argonjs/argon'
 
 class BookmarkItem extends Observable {
     title?:string;

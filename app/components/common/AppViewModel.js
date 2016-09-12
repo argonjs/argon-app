@@ -1,7 +1,7 @@
 "use strict";
 var observable_1 = require('data/observable');
 var bookmarks = require('./bookmarks');
-var Argon = require('argon');
+var Argon = require('@argonjs/argon');
 var argon_device_service_1 = require('./argon-device-service');
 var argon_reality_service_1 = require('./argon-reality-service');
 var argon_vuforia_service_1 = require('./argon-vuforia-service');

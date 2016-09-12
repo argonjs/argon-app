@@ -4,7 +4,7 @@ var frames = require('ui/frame');
 var platform = require('platform');
 var absolute_layout_1 = require('ui/layouts/absolute-layout');
 var argon_device_service_1 = require('./argon-device-service');
-var Argon = require("argon");
+var Argon = require("@argonjs/argon");
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
 var Quaternion = Argon.Cesium.Quaternion;
@@ -16,8 +16,9 @@ var scratchFrustum = new Argon.Cesium.PerspectiveFrustum();
 var ONE = new Cartesian3(1, 1, 1);
 exports.vuforiaCameraDeviceMode = -3 /* OpimizeQuality */;
 if (vuforia.videoView.ios) {
-    vuforia.videoView.ios.contentScaleFactor = exports.vuforiaCameraDeviceMode === -2 /* OptimizeSpeed */ ?
-        1 : platform.screen.mainScreen.scale;
+    vuforia.videoView.ios.contentScaleFactor =
+        exports.vuforiaCameraDeviceMode === -2 /* OptimizeSpeed */ ?
+            1 : platform.screen.mainScreen.scale;
 }
 var NativescriptRealityService = (function (_super) {
     __extends(NativescriptRealityService, _super);

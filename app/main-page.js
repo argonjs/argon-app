@@ -1,6 +1,6 @@
 "use strict";
 var URI = require('urijs');
-var Argon = require('argon');
+var Argon = require('@argonjs/argon');
 var application = require('application');
 var search_bar_1 = require('ui/search-bar');
 var color_1 = require('color');

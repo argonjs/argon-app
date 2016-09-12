@@ -3,7 +3,7 @@ declare module "argon-web-view" {
 
     import {WebView} from 'ui/web-view'
     import {EventData} from 'data/observable'
-    import {SessionPort} from 'argon';
+    import {SessionPort} from '@argonjs/argon';
     import {ObservableArray} from 'data/observable-array';
 
     export interface Log {

@@ -38,7 +38,7 @@ import * as utils from 'utils/utils';
 import {manager, appViewModel, LayerDetails} from './common/AppViewModel'
 import * as bookmarks from './common/bookmarks'
 
-import * as Argon from 'argon'
+import * as Argon from '@argonjs/argon'
 
 const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;

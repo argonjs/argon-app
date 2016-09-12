@@ -1,6 +1,6 @@
 import * as def from 'argon-web-view'
 import {WebView} from 'ui/web-view'
-import * as Argon from 'argon'
+import * as Argon from '@argonjs/argon'
 import {ObservableArray} from 'data/observable-array';
 
 
