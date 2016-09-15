@@ -112,11 +112,6 @@ declare module interop {
          * Gets the value using pointer arithmetic.
          */
         [index: number]: any;
-
-        /**
-         * Dereferences the pointer.
-         */
-        value: any;
     }
 
     interface FunctionReference<T> {
@@ -205,5 +200,15 @@ declare module interop {
        * and you know that you're not responsible for releasing the result.
        */
       takeUnretainedValue(): T;
+    }
+
+    interface NSErrorWrapper extends Error {
+        error: NSError;
+    }
+
+    var NSErrorWrapper: {
+        new (error: NSError): NSErrorWrapper;
+        (error: NSError): NSErrorWrapper;
+        prototype: NSErrorWrapper;
     }
 }

@@ -2,10 +2,10 @@
   "nativescript": {
     "id": "edu.gatech.ael.argon4",
     "tns-android": {
-      "version": "1.7.1"
+      "version": "2.3.0"
     },
     "tns-ios": {
-      "version": "2.2.1"
+      "version": "2.3.0"
     }
   },
   "dependencies": {
@@ -15,12 +15,16 @@
     "nativescript-screen-orientation": "github:bionictk/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^2.1.0",
+    "tns-core-modules": "^2.3.0",
     "urijs": "^1.17.1"
   },
   "devDependencies": {
+    "babel-traverse": "6.15.0",
+    "babel-types": "6.15.0",
+    "babylon": "6.9.2",
+    "lazy": "1.0.11",
     "nativescript-dev-typescript": "^0.3.1",
-    "typescript": "^2.0.0"
+    "typescript": "^2.0.2"
   },
   "scripts": {
     "postinstall": "npm install @types/minimatch"

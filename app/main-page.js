@@ -2,6 +2,7 @@
 var URI = require('urijs');
 var Argon = require('@argonjs/argon');
 var application = require('application');
+var utils = require('utils/utils');
 var search_bar_1 = require('ui/search-bar');
 var color_1 = require('color');
 var enums_1 = require('ui/enums');
@@ -424,15 +425,15 @@ var IOSSearchBarController = (function () {
         this.searchBar = searchBar;
         this.uiSearchBar = searchBar.ios;
         this.textField = this.uiSearchBar.valueForKey("searchField");
-        this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
-        this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
-        this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
-        this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
-        this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal);
-        this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
+        this.uiSearchBar.keyboardType = 3 /* URL */;
+        this.uiSearchBar.autocapitalizationType = 0 /* None */;
+        this.uiSearchBar.searchBarStyle = 2 /* Minimal */;
+        this.uiSearchBar.returnKeyType = 1 /* Go */;
+        this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), 0 /* Search */, 0 /* Normal */);
+        this.textField.leftViewMode = 0 /* Never */;
         var textFieldEditHandler = function () {
             AppViewModel_1.appViewModel.hideMenu();
-            if (_this.uiSearchBar.isFirstResponder()) {
+            if (utils.ios.getter(UIResponder, _this.uiSearchBar.isFirstResponder)) {
                 if (exports.browserView.focussedLayer === exports.browserView.realityLayer) {
                     AppViewModel_1.appViewModel.showRealityChooser();
                 }
@@ -464,8 +465,8 @@ var IOSSearchBarController = (function () {
     }
     IOSSearchBarController.prototype.setPlaceholderText = function (text) {
         if (text) {
-            var attributes = NSMutableDictionary.alloc().init();
-            attributes.setObjectForKey(UIColor.blackColor(), NSForegroundColorAttributeName);
+            var attributes = NSMutableDictionary.new().init();
+            attributes.setObjectForKey(utils.ios.getter(UIColor, UIColor.blackColor), NSForegroundColorAttributeName);
             this.textField.attributedPlaceholder = NSAttributedString.alloc().initWithStringAttributes(text, attributes);
         }
         else {
@@ -473,7 +474,7 @@ var IOSSearchBarController = (function () {
         }
     };
     IOSSearchBarController.prototype.setText = function (url) {
-        if (!this.uiSearchBar.isFirstResponder()) {
+        if (!utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
             this.setPlaceholderText(url);
         }
     };

@@ -3,6 +3,7 @@ var Argon = require('@argonjs/argon');
 var common = require('./argon-web-view-common');
 var web_view_1 = require('ui/web-view');
 var trace = require('trace');
+var utils = require('utils/utils');
 var ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 var processPool = WKProcessPool.new();
 var ArgonWebView = (function (_super) {
@@ -78,7 +79,7 @@ var ArgonWebView = (function (_super) {
                     name = o.constructor.name;
                 return name;
             }
-        }.toString() + "())", WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
+        }.toString() + "())", 0 /* AtDocumentStart */, true));
         this._ios.allowsBackForwardNavigationGestures = true;
         this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
@@ -87,14 +88,14 @@ var ArgonWebView = (function (_super) {
     }
     ArgonWebView.prototype._setIsArgonApp = function (flag) {
         if (!this.isArgonApp && flag) {
-            this._ios.scrollView.backgroundColor = UIColor.clearColor();
-            this._ios.backgroundColor = UIColor.clearColor();
+            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
+            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.opaque = false;
             this.set("isArgonApp", true);
         }
         else if (this.isArgonApp && !flag) {
-            this._ios.scrollView.backgroundColor = UIColor.whiteColor();
-            this._ios.backgroundColor = UIColor.whiteColor();
+            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
+            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.opaque = true;
             this.set("isArgonApp", false);
         }
@@ -118,7 +119,9 @@ var ArgonWebView = (function (_super) {
         this._ios.navigationDelegate = this._argonDelegate;
     };
     ArgonWebView.prototype.onUnloaded = function () {
-        this._ios.navigationDelegate = null;
+        // NOTE: removed when moving to iOS10 -- will not let me assign null to the 
+        // delegate.  Not sure if this will cause a problem.
+        // this._ios.navigationDelegate = null;
         _super.prototype.onUnloaded.call(this);
     };
     return ArgonWebView;
@@ -167,19 +170,19 @@ var ArgonWebViewDelegate = (function (_super) {
             var navigationType = navigationAction.navigationType;
             var navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('other');
             switch (navigationType) {
-                case WKNavigationType.WKNavigationTypeLinkActivated:
+                case 0 /* LinkActivated */:
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('linkClicked');
                     break;
-                case WKNavigationType.WKNavigationTypeFormSubmitted:
+                case 1 /* FormSubmitted */:
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('formSubmitted');
                     break;
-                case WKNavigationType.WKNavigationTypeBackForward:
+                case 2 /* BackForward */:
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('backForward');
                     break;
-                case WKNavigationType.WKNavigationTypeReload:
+                case 3 /* Reload */:
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('reload');
                     break;
-                case WKNavigationType.WKNavigationTypeFormResubmitted:
+                case 4 /* FormResubmitted */:
                     navTypeIndex = web_view_1.WebView.navigationTypes.indexOf('formResubmitted');
                     break;
             }
@@ -188,10 +191,10 @@ var ArgonWebViewDelegate = (function (_super) {
                 owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, web_view_1.WebView.navigationTypes[navTypeIndex]);
         }
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);
-        decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyAllow);
+        decisionHandler(1 /* Allow */);
     };
     ArgonWebViewDelegate.prototype.webViewDecidePolicyForNavigationResponseDecisionHandler = function (webview, navigationResponse, decisionHandler) {
-        decisionHandler(WKNavigationResponsePolicy.WKNavigationResponsePolicyAllow);
+        decisionHandler(1 /* Allow */);
     };
     ArgonWebViewDelegate.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
         this._provisionalURL = webView.URL.absoluteString;

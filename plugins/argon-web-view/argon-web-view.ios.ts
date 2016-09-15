@@ -2,6 +2,7 @@ import * as Argon from '@argonjs/argon';
 import * as common from './argon-web-view-common';
 import {WebView} from 'ui/web-view';
 import * as trace from 'trace';
+import * as utils from 'utils/utils';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
@@ -84,7 +85,7 @@ export class ArgonWebView extends common.ArgonWebView  {
                     return name;
                 }
             }.toString()
-        }())`, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true));
+        }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
 
 	    this._ios.allowsBackForwardNavigationGestures = true;
 		this._ios['customUserAgent'] = ARGON_USER_AGENT;
@@ -96,13 +97,13 @@ export class ArgonWebView extends common.ArgonWebView  {
     
     public _setIsArgonApp(flag:boolean) {
         if (!this.isArgonApp && flag) {
-            this._ios.scrollView.backgroundColor = UIColor.clearColor();
-            this._ios.backgroundColor = UIColor.clearColor();
+            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
+            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.opaque = false;        
             this.set("isArgonApp", true);
         } else if (this.isArgonApp && !flag) {
-            this._ios.scrollView.backgroundColor = UIColor.whiteColor();
-            this._ios.backgroundColor = UIColor.whiteColor();
+            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
+            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.opaque = true;        
             this.set("isArgonApp", false);
         }
@@ -127,7 +128,9 @@ export class ArgonWebView extends common.ArgonWebView  {
     }
 
     public onUnloaded() {
-        this._ios.navigationDelegate = null;
+        // NOTE: removed when moving to iOS10 -- will not let me assign null to the 
+        // delegate.  Not sure if this will cause a problem.
+        // this._ios.navigationDelegate = null;
         super.onUnloaded();
     }
 }
@@ -177,19 +180,19 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
             const navigationType:WKNavigationType = navigationAction.navigationType;
             var navTypeIndex = WebView.navigationTypes.indexOf('other');
             switch (navigationType) {
-                case WKNavigationType.WKNavigationTypeLinkActivated:
+                case WKNavigationType.LinkActivated:
                     navTypeIndex = WebView.navigationTypes.indexOf('linkClicked');
                     break;
-                case WKNavigationType.WKNavigationTypeFormSubmitted:
+                case WKNavigationType.FormSubmitted:
                     navTypeIndex = WebView.navigationTypes.indexOf('formSubmitted');
                     break;
-                case WKNavigationType.WKNavigationTypeBackForward:
+                case WKNavigationType.BackForward:
                     navTypeIndex = WebView.navigationTypes.indexOf('backForward');
                     break;
-                case WKNavigationType.WKNavigationTypeReload:
+                case WKNavigationType.Reload:
                     navTypeIndex = WebView.navigationTypes.indexOf('reload');
                     break;
-                case WKNavigationType.WKNavigationTypeFormResubmitted:
+                case WKNavigationType.FormResubmitted:
                     navTypeIndex = WebView.navigationTypes.indexOf('formResubmitted');
                     break;
             }
@@ -198,11 +201,11 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         }
 
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);
-        decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyAllow);
+        decisionHandler(WKNavigationActionPolicy.Allow);
     }
 
     webViewDecidePolicyForNavigationResponseDecisionHandler(webview:WKWebView, navigationResponse:WKNavigationResponse, decisionHandler:(policy:WKNavigationResponsePolicy)=>void) {
-        decisionHandler(WKNavigationResponsePolicy.WKNavigationResponsePolicyAllow);
+        decisionHandler(WKNavigationResponsePolicy.Allow);
     }
 
     webViewDidStartProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {

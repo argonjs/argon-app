@@ -1,4 +1,5 @@
 "use strict";
+var utils = require('utils/utils');
 var common = require('./vuforia-common');
 var application = require('application');
 var placeholder = require('ui/placeholder');
@@ -117,18 +118,18 @@ var API = (function (_super) {
             x: width,
             y: height
         });
-        var orientation = UIApplication.sharedApplication().statusBarOrientation;
+        var orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
-            case UIInterfaceOrientation.UIInterfaceOrientationPortrait:
+            case 1 /* Portrait */:
                 VuforiaSession.setRotation(128 /* IOS_90 */);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown:
+            case 2 /* PortraitUpsideDown */:
                 VuforiaSession.setRotation(512 /* IOS_270 */);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft:
+            case 4 /* LandscapeLeft */:
                 VuforiaSession.setRotation(256 /* IOS_180 */);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight:
+            case 3 /* LandscapeRight */:
                 VuforiaSession.setRotation(1024 /* IOS_0 */);
                 break;
             default:

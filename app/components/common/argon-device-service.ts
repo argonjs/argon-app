@@ -108,10 +108,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                     }).then((action)=>{
                         if (action === 'Settings') {
                             const url = NSURL.URLWithString(UIApplicationOpenSettingsURLString);
-                            UIApplication.sharedApplication().openURL(url);
+                            utils.ios.getter(UIApplication, UIApplication.sharedApplication).openURL(url);
                         }
                     })
             }
+            // During testing of orientation problems, we tried 
+            // turning on the heading feature of the location manager
+            // to see if that helped.  It didn't, but here's the code:
+            //
             // if (CLLocationManager.headingAvailable()) {
             //     console.log("Phew, heading available. " );
             //     this.locationManager.headingFilter = 1.0;
@@ -126,22 +130,26 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         if (this.motionManager) return;
 
         const motionManager = CMMotionManager.alloc().init();
-        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0;
+        motionManager.deviceMotionUpdateInterval = 1.0 / 100.0;
         if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
             console.log("NO Magnetometer and/or Gyro. " );
             alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
         } else {
             let effectiveReferenceFrame:CMAttitudeReferenceFrame;
-            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-                effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
-//                motionManager.startMagnetometerUpdates();
-//                motionManager.startGyroUpdates();
-//                motionManager.startAccelerometerUpdates();
+            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.XTrueNorthZVertical) {
+                effectiveReferenceFrame = CMAttitudeReferenceFrame.XTrueNorthZVertical;
+
+                // During testing of orientation problems, we tried 
+                // turning on each of the individual updateds
+                // to see if that helped.  It didn't, but here's the code:
+                // motionManager.startMagnetometerUpdates();
+                // motionManager.startGyroUpdates();
+                // motionManager.startAccelerometerUpdates();
+                
                 motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
             } else {
                 alert("Need a device with magnetometer to get full 3D device orientation");
                 console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
-     //           effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
             }
         }
         this.motionManager = motionManager;
@@ -161,8 +169,12 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             this.locationWatchId = undefined;
         }
         if (this.motionManager) {
-            this.motionManager.stopDeviceMotionUpdates();
-            this.motionManager = undefined;
+            // BUG:  iOS 10 seems to have issues if you turn off and then
+            // turn back on CMMotion.  So, we're not turning it off here.
+            // But we probably should, when the bug is fixed.
+            //
+            // this.motionManager.stopDeviceMotionUpdates();
+            // this.motionManager = undefined;
         }
     }
     
@@ -177,29 +189,35 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             const motion = this.motionManager.deviceMotion;
 
             if (motion) {                
+
+                // We want to have the user calibrate the magnetic field
+                // if there are problems.  But iOS10 seems to have a problem 
+                // where doing the calibration messes up CMMotion.  So, we've 
+                // commented this out for now, but should turn it back on eventually
+                
                 switch (motion.magneticField.accuracy) {
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyUncalibrated:
-	                case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyLow:
+                    case CMMagneticFieldCalibrationAccuracy.Uncalibrated:
+	                case CMMagneticFieldCalibrationAccuracy.Low:
                         if (!this.calibrating) {
                             // let's only start calibration if it's been a while since we stopped
                             if (JulianDate.secondsDifference(time, this.calibStartTime) > 5) {
-                                console.log("starting calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
-                                this.calibStartTime = time;
-                                this.calibrating = true;
-                                this.motionManager.showsDeviceMovementDisplay = true;
+                                // console.log("starting calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                // this.calibStartTime = time;
+                                // this.calibrating = true;
+                                // this.motionManager.showsDeviceMovementDisplay = true;
                             }
                         }
                         break;
 
-            	    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyMedium:
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyHigh:
+            	    case CMMagneticFieldCalibrationAccuracy.Medium:
+                    case CMMagneticFieldCalibrationAccuracy.High:
                         if (this.calibrating) {
                             // let's only stop calibration if it's been a little bit since we stopped
                             if (JulianDate.secondsDifference(time, this.calibStartTime) > 2) {
-                                console.log("stopping calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
-                                this.calibStartTime = time;
-                                this.calibrating = false;
-                                this.motionManager.showsDeviceMovementDisplay = false;
+                                // console.log("stopping calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                // this.calibStartTime = time;
+                                // this.calibrating = false;
+                                // this.motionManager.showsDeviceMovementDisplay = false;
                             }
                         }
                         break;
@@ -236,13 +254,13 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
 export function getDisplayOrientation() : number {
     if (application.ios) {
-        const orientation = UIApplication.sharedApplication().statusBarOrientation;
+        const orientation =                             utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
-            case UIInterfaceOrientation.UIInterfaceOrientationUnknown:
-            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: return 0;
-            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: return 180;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: return 90;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: return -90;
+            case UIInterfaceOrientation.Unknown:
+            case UIInterfaceOrientation.Portrait: return 0;
+            case UIInterfaceOrientation.PortraitUpsideDown: return 180;
+            case UIInterfaceOrientation.LandscapeLeft: return 90;
+            case UIInterfaceOrientation.LandscapeRight: return -90;
         }
     }
     if (application.android) {

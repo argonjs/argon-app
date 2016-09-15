@@ -1,3 +1,5 @@
+import * as utils from 'utils/utils';
+
 import common = require('./vuforia-common');
 import def = require('nativescript-vuforia');
 import application = require('application');
@@ -142,18 +144,18 @@ export class API extends common.APIBase {
             x: width,
             y: height
         });
-        const orientation:UIInterfaceOrientation = UIApplication.sharedApplication().statusBarOrientation;
+        const orientation:UIInterfaceOrientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
-            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: 
+            case UIInterfaceOrientation.Portrait: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_90);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: 
+            case UIInterfaceOrientation.PortraitUpsideDown: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_270);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: 
+            case UIInterfaceOrientation.LandscapeLeft: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_180);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: 
+            case UIInterfaceOrientation.LandscapeRight: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_0);
                 break;
             default: 

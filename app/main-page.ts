@@ -1,6 +1,7 @@
 import * as URI from 'urijs';
 import * as Argon from '@argonjs/argon';
 import * as application from 'application';
+import * as utils from 'utils/utils';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';
 import {CreateViewEventData} from 'ui/placeholder';
@@ -446,18 +447,17 @@ class IOSSearchBarController {
         this.uiSearchBar = searchBar.ios;
         this.textField = this.uiSearchBar.valueForKey("searchField");
 
-        this.uiSearchBar.keyboardType = UIKeyboardType.UIKeyboardTypeURL;
-        this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.UITextAutocapitalizationTypeNone;
-        this.uiSearchBar.searchBarStyle = UISearchBarStyle.UISearchBarStyleMinimal;
-        this.uiSearchBar.returnKeyType = UIReturnKeyType.UIReturnKeyGo;
-        this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.UISearchBarIconSearch, UIControlState.UIControlStateNormal)
+        this.uiSearchBar.keyboardType = UIKeyboardType.URL;
+        this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.None;
+        this.uiSearchBar.searchBarStyle = UISearchBarStyle.Minimal;
+        this.uiSearchBar.returnKeyType = UIReturnKeyType.Go;
+        this.uiSearchBar.setImageForSearchBarIconState(UIImage.new(), UISearchBarIcon.Search, UIControlState.Normal)
         
-        this.textField.leftViewMode = UITextFieldViewMode.UITextFieldViewModeNever;
+        this.textField.leftViewMode = UITextFieldViewMode.Never;
 
         const textFieldEditHandler = () => {
             appViewModel.hideMenu();
-            if (this.uiSearchBar.isFirstResponder()) {
-                
+            if (utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
                 if (browserView.focussedLayer === browserView.realityLayer) {
                     appViewModel.showRealityChooser();
                 } else {
@@ -490,8 +490,8 @@ class IOSSearchBarController {
 
     private setPlaceholderText(text:string) {
         if (text) {
-            var attributes = NSMutableDictionary.alloc().init();
-            attributes.setObjectForKey(UIColor.blackColor(), NSForegroundColorAttributeName);
+            var attributes: NSMutableDictionary<string,any> = NSMutableDictionary.new<string,any>().init();
+            attributes.setObjectForKey(utils.ios.getter(UIColor,UIColor.blackColor), NSForegroundColorAttributeName);
             this.textField.attributedPlaceholder = NSAttributedString.alloc().initWithStringAttributes(text, attributes);
         } else {
             this.textField.placeholder = searchBar.hint;
@@ -499,7 +499,7 @@ class IOSSearchBarController {
     }
 
     public setText(url) {
-        if (!this.uiSearchBar.isFirstResponder()) {
+        if (!utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
             this.setPlaceholderText(url);
         }
     }

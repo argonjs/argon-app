@@ -65,15 +65,15 @@ var NativescriptDeviceService = (function (_super) {
         console.log("Creating location watcher. " + this.locationWatchId);
         if (application.ios) {
             switch (CLLocationManager.authorizationStatus()) {
-                case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedWhenInUse:
-                case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways:
+                case 4 /* kCLAuthorizationStatusAuthorizedWhenInUse */:
+                case 3 /* kCLAuthorizationStatusAuthorizedAlways */:
                     break;
-                case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
+                case 0 /* kCLAuthorizationStatusNotDetermined */:
                     this.locationManager = CLLocationManager.alloc().init();
                     this.locationManager.requestWhenInUseAuthorization();
                     break;
-                case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
-                case CLAuthorizationStatus.kCLAuthorizationStatusRestricted:
+                case 2 /* kCLAuthorizationStatusDenied */:
+                case 1 /* kCLAuthorizationStatusRestricted */:
                 default:
                     dialogs.action({
                         title: "Location Services",
@@ -83,7 +83,7 @@ var NativescriptDeviceService = (function (_super) {
                     }).then(function (action) {
                         if (action === 'Settings') {
                             var url = NSURL.URLWithString(UIApplicationOpenSettingsURLString);
-                            UIApplication.sharedApplication().openURL(url);
+                            utils.ios.getter(UIApplication, UIApplication.sharedApplication).openURL(url);
                         }
                     });
             }
@@ -93,18 +93,21 @@ var NativescriptDeviceService = (function (_super) {
         if (this.motionManager)
             return;
         var motionManager = CMMotionManager.alloc().init();
-        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0;
+        motionManager.deviceMotionUpdateInterval = 1.0 / 100.0;
         if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
             console.log("NO Magnetometer and/or Gyro. ");
             alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
         }
         else {
             var effectiveReferenceFrame = void 0;
-            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-                effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
-                //                motionManager.startMagnetometerUpdates();
-                //                motionManager.startGyroUpdates();
-                //                motionManager.startAccelerometerUpdates();
+            if (CMMotionManager.availableAttitudeReferenceFrames() & 8 /* XTrueNorthZVertical */) {
+                effectiveReferenceFrame = 8 /* XTrueNorthZVertical */;
+                // During testing of orientation problems, we tried 
+                // turning on each of the individual updateds
+                // to see if that helped.  It didn't, but here's the code:
+                // motionManager.startMagnetometerUpdates();
+                // motionManager.startGyroUpdates();
+                // motionManager.startAccelerometerUpdates();
                 motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
             }
             else {
@@ -127,8 +130,6 @@ var NativescriptDeviceService = (function (_super) {
             this.locationWatchId = undefined;
         }
         if (this.motionManager) {
-            this.motionManager.stopDeviceMotionUpdates();
-            this.motionManager = undefined;
         }
     };
     NativescriptDeviceService.prototype.onUpdate = function () {
@@ -138,28 +139,24 @@ var NativescriptDeviceService = (function (_super) {
         if (application.ios && this.motionManager) {
             var motion = this.motionManager.deviceMotion;
             if (motion) {
+                // We want to have the user calibrate the magnetic field
+                // if there are problems.  But iOS10 seems to have a problem 
+                // where doing the calibration messes up CMMotion.  So, we've 
+                // commented this out for now, but should turn it back on eventually
                 switch (motion.magneticField.accuracy) {
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyUncalibrated:
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyLow:
+                    case -1 /* Uncalibrated */:
+                    case 0 /* Low */:
                         if (!this.calibrating) {
                             // let's only start calibration if it's been a while since we stopped
                             if (JulianDate.secondsDifference(time, this.calibStartTime) > 5) {
-                                console.log("starting calib after " + JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
-                                this.calibStartTime = time;
-                                this.calibrating = true;
-                                this.motionManager.showsDeviceMovementDisplay = true;
                             }
                         }
                         break;
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyMedium:
-                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyHigh:
+                    case 1 /* Medium */:
+                    case 2 /* High */:
                         if (this.calibrating) {
                             // let's only stop calibration if it's been a little bit since we stopped
                             if (JulianDate.secondsDifference(time, this.calibStartTime) > 2) {
-                                console.log("stopping calib after " + JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
-                                this.calibStartTime = time;
-                                this.calibrating = false;
-                                this.motionManager.showsDeviceMovementDisplay = false;
                             }
                         }
                         break;
@@ -196,13 +193,13 @@ var NativescriptDeviceService = (function (_super) {
 exports.NativescriptDeviceService = NativescriptDeviceService;
 function getDisplayOrientation() {
     if (application.ios) {
-        var orientation = UIApplication.sharedApplication().statusBarOrientation;
+        var orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
-            case UIInterfaceOrientation.UIInterfaceOrientationUnknown:
-            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: return 0;
-            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: return 180;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: return 90;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: return -90;
+            case 0 /* Unknown */:
+            case 1 /* Portrait */: return 0;
+            case 2 /* PortraitUpsideDown */: return 180;
+            case 4 /* LandscapeLeft */: return 90;
+            case 3 /* LandscapeRight */: return -90;
         }
     }
     if (application.android) {
