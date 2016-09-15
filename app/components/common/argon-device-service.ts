@@ -28,9 +28,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     private locationWatchId?:number;
     private locationManager?:CLLocationManager;
     private motionManager?:CMMotionManager;
-    
+    private calibStartTime: Argon.Cesium.JulianDate;
+    private calibrating: boolean;
+
     constructor(context:Argon.ContextService) {
         super(context);
+
+        this.calibStartTime = JulianDate.now();
+        this.calibrating = false;
 
         const geolocationPositionProperty = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
         this.geolocationEntity.position = geolocationPositionProperty;
@@ -82,12 +87,13 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         console.log("Creating location watcher. " + this.locationWatchId);
         
         if (application.ios) {
+
             switch (CLLocationManager.authorizationStatus()) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedWhenInUse:
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways: 
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
-                    this.locationManager = CLLocationManager.new();
+                    this.locationManager = CLLocationManager.alloc().init();
                     this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
@@ -106,6 +112,13 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                         }
                     })
             }
+            // if (CLLocationManager.headingAvailable()) {
+            //     console.log("Phew, heading available. " );
+            //     this.locationManager.headingFilter = 1.0;
+            //     this.locationManager.startUpdatingHeading();
+            // } else {
+            //     console.log("HEADING NOT AVAILABLE. " );
+            // }
         }
     }
     
@@ -113,14 +126,24 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         if (this.motionManager) return;
 
         const motionManager = CMMotionManager.alloc().init();
-        motionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
-        let effectiveReferenceFrame:CMAttitudeReferenceFrame;
-        if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0;
+        if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
+            console.log("NO Magnetometer and/or Gyro. " );
+            alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
         } else {
-            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
+            let effectiveReferenceFrame:CMAttitudeReferenceFrame;
+            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
+                effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+//                motionManager.startMagnetometerUpdates();
+//                motionManager.startGyroUpdates();
+//                motionManager.startAccelerometerUpdates();
+                motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+            } else {
+                alert("Need a device with magnetometer to get full 3D device orientation");
+                console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
+     //           effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
+            }
         }
-        motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
         this.motionManager = motionManager;
 
         // make sure the device entity has a defined pose relative to the device orientation entity
@@ -153,7 +176,38 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             
             const motion = this.motionManager.deviceMotion;
 
-            if (motion) {
+            if (motion) {                
+                switch (motion.magneticField.accuracy) {
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyUncalibrated:
+	                case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyLow:
+                        if (!this.calibrating) {
+                            // let's only start calibration if it's been a while since we stopped
+                            if (JulianDate.secondsDifference(time, this.calibStartTime) > 5) {
+                                console.log("starting calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                this.calibStartTime = time;
+                                this.calibrating = true;
+                                this.motionManager.showsDeviceMovementDisplay = true;
+                            }
+                        }
+                        break;
+
+            	    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyMedium:
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyHigh:
+                        if (this.calibrating) {
+                            // let's only stop calibration if it's been a little bit since we stopped
+                            if (JulianDate.secondsDifference(time, this.calibStartTime) > 2) {
+                                console.log("stopping calib after " +  JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                this.calibStartTime = time;
+                                this.calibrating = false;
+                                this.motionManager.showsDeviceMovementDisplay = false;
+                            }
+                        }
+                        break;
+                }
+
+                if (this.motionManager.showsDeviceMovementDisplay) {
+                    return;
+                }
                 const motionQuaternion = <Argon.Cesium.Quaternion>motion.attitude.quaternion;
 
                 // Apple's orientation is reported in NWU, so we convert to ENU by applying a global rotation of
@@ -170,7 +224,6 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                     this.orientationEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.geolocationEntity);
                 }
             }
-
         }
 
         const displayOrientation = getDisplayOrientation();

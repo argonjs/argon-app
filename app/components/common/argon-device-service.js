@@ -22,6 +22,8 @@ var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService(context) {
         _super.call(this, context);
+        this.calibStartTime = JulianDate.now();
+        this.calibrating = false;
         var geolocationPositionProperty = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
         this.geolocationEntity.position = geolocationPositionProperty;
         geolocationPositionProperty.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
@@ -67,7 +69,7 @@ var NativescriptDeviceService = (function (_super) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways:
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
-                    this.locationManager = CLLocationManager.new();
+                    this.locationManager = CLLocationManager.alloc().init();
                     this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
@@ -91,15 +93,25 @@ var NativescriptDeviceService = (function (_super) {
         if (this.motionManager)
             return;
         var motionManager = CMMotionManager.alloc().init();
-        motionManager.deviceMotionUpdateInterval = 1.0 / 120.0;
-        var effectiveReferenceFrame;
-        if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
-            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0;
+        if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
+            console.log("NO Magnetometer and/or Gyro. ");
+            alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
         }
         else {
-            effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXArbitraryCorrectedZVertical;
+            var effectiveReferenceFrame = void 0;
+            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical) {
+                effectiveReferenceFrame = CMAttitudeReferenceFrame.CMAttitudeReferenceFrameXTrueNorthZVertical;
+                //                motionManager.startMagnetometerUpdates();
+                //                motionManager.startGyroUpdates();
+                //                motionManager.startAccelerometerUpdates();
+                motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+            }
+            else {
+                alert("Need a device with magnetometer to get full 3D device orientation");
+                console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical");
+            }
         }
-        motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
         this.motionManager = motionManager;
         // make sure the device entity has a defined pose relative to the device orientation entity
         if (this.entity.position instanceof Argon.Cesium.ConstantPositionProperty == false) {
@@ -126,6 +138,35 @@ var NativescriptDeviceService = (function (_super) {
         if (application.ios && this.motionManager) {
             var motion = this.motionManager.deviceMotion;
             if (motion) {
+                switch (motion.magneticField.accuracy) {
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyUncalibrated:
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyLow:
+                        if (!this.calibrating) {
+                            // let's only start calibration if it's been a while since we stopped
+                            if (JulianDate.secondsDifference(time, this.calibStartTime) > 5) {
+                                console.log("starting calib after " + JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                this.calibStartTime = time;
+                                this.calibrating = true;
+                                this.motionManager.showsDeviceMovementDisplay = true;
+                            }
+                        }
+                        break;
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyMedium:
+                    case CMMagneticFieldCalibrationAccuracy.CMMagneticFieldCalibrationAccuracyHigh:
+                        if (this.calibrating) {
+                            // let's only stop calibration if it's been a little bit since we stopped
+                            if (JulianDate.secondsDifference(time, this.calibStartTime) > 2) {
+                                console.log("stopping calib after " + JulianDate.secondsDifference(time, this.calibStartTime) + " seconds");
+                                this.calibStartTime = time;
+                                this.calibrating = false;
+                                this.motionManager.showsDeviceMovementDisplay = false;
+                            }
+                        }
+                        break;
+                }
+                if (this.motionManager.showsDeviceMovementDisplay) {
+                    return;
+                }
                 var motionQuaternion = motion.attitude.quaternion;
                 // Apple's orientation is reported in NWU, so we convert to ENU by applying a global rotation of
                 // 90 degrees about +z to the NWU orientation (or applying the NWU quaternion as a local rotation 
