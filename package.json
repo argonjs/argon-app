@@ -12,7 +12,7 @@
     "@argonjs/argon": "argonjs/argon#master",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",
-    "nativescript-screen-orientation": "github:bionictk/nativescript-screen-orientation",
+    "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
     "tns-core-modules": "^2.3.0",
