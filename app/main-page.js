@@ -274,7 +274,7 @@ function searchBarLoaded(args) {
         if (urlString.indexOf('//') === -1)
             urlString = '//' + urlString;
         var url = URI(urlString);
-        if (url.protocol() !== "http" || url.protocol() !== "https") {
+        if (url.protocol() !== "http" && url.protocol() !== "https") {
             url.protocol("http");
         }
         setSearchBarText(url.toString());

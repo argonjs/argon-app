@@ -29,7 +29,7 @@ this site Copyright &copy; Georgia Tech Research Corporation, available as [open
 <i class="fa fa-circle fa-stack-2x"></i>
 <i class="fa fa-graduation-cap fa-stack-1x" style="color: black;"></i>
 </span></a>
-<a href="https://itunes.apple.com/us/app/argon3/id944297993?mt=8">
+<a href="https://itunes.apple.com/us/app/argon4/id1089308600?ls=1&mt=8">
 <span class="fa-stack fa-lg">
 <i class="fa fa-circle fa-stack-2x"></i>
 <i class="fa fa-apple fa-stack-1x" style="color: black;"></i>
