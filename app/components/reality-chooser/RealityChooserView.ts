@@ -3,7 +3,7 @@ import {ObservableArray} from 'data/observable-array';
 import {View} from 'ui/core/view';
 import {ListView,ItemEventData} from 'ui/list-view';
 import {RealityBookmarkItem, realityList} from '../common/bookmarks'
-import {manager, appViewModel} from '../common/AppViewModel'
+import {appViewModel} from '../common/AppViewModel'
 
 import {
   GestureTypes,
@@ -32,6 +32,6 @@ export function onLoaded(args) {
 export function onTap(args) {
     if (editing) return
     var item:RealityBookmarkItem = (args.object as View).bindingContext;
-    manager.reality.setDesired(item.reality);
+    appViewModel.manager.reality.setDesired(item.reality);
     appViewModel.hideRealityChooser();
 }

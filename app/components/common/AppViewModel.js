@@ -45,6 +45,61 @@ var AppViewModel = (function (_super) {
         });
     }
     AppViewModel.prototype.setReady = function () {
+        var container = new Argon.DI.Container;
+        container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
+        container.registerSingleton(Argon.RealityService, argon_reality_service_1.NativescriptRealityService);
+        container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
+        var manager = this.manager = Argon.init({
+            container: container,
+            configuration: {
+                role: Argon.Role.MANAGER,
+                name: 'ArgonApp'
+            }
+        });
+        manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
+        manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
+            var previous = _a.previous, current = _a.current, session = _a.session;
+            if (session === manager.session.manager)
+                return;
+            if (previous) {
+                var previousRealityItem = bookmarks.realityMap.get(previous.uri);
+                if (previousRealityItem && !previousRealityItem.builtin) {
+                    var i = bookmarks.realityList.indexOf(previousRealityItem);
+                    bookmarks.realityList.splice(i, 1);
+                }
+            }
+            if (current) {
+                var currentRealityItem = bookmarks.realityMap.get(current.uri);
+                if (!currentRealityItem)
+                    bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
+            }
+            session.closeEvent.addEventListener(function () {
+                var sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
+                if (sessionDesiredReality) {
+                    var sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
+                    if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
+                        var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
+                        bookmarks.realityList.splice(i, 1);
+                    }
+                }
+            });
+        });
+        manager.focus.sessionFocusEvent.addEventListener(function () {
+            var focussedSession = manager.focus.getSession();
+            console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
+        });
+        manager.vuforia.isAvailable().then(function (available) {
+            if (available) {
+                var primaryVuforiaLicenseKey = util_1.Util.getInternalVuforiaKey();
+                if (!primaryVuforiaLicenseKey) {
+                    alert("Unable to locate Vuforia License Key");
+                    return;
+                }
+                manager.vuforia.initWithUnencryptedKey({ key: primaryVuforiaLicenseKey }).catch(function (err) {
+                    alert(err.message);
+                });
+            }
+        });
         this._resolveReady();
     };
     AppViewModel.prototype.toggleMenu = function () {
@@ -129,62 +184,4 @@ var AppViewModel = (function (_super) {
 }(observable_1.Observable));
 exports.AppViewModel = AppViewModel;
 exports.appViewModel = new AppViewModel;
-var container = new Argon.DI.Container;
-container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
-container.registerSingleton(Argon.RealityService, argon_reality_service_1.NativescriptRealityService);
-container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
-exports.manager = Argon.init({
-    container: container,
-    configuration: {
-        role: Argon.Role.MANAGER,
-        name: 'ArgonApp'
-    }
-});
-exports.vuforiaDelegate = container.get(Argon.VuforiaServiceDelegate);
-exports.manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
-exports.appViewModel.ready.then(function () {
-    exports.manager.vuforia.isAvailable().then(function (available) {
-        if (available) {
-            var primaryVuforiaLicenseKey = util_1.Util.getInternalVuforiaKey();
-            if (!primaryVuforiaLicenseKey) {
-                alert("Unable to locate Vuforia License Key");
-                return;
-            }
-            exports.manager.vuforia.initWithUnencryptedKey({ key: primaryVuforiaLicenseKey }).catch(function (err) {
-                alert(err.message);
-            });
-        }
-    });
-});
-exports.manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
-    var previous = _a.previous, current = _a.current, session = _a.session;
-    if (session === exports.manager.session.manager)
-        return;
-    if (previous) {
-        var previousRealityItem = bookmarks.realityMap.get(previous.uri);
-        if (previousRealityItem && !previousRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(previousRealityItem);
-            bookmarks.realityList.splice(i, 1);
-        }
-    }
-    if (current) {
-        var currentRealityItem = bookmarks.realityMap.get(current.uri);
-        if (!currentRealityItem)
-            bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
-    }
-    session.closeEvent.addEventListener(function () {
-        var sessionDesiredReality = exports.manager.reality.desiredRealityMap.get(session);
-        if (sessionDesiredReality) {
-            var sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
-            if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-                var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-                bookmarks.realityList.splice(i, 1);
-            }
-        }
-    });
-});
-exports.manager.focus.sessionFocusEvent.addEventListener(function () {
-    var focussedSession = exports.manager.focus.getSession();
-    console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
-});
 //# sourceMappingURL=AppViewModel.js.map

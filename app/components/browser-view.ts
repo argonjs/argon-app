@@ -35,7 +35,7 @@ import * as frames from 'ui/frame';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 
-import {manager, appViewModel, LayerDetails} from './common/AppViewModel'
+import {appViewModel, LayerDetails} from './common/AppViewModel'
 import * as bookmarks from './common/bookmarks'
 
 import * as Argon from '@argonjs/argon'
@@ -121,17 +121,19 @@ export class BrowserView extends GridLayout {
             this.scrollView.scrollToVerticalOffset(0, false);
         })
         
-        manager.reality.changeEvent.addEventListener(({current})=>{
-            // const realityListItem = bookmarks.realityMap.get(current.uri);
-            const details = this.realityLayer.details;
-            details.set('title', 'Reality: ' + current.title);
-            details.set('uri', current.uri);
-            details.set('supportedInteractionModes', ['page','immersive']);
-            if (current === bookmarks.LIVE_VIDEO_REALITY) {
-                this.realityLayer.webView.visibility = 'collapse';
-            } else {
-                this.realityLayer.webView.visibility = 'visible';
-            }
+        appViewModel.ready.then(()=>{
+            appViewModel.manager.reality.changeEvent.addEventListener(({current})=>{
+                // const realityListItem = bookmarks.realityMap.get(current.uri);
+                const details = this.realityLayer.details;
+                details.set('title', 'Reality: ' + current.title);
+                details.set('uri', current.uri);
+                details.set('supportedInteractionModes', ['page','immersive']);
+                if (current === bookmarks.LIVE_VIDEO_REALITY) {
+                    this.realityLayer.webView.visibility = 'collapse';
+                } else {
+                    this.realityLayer.webView.visibility = 'visible';
+                }
+            })
         })
 
         // enable pinch-zoom
@@ -211,7 +213,7 @@ export class BrowserView extends GridLayout {
             const session = e.session;
             session.connectEvent.addEventListener(()=>{
                 if (webView === this.focussedLayer.webView) {
-                    manager.focus.setSession(session);
+                    Argon.ArgonSystem.instance!.focus.setSession(session);
                 }
                 if (layer === this.realityLayer) {
                     if (session.info.role !== Argon.Role.REALITY_VIEW) {
@@ -504,6 +506,7 @@ export class BrowserView extends GridLayout {
     private _pinchStartFov?:number;
     
     private _handlePinch(event: PinchGestureEventData) {
+        const manager = Argon.ArgonSystem.instance!;
         switch (event.state) {
             case GestureStateTypes.began: 
                 const state = manager.context.serializedFrameState
@@ -513,26 +516,26 @@ export class BrowserView extends GridLayout {
                     this._pinchStartFov = undefined;
                 }
                 if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
+                manager.device.zoom({
                     zoom: 1, 
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.START
+                    state: Argon.ZoomState.START
                 })
                 break;
             case GestureStateTypes.changed: 
                 if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
+                manager.device.zoom({
                     zoom: event.scale, 
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.CHANGE
+                    state: Argon.ZoomState.CHANGE
                 })
                 break;
             default:
                 if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
+                manager.device.zoom({
                     zoom: event.scale, 
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.END
+                    state: Argon.ZoomState.END
                 })
                 break;  
         }
@@ -556,7 +559,7 @@ export class BrowserView extends GridLayout {
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
 
             const session = layer.webView.session;
-            manager.focus.setSession(session);
+            Argon.ArgonSystem.instance!.focus.setSession(session);
             appViewModel.setLayerDetails(this.focussedLayer.details);
             appViewModel.hideOverview();
             if (layer !== this.realityLayer) {

@@ -16,22 +16,7 @@ import {GestureTypes} from 'ui/gestures'
 import {SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
-import {manager, appViewModel, AppViewModel, LoadUrlEventData, vuforiaDelegate} from './components/common/AppViewModel';
-
-manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
-    type = 'hosted';
-    load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
-        const url:string = reality.uri;
-        const webView = browserView.realityLayer.webView;
-        let sessionCallback = (data:SessionEventData)=>{
-            webView.off('session', sessionCallback);
-            callback(data.session);
-        }
-        webView.on('session', sessionCallback);
-        if (webView.src === url) webView.reload();
-        else webView.src = url;
-    }
-});
+import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
@@ -53,6 +38,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         setSearchBarText(appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
+        const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
         vuforiaDelegate.viewerEnabled = evt.value;
         if (evt.value) {
             orientationModule.setCurrentOrientation("landscape");
@@ -265,11 +251,27 @@ export function pageLoaded(args) {
     }
     
     appViewModel.showBookmarks();
+
+
+    appViewModel.manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
+        type = 'hosted';
+        load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
+            const url:string = reality.uri;
+            const webView = browserView.realityLayer.webView;
+            let sessionCallback = (data:SessionEventData)=>{
+                webView.off('session', sessionCallback);
+                callback(data.session);
+            }
+            webView.on('session', sessionCallback);
+            if (webView.src === url) webView.reload();
+            else webView.src = url;
+        }
+    });
     
-    manager.session.errorEvent.addEventListener((error)=>{
+    appViewModel.manager.session.errorEvent.addEventListener((error)=>{
         alert(error.message);
         if (error.stack) console.log(error.stack);
-    })
+    });
 }
 
 export function layoutLoaded(args) {
@@ -384,7 +386,7 @@ export function onAddChannel(args) {
 
 export function onReload(args) {
     if (browserView.focussedLayer === browserView.realityLayer) {
-        manager.reality.setDesired(manager.reality.getCurrent());
+        appViewModel.manager.reality.setDesired(appViewModel.manager.reality.getCurrent());
     } else {
         browserView.focussedLayer.webView.reload();
     }

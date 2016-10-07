@@ -23,7 +23,7 @@ function onTap(args) {
     if (editing)
         return;
     var item = args.object.bindingContext;
-    AppViewModel_1.manager.reality.setDesired(item.reality);
+    AppViewModel_1.appViewModel.manager.reality.setDesired(item.reality);
     AppViewModel_1.appViewModel.hideRealityChooser();
 }
 exports.onTap = onTap;

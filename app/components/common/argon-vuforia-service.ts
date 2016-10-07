@@ -3,7 +3,8 @@ import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as http from 'http';
 import * as file from 'file-system';
-import {NativescriptRealityService, vuforiaCameraDeviceMode} from './argon-reality-service';
+import {NativescriptRealityService} from './argon-reality-service';
+import {NativescriptDeviceService, vuforiaCameraDeviceMode} from './argon-device-service';
 import {Util} from './util'
 import * as minimatch from 'minimatch'
 
@@ -46,7 +47,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     });
 	
 	constructor(
-        private deviceService:Argon.DeviceService, 
+        private deviceService:NativescriptDeviceService, 
         private realityService:NativescriptRealityService,
         private contextService:Argon.ContextService,
         private viewService:Argon.ViewService) {
@@ -64,7 +65,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // we start the render)
             JulianDate.addSeconds(time, VIDEO_DELAY, time);
             
-            deviceService.update();
+            deviceService.update({orientation:true});
             
             const vuforiaFrame = state.getFrame();
             const index = vuforiaFrame.getIndex();
@@ -160,6 +161,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         this._viewerEnabled = enabled;
         const device = vuforia.api.getDevice();
         if (device) device.setViewerActive(enabled);
+        this.deviceService.updateDeviceState();
     }
     
     get videoEnabled() {
@@ -264,7 +266,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             device.setViewerActive(true);
         }
             
-        this.realityService.configureVuforiaVideoBackground();
+        this.deviceService.configureVuforiaVideoBackground();
         this._configureCameraAndTrackers();
         return true;
     }

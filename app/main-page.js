@@ -9,27 +9,6 @@ var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var bookmarks = require('./components/common/bookmarks');
 var AppViewModel_1 = require('./components/common/AppViewModel');
-AppViewModel_1.manager.reality.registerLoader(new (function (_super) {
-    __extends(HostedRealityLoader, _super);
-    function HostedRealityLoader() {
-        _super.apply(this, arguments);
-        this.type = 'hosted';
-    }
-    HostedRealityLoader.prototype.load = function (reality, callback) {
-        var url = reality.uri;
-        var webView = exports.browserView.realityLayer.webView;
-        var sessionCallback = function (data) {
-            webView.off('session', sessionCallback);
-            callback(data.session);
-        };
-        webView.on('session', sessionCallback);
-        if (webView.src === url)
-            webView.reload();
-        else
-            webView.src = url;
-    };
-    return HostedRealityLoader;
-}(Argon.RealityLoader)));
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
 var searchBar;
@@ -39,7 +18,8 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
         setSearchBarText(AppViewModel_1.appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
-        AppViewModel_1.vuforiaDelegate.viewerEnabled = evt.value;
+        var vuforiaDelegate = AppViewModel_1.appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
+        vuforiaDelegate.viewerEnabled = evt.value;
         if (evt.value) {
             orientationModule.setCurrentOrientation("landscape");
         }
@@ -249,7 +229,28 @@ function pageLoaded(args) {
         });
     }
     AppViewModel_1.appViewModel.showBookmarks();
-    AppViewModel_1.manager.session.errorEvent.addEventListener(function (error) {
+    AppViewModel_1.appViewModel.manager.reality.registerLoader(new (function (_super) {
+        __extends(HostedRealityLoader, _super);
+        function HostedRealityLoader() {
+            _super.apply(this, arguments);
+            this.type = 'hosted';
+        }
+        HostedRealityLoader.prototype.load = function (reality, callback) {
+            var url = reality.uri;
+            var webView = exports.browserView.realityLayer.webView;
+            var sessionCallback = function (data) {
+                webView.off('session', sessionCallback);
+                callback(data.session);
+            };
+            webView.on('session', sessionCallback);
+            if (webView.src === url)
+                webView.reload();
+            else
+                webView.src = url;
+        };
+        return HostedRealityLoader;
+    }(Argon.RealityLoader)));
+    AppViewModel_1.appViewModel.manager.session.errorEvent.addEventListener(function (error) {
         alert(error.message);
         if (error.stack)
             console.log(error.stack);
@@ -363,7 +364,7 @@ function onAddChannel(args) {
 exports.onAddChannel = onAddChannel;
 function onReload(args) {
     if (exports.browserView.focussedLayer === exports.browserView.realityLayer) {
-        AppViewModel_1.manager.reality.setDesired(AppViewModel_1.manager.reality.getCurrent());
+        AppViewModel_1.appViewModel.manager.reality.setDesired(AppViewModel_1.appViewModel.manager.reality.getCurrent());
     }
     else {
         exports.browserView.focussedLayer.webView.reload();

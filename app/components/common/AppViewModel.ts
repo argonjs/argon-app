@@ -40,6 +40,8 @@ export class AppViewModel extends Observable {
     currentUri = '';
     isFavorite = false;
 
+    public manager:Argon.ArgonSystem;
+
     private _resolveReady:Function;
     ready:Promise<void>;
     
@@ -59,6 +61,66 @@ export class AppViewModel extends Observable {
     }
 
     setReady() {
+
+        const container = new Argon.DI.Container;
+        container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
+        container.registerSingleton(Argon.RealityService, NativescriptRealityService);
+        container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
+
+        const manager = this.manager = Argon.init({
+            container, 
+            configuration: {
+                role: Argon.Role.MANAGER,
+                name: 'ArgonApp'
+            }
+        });
+
+        manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
+
+        manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current, session})=>{
+            if (session === manager.session.manager) return;
+            
+            if (previous) {
+                const previousRealityItem = bookmarks.realityMap.get(previous.uri);
+                if (previousRealityItem && !previousRealityItem.builtin) {
+                    var i = bookmarks.realityList.indexOf(previousRealityItem);
+                    bookmarks.realityList.splice(i, 1);
+                }
+            } 
+            if (current) {        
+                const currentRealityItem = bookmarks.realityMap.get(current.uri)
+                if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
+            }
+            session.closeEvent.addEventListener(()=>{
+                const sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
+                if (sessionDesiredReality) {
+                    const sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
+                    if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
+                            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
+                            bookmarks.realityList.splice(i, 1);
+                    }
+                }
+            });
+        })
+
+        manager.focus.sessionFocusEvent.addEventListener(()=>{
+            const focussedSession = manager.focus.getSession();    
+            console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
+        })
+
+        manager.vuforia.isAvailable().then((available)=>{
+            if (available) {
+                const primaryVuforiaLicenseKey = Util.getInternalVuforiaKey();
+                if (!primaryVuforiaLicenseKey) {
+                    alert("Unable to locate Vuforia License Key");
+                    return;
+                }
+                manager.vuforia.initWithUnencryptedKey({key:primaryVuforiaLicenseKey}).catch((err)=>{
+                    alert(err.message);
+                });
+            }
+        })
+        
         this._resolveReady();
     }
     
@@ -160,69 +222,5 @@ export class AppViewModel extends Observable {
         this.set('bookmarksOpen', !url);
     }
 }
-
-export const appViewModel = new AppViewModel;
-
-
-const container = new Argon.DI.Container;
-container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
-container.registerSingleton(Argon.RealityService, NativescriptRealityService);
-container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
-
-export const manager = Argon.init({
-    container, 
-    configuration: {
-        role: Argon.Role.MANAGER,
-        name: 'ArgonApp'
-    }
-});
-
-export const vuforiaDelegate:NativescriptVuforiaServiceDelegate = container.get(Argon.VuforiaServiceDelegate);
-
-manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
-
-appViewModel.ready.then(()=>{
-    manager.vuforia.isAvailable().then((available)=>{
-        if (available) {
-            const primaryVuforiaLicenseKey = Util.getInternalVuforiaKey();
-            if (!primaryVuforiaLicenseKey) {
-                alert("Unable to locate Vuforia License Key");
-                return;
-            }
-            manager.vuforia.initWithUnencryptedKey({key:primaryVuforiaLicenseKey}).catch((err)=>{
-                alert(err.message);
-            });
-        }
-    })
-})
-
-manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current, session})=>{
-    if (session === manager.session.manager) return;
     
-    if (previous) {
-        const previousRealityItem = bookmarks.realityMap.get(previous.uri);
-        if (previousRealityItem && !previousRealityItem.builtin) {
-            var i = bookmarks.realityList.indexOf(previousRealityItem);
-            bookmarks.realityList.splice(i, 1);
-        }
-    } 
-    if (current) {        
-        const currentRealityItem = bookmarks.realityMap.get(current.uri)
-        if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
-    }
-    session.closeEvent.addEventListener(()=>{
-        const sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
-        if (sessionDesiredReality) {
-            const sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
-            if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-                    var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-                    bookmarks.realityList.splice(i, 1);
-            }
-        }
-    });
-})
-
-manager.focus.sessionFocusEvent.addEventListener(()=>{
-    const focussedSession = manager.focus.getSession();    
-    console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
-})
+export const appViewModel = new AppViewModel;

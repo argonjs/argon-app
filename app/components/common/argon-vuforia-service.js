@@ -3,7 +3,7 @@ var Argon = require('@argonjs/argon');
 var vuforia = require('nativescript-vuforia');
 var http = require('http');
 var file = require('file-system');
-var argon_reality_service_1 = require('./argon-reality-service');
+var argon_device_service_1 = require('./argon-device-service');
 var util_1 = require('./util');
 var minimatch = require('minimatch');
 exports.VIDEO_DELAY = -0.5 / 60;
@@ -51,7 +51,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // but in each app itself to we are as close as possible to the actual render time when
             // we start the render)
             JulianDate.addSeconds(time, exports.VIDEO_DELAY, time);
-            deviceService.update();
+            deviceService.update({ orientation: true });
             var vuforiaFrame = state.getFrame();
             var index = vuforiaFrame.getIndex();
             var frameTimeStamp = vuforiaFrame.getTimeStamp();
@@ -132,6 +132,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             var device = vuforia.api.getDevice();
             if (device)
                 device.setViewerActive(enabled);
+            this.deviceService.updateDeviceState();
         },
         enumerable: true,
         configurable: true
@@ -225,14 +226,14 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         console.log("Vuforia initializing camera device");
         if (!cameraDevice.init(0 /* Default */))
             return false;
-        if (!cameraDevice.selectVideoMode(argon_reality_service_1.vuforiaCameraDeviceMode))
+        if (!cameraDevice.selectVideoMode(argon_device_service_1.vuforiaCameraDeviceMode))
             return false;
         var device = vuforia.api.getDevice();
         device.setMode(0 /* AR */);
         if (this.viewerEnabled) {
             device.setViewerActive(true);
         }
-        this.realityService.configureVuforiaVideoBackground();
+        this.deviceService.configureVuforiaVideoBackground();
         this._configureCameraAndTrackers();
         return true;
     };

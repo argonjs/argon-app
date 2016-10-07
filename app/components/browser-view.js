@@ -73,19 +73,21 @@ var BrowserView = (function (_super) {
             _this.requestLayout();
             _this.scrollView.scrollToVerticalOffset(0, false);
         });
-        AppViewModel_1.manager.reality.changeEvent.addEventListener(function (_a) {
-            var current = _a.current;
-            // const realityListItem = bookmarks.realityMap.get(current.uri);
-            var details = _this.realityLayer.details;
-            details.set('title', 'Reality: ' + current.title);
-            details.set('uri', current.uri);
-            details.set('supportedInteractionModes', ['page', 'immersive']);
-            if (current === bookmarks.LIVE_VIDEO_REALITY) {
-                _this.realityLayer.webView.visibility = 'collapse';
-            }
-            else {
-                _this.realityLayer.webView.visibility = 'visible';
-            }
+        AppViewModel_1.appViewModel.ready.then(function () {
+            AppViewModel_1.appViewModel.manager.reality.changeEvent.addEventListener(function (_a) {
+                var current = _a.current;
+                // const realityListItem = bookmarks.realityMap.get(current.uri);
+                var details = _this.realityLayer.details;
+                details.set('title', 'Reality: ' + current.title);
+                details.set('uri', current.uri);
+                details.set('supportedInteractionModes', ['page', 'immersive']);
+                if (current === bookmarks.LIVE_VIDEO_REALITY) {
+                    _this.realityLayer.webView.visibility = 'collapse';
+                }
+                else {
+                    _this.realityLayer.webView.visibility = 'visible';
+                }
+            });
         });
         // enable pinch-zoom
         this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
@@ -160,7 +162,7 @@ var BrowserView = (function (_super) {
             var session = e.session;
             session.connectEvent.addEventListener(function () {
                 if (webView === _this.focussedLayer.webView) {
-                    AppViewModel_1.manager.focus.setSession(session);
+                    Argon.ArgonSystem.instance.focus.setSession(session);
                 }
                 if (layer === _this.realityLayer) {
                     if (session.info.role !== Argon.Role.REALITY_VIEW) {
@@ -414,9 +416,10 @@ var BrowserView = (function (_super) {
         this.layerContainer.on(gestures_1.GestureTypes.pinch, this._handlePinch, this);
     };
     BrowserView.prototype._handlePinch = function (event) {
+        var manager = Argon.ArgonSystem.instance;
         switch (event.state) {
             case gestures_1.GestureStateTypes.began:
-                var state = AppViewModel_1.manager.context.serializedFrameState;
+                var state = manager.context.serializedFrameState;
                 if (state) {
                     this._pinchStartFov = state.view.subviews[0].frustum.fov;
                 }
@@ -425,28 +428,28 @@ var BrowserView = (function (_super) {
                 }
                 if (this._pinchStartFov === undefined)
                     return;
-                AppViewModel_1.manager.reality.zoom({
+                manager.device.zoom({
                     zoom: 1,
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.START
+                    state: Argon.ZoomState.START
                 });
                 break;
             case gestures_1.GestureStateTypes.changed:
                 if (this._pinchStartFov === undefined)
                     return;
-                AppViewModel_1.manager.reality.zoom({
+                manager.device.zoom({
                     zoom: event.scale,
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.CHANGE
+                    state: Argon.ZoomState.CHANGE
                 });
                 break;
             default:
                 if (this._pinchStartFov === undefined)
                     return;
-                AppViewModel_1.manager.reality.zoom({
+                manager.device.zoom({
                     zoom: event.scale,
                     fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.END
+                    state: Argon.ZoomState.END
                 });
                 break;
         }
@@ -469,7 +472,7 @@ var BrowserView = (function (_super) {
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
             var session = layer.webView.session;
-            AppViewModel_1.manager.focus.setSession(session);
+            Argon.ArgonSystem.instance.focus.setSession(session);
             AppViewModel_1.appViewModel.setLayerDetails(this.focussedLayer.details);
             AppViewModel_1.appViewModel.hideOverview();
             if (layer !== this.realityLayer) {

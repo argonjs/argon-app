@@ -2,9 +2,6 @@ import * as application from "application";
 import * as vuforia from 'nativescript-vuforia';
 import * as utils from 'utils/utils';
 import * as enums from 'ui/enums';
-import * as frames from 'ui/frame';
-import * as platform from 'platform';
-import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {getDisplayOrientation} from './argon-device-service'
 
 import * as Argon from "@argonjs/argon";
@@ -21,13 +18,6 @@ const scratchFrustum = new Argon.Cesium.PerspectiveFrustum();
 
 const ONE = new Cartesian3(1,1,1);
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor = 
-        vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
-        1 : platform.screen.mainScreen.scale;
-}
-
 @Argon.DI.inject(
     Argon.SessionService,
     Argon.FocusService)
@@ -38,26 +28,16 @@ export class NativescriptRealityService extends Argon.RealityService {
         super(sessionService, focusService);
     }
 
-    getMaximumViewport() {
-        const contentView = frames.topmost().currentPage.content;
-        return {
-            x: 0,
-            y: 0,
-            width: contentView.getMeasuredWidth(),
-            height: contentView.getMeasuredHeight()
-        }
-    }
-
-    onGenerateViewFromEyeParameters(eye: Argon.SerializedEyeParameters) : Argon.SerializedViewParameters {
+    onGenerateViewFromEyeParameters(eye: Argon.DeprecatedEyeParameters, time:Argon.Cesium.JulianDate) : Argon.ViewState|undefined {
         if (vuforia.api) {
             if (vuforia.api.getDevice().isViewerActive()) {
-                eye.viewport = this.getMaximumViewport();
+                eye.viewport = Argon.ArgonSystem.instance!.device.state.viewport;
                 vuforia.api.setScaleFactor(vuforia.api.getViewerScaleFactor());
             } else {
-                eye.viewport = eye.viewport || this.getMaximumViewport();
+                eye.viewport = eye.viewport || Argon.ArgonSystem.instance!.device.state.viewport;
                 // convert our desired fov to the scale factor
-                const desiredFov = eye.fov || this.getDesiredFov() || this.getDefaultFov();
-                const defaultFov = this.getDefaultFov();
+                const desiredFov = eye.fov || Argon.ArgonSystem.instance!.device.state.subviews[0].frustum.fov;
+                const defaultFov = Argon.ArgonSystem.instance!.device.state.defaultFov;
                 const desiredHalfLength = Math.tan(0.5*desiredFov);
                 const defaultHalfLength = Math.tan(0.5*defaultFov);
                 const scaleFactor =  defaultHalfLength / desiredHalfLength;
@@ -65,14 +45,14 @@ export class NativescriptRealityService extends Argon.RealityService {
                 vuforia.api.setScaleFactor(scaleFactor);
             }
             // update the videoView       
-            this.configureVuforiaVideoBackground(eye.viewport);
+            Argon.ArgonSystem.instance!.device['configureVuforiaVideoBackground'](eye.viewport);
             // compute the vuforia-based view configuraiton
-            return this.getVuforiaViewConfiguration(eye);
+            return this.getVuforiaViewConfiguration(eye, time);
         }
-        return super.onGenerateViewFromEyeParameters(eye);
+        return super.onGenerateViewFromEyeParameters(eye, time);
     }
 
-    getVuforiaViewConfiguration(eye: Argon.SerializedEyeParameters) {
+    getVuforiaViewConfiguration(eye: Argon.DeprecatedEyeParameters, time:Argon.Cesium.JulianDate) {
         const device = vuforia.api.getDevice();
         const renderingPrimitives = device.getRenderingPrimitives();
         const renderingViews = renderingPrimitives.getRenderingViews();
@@ -172,107 +152,12 @@ export class NativescriptRealityService extends Argon.RealityService {
         }
 
         // construct the final view parameters for this frame
-        const view: Argon.SerializedViewParameters = {
+        return eye.pose ? {
+            time,
             viewport: <Argon.Viewport>eye.viewport,
             pose: eye.pose,
             subviews
-        }
-
-        return view;
+        } : undefined;
     }
 
-    previousViewport:Argon.Viewport;
-
-    configureVuforiaVideoBackground(viewport?:Argon.Viewport, enabled=true) {
-
-        if (viewport && this.previousViewport && 
-            this.previousViewport.x == viewport.x &&
-            this.previousViewport.y == viewport.y &&
-            this.previousViewport.width == viewport.width &&
-            this.previousViewport.height == viewport.height) return;
-
-        if (viewport) 
-            this.previousViewport = viewport;
-        else 
-            viewport = this.previousViewport;
-
-        if (!viewport) return;
-
-        const videoView = vuforia.videoView;
-        AbsoluteLayout.setLeft(videoView, viewport.x);
-        AbsoluteLayout.setTop(videoView, viewport.y);
-        videoView.width = viewport.width;
-        videoView.height = viewport.height;
-
-        const viewWidth = viewport.width;
-        const viewHeight = viewport.height;
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
-        
-        const cameraDevice = vuforia.api.getCameraDevice();
-        const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode);
-        let videoWidth = videoMode.width;
-        let videoHeight = videoMode.height;
-
-        const cameraCalibration = cameraDevice.getCameraCalibration();
-        const videoFovs = cameraCalibration.getFieldOfViewRads();
-        let videoFovX = videoFovs.x;
-        let videoFovY = videoFovs.y;
-        
-        const orientation = getDisplayOrientation();
-        if (orientation === 0 || orientation === 180) {
-            videoWidth = videoMode.height;
-            videoHeight = videoMode.width;
-            videoFovX = videoFovs.y;
-            videoFovY = videoFovs.x;
-        }
-        
-        const widthRatio = viewWidth / videoWidth;
-        const heightRatio = viewHeight / videoHeight;
-        // aspect fill
-        const scale = Math.max(widthRatio, heightRatio);
-        // aspect fit
-        // const scale = Math.min(widthRatio, heightRatio);
-
-        // Tell the reality service what our default fov should be based on 
-        // the video background configuration we have chosen
-        const aspectRatio = viewWidth / viewHeight;
-        if (widthRatio > heightRatio) {
-            const viewFovX = videoFovX;
-            if (aspectRatio > 1) {
-                this.setDefaultFov(viewFovX);
-            } else {
-                const viewFovY = 2 * Math.atan(Math.tan(0.5 * viewFovX) / aspectRatio);
-                this.setDefaultFov(viewFovY);
-            }
-        } else {
-            const viewFovY = videoFovY;
-            if (aspectRatio > 1) {
-                const viewFovX = 2 * Math.atan(Math.tan(0.5 * viewFovY) * aspectRatio);
-                this.setDefaultFov(viewFovX);
-            } else {
-                this.setDefaultFov(viewFovY);
-            }
-        }
-        
-        const config = {
-            enabled,
-            positionX:0,
-            positionY:0,
-            sizeX: videoWidth * scale * contentScaleFactor,
-            sizeY: videoHeight * scale * contentScaleFactor,
-            reflection: vuforia.VideoBackgroundReflection.Default
-        }
-        
-        console.log(`Vuforia configuring video background...
-            contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
-            viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
-            config: ${JSON.stringify(config)}
-        `);
-        
-        vuforia.api.getRenderer().setVideoBackgroundConfig(config);
-        vuforia.api.onSurfaceChanged(
-            viewWidth * contentScaleFactor, 
-            viewHeight * contentScaleFactor
-        );
-    }
 }
