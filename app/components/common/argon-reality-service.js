@@ -126,12 +126,14 @@ var NativescriptRealityService = (function (_super) {
             });
         }
         // construct the final view parameters for this frame
-        return eye.pose ? {
+        return {
             time: time,
             viewport: eye.viewport,
             pose: eye.pose,
-            subviews: subviews
-        } : undefined;
+            subviews: subviews,
+            geolocationAccuracy: undefined,
+            geolocationAltitudeAccuracy: undefined
+        };
     };
     NativescriptRealityService = __decorate([
         Argon.DI.inject(Argon.SessionService, Argon.FocusService)

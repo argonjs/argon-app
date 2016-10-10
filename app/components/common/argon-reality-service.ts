@@ -52,7 +52,7 @@ export class NativescriptRealityService extends Argon.RealityService {
         return super.onGenerateViewFromEyeParameters(eye, time);
     }
 
-    getVuforiaViewConfiguration(eye: Argon.DeprecatedEyeParameters, time:Argon.Cesium.JulianDate) {
+    getVuforiaViewConfiguration(eye: Argon.DeprecatedEyeParameters, time:Argon.Cesium.JulianDate) : Argon.ViewState {
         const device = vuforia.api.getDevice();
         const renderingPrimitives = device.getRenderingPrimitives();
         const renderingViews = renderingPrimitives.getRenderingViews();
@@ -152,12 +152,14 @@ export class NativescriptRealityService extends Argon.RealityService {
         }
 
         // construct the final view parameters for this frame
-        return eye.pose ? {
+        return {
             time,
             viewport: <Argon.Viewport>eye.viewport,
             pose: eye.pose,
-            subviews
-        } : undefined;
+            subviews,
+            geolocationAccuracy: undefined,
+            geolocationAltitudeAccuracy: undefined
+        };
     }
 
 }

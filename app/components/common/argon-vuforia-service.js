@@ -53,7 +53,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             JulianDate.addSeconds(time, exports.VIDEO_DELAY, time);
             deviceService.update({ orientation: true });
             var vuforiaFrame = state.getFrame();
-            var index = vuforiaFrame.getIndex();
             var frameTimeStamp = vuforiaFrame.getTimeStamp();
             // update trackable results in context entity collection
             var numTrackableResults = state.getNumTrackableResults();
@@ -97,14 +96,16 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // we still want to update the trackables above in case an app is depending on them)
             if (_this.stateUpdateEvent.numberOfListeners === 0)
                 return;
+            var deviceState = _this.deviceService.state;
             var pose = Argon.getSerializedEntityPose(_this.deviceService.displayEntity, time);
             // raise the event to let the vuforia service know we are ready!
             _this.stateUpdateEvent.raiseEvent({
-                index: index,
                 time: time,
-                eye: {
-                    pose: pose,
-                }
+                pose: pose,
+                viewport: deviceState.viewport,
+                subviews: deviceState.subviews,
+                geolocationAccuracy: deviceState.geolocationAccuracy,
+                geolocationAltitudeAccuracy: deviceState.geolocationAltitudeAccuracy
             });
         };
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);

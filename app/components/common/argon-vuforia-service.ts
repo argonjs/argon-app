@@ -68,7 +68,6 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             deviceService.update({orientation:true});
             
             const vuforiaFrame = state.getFrame();
-            const index = vuforiaFrame.getIndex();
             const frameTimeStamp = vuforiaFrame.getTimeStamp();
                         
             // update trackable results in context entity collection
@@ -119,15 +118,17 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // we still want to update the trackables above in case an app is depending on them)
             if (this.stateUpdateEvent.numberOfListeners === 0) return;
             
-            const pose = Argon.getSerializedEntityPose(this.deviceService.displayEntity, time)
+            const deviceState = this.deviceService.state;
+            const pose = Argon.getSerializedEntityPose(this.deviceService.displayEntity, time);
             
             // raise the event to let the vuforia service know we are ready!
             this.stateUpdateEvent.raiseEvent({
-                index,
                 time,
-                eye: {
-                    pose,
-                }
+                pose,
+                viewport: deviceState.viewport,
+                subviews: deviceState.subviews,
+                geolocationAccuracy: deviceState.geolocationAccuracy,
+                geolocationAltitudeAccuracy:  deviceState.geolocationAltitudeAccuracy
             });
         };
         

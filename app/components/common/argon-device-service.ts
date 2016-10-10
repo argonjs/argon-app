@@ -74,14 +74,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         });
 
         realityService.viewStateEvent.addEventListener((viewState)=>{
-            if (vuforia.api) {
-                // convert the desired fov to the appropriate scale factor
+            if (vuforia.api) {                   
                 const desiredFov = viewState.subviews[0].frustum.fov;
-                const defaultFov = Argon.ArgonSystem.instance!.device.state.defaultFov;
+                // convert the desired fov to the appropriate scale factor
+                const defaultFov = this.state.defaultFov;
                 const desiredHalfLength = Math.tan(0.5*desiredFov);
                 const defaultHalfLength = Math.tan(0.5*defaultFov);
                 const scaleFactor =  defaultHalfLength / desiredHalfLength;
-                // make sure the video is scaled as appropriate
+                // make sure the video is scaled as appropriately
                 vuforia.api.setScaleFactor(scaleFactor);
                 // update the videoView
                 this.configureVuforiaVideoBackground(viewState.viewport);
@@ -141,7 +141,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 );
                 Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
 
-                // convert from the vuforia projection matrix (+X -Y +X) to a more standard convention (+X +Y -Z)
+                // convert from the vuforia projection matrix (+X -Y +Z) to a more standard convention (+X +Y -Z)
                 // by negating the appropriate rows. 
                 // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
 
@@ -156,23 +156,24 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 projectionMatrix[10] *= -1; // z
                 projectionMatrix[11] *= -1; // w
 
-                var scaleFactor = vuforia.api.getScaleFactor();
+                // var scaleFactor = vuforia.api.getScaleFactor();
 
-                // scale x-axis
-                projectionMatrix[0] *= scaleFactor; // x
-                projectionMatrix[1] *= scaleFactor; // y
-                projectionMatrix[2] *= scaleFactor; // z
-                projectionMatrix[3] *= scaleFactor; // w
-                // scale y-axis
-                projectionMatrix[4] *= scaleFactor; // x
-                projectionMatrix[5] *= scaleFactor; // y
-                projectionMatrix[6] *= scaleFactor; // z
-                projectionMatrix[7] *= scaleFactor; // w
+                // // scale x-axis
+                // projectionMatrix[0] *= scaleFactor; // x
+                // projectionMatrix[1] *= scaleFactor; // y
+                // projectionMatrix[2] *= scaleFactor; // z
+                // projectionMatrix[3] *= scaleFactor; // w
+                // // scale y-axis
+                // projectionMatrix[4] *= scaleFactor; // x
+                // projectionMatrix[5] *= scaleFactor; // y
+                // projectionMatrix[6] *= scaleFactor; // z
+                // projectionMatrix[7] *= scaleFactor; // w
 
                 const vuforiaViewport = renderingPrimitives.getViewport(view);
                 const frustum = Argon.decomposePerspectiveProjectionMatrix(projectionMatrix, scratchFrustum);
 
                 const subview = subviews[i] || <Argon.SerializedSubview>{};
+                
                 subview.type = type;
 
                 subview.viewport = subview.viewport || <Argon.Viewport>{};
@@ -181,14 +182,13 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 subview.viewport.width = vuforiaViewport.z / contentScaleFactor;
                 subview.viewport.height = vuforiaViewport.w / contentScaleFactor;
 
-                subview.frustum = subview.frustum || {};
-                subview.frustum.fov = frustum.fov;
+                subview.frustum = subview.frustum || {
+                    fov: subviews[0].frustum.fov || this.state.defaultFov
+                };
+                // subview.frustum.fov = frustum.fov;
                 subview.frustum.aspectRatio = frustum.aspectRatio;
                 subview.frustum.xOffset = frustum.xOffset;
                 subview.frustum.yOffset = frustum.yOffset;
-
-                // todo: deprecate projectionMatrix here
-                subview.projectionMatrix = Matrix4.toArray(projectionMatrix, []);
 
                 subviews[i] = subview;
             }
@@ -202,6 +202,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             subview.type = Argon.SubviewType.SINGULAR;
             subview.viewport = undefined;
             subview.pose = undefined;
+            subview.frustum.aspectRatio = this.state.viewport.width / this.state.viewport.height;
             this.state.strictSubviewViewports = false;
             this.state.strictViewport = false;
         }
@@ -477,18 +478,18 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         if (widthRatio > heightRatio) {
             const viewFovX = videoFovX;
             if (aspectRatio > 1) {
-                Argon.ArgonSystem.instance!.device.setDefaultFov(viewFovX);
+                this.setDefaultFov(viewFovX);
             } else {
                 const viewFovY = 2 * Math.atan(Math.tan(0.5 * viewFovX) / aspectRatio);
-                Argon.ArgonSystem.instance!.device.setDefaultFov(viewFovY);
+                this.setDefaultFov(viewFovY);
             }
         } else {
             const viewFovY = videoFovY;
             if (aspectRatio > 1) {
                 const viewFovX = 2 * Math.atan(Math.tan(0.5 * viewFovY) * aspectRatio);
-                Argon.ArgonSystem.instance!.device.setDefaultFov(viewFovX);
+                this.setDefaultFov(viewFovX);
             } else {
-                Argon.ArgonSystem.instance!.device.setDefaultFov(viewFovY);
+                this.setDefaultFov(viewFovY);
             }
         }
         
