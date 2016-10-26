@@ -17,6 +17,7 @@ import {SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {manager, appViewModel, AppViewModel, LoadUrlEventData, vuforiaDelegate} from './components/common/AppViewModel';
+import {getDisplayOrientation} from './components/common/argon-device-service';
 
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
     type = 'hosted';
@@ -272,11 +273,13 @@ export function pageLoaded(args) {
     })
 
     application.on(application.orientationChangedEvent, ()=>{
-        const orientation = manager.device['getDisplayOrientation']();
-        if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
-            page.actionBarHidden = true;
-        else 
-            page.actionBarHidden = false;
+        setTimeout(()=>{
+            const orientation = getDisplayOrientation();
+            if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+                page.actionBarHidden = true;
+            else 
+                page.actionBarHidden = false;
+        }, 500)
     });
 }
 

@@ -9,6 +9,7 @@ var enums_1 = require('ui/enums');
 var gestures_1 = require('ui/gestures');
 var bookmarks = require('./components/common/bookmarks');
 var AppViewModel_1 = require('./components/common/AppViewModel');
+var argon_device_service_1 = require('./components/common/argon-device-service');
 AppViewModel_1.manager.reality.registerLoader(new (function (_super) {
     __extends(HostedRealityLoader, _super);
     function HostedRealityLoader() {
@@ -253,6 +254,15 @@ function pageLoaded(args) {
         alert(error.message);
         if (error.stack)
             console.log(error.stack);
+    });
+    application.on(application.orientationChangedEvent, function () {
+        setTimeout(function () {
+            var orientation = argon_device_service_1.getDisplayOrientation();
+            if (orientation === 90 || orientation === -90 || AppViewModel_1.appViewModel.viewerEnabled)
+                exports.page.actionBarHidden = true;
+            else
+                exports.page.actionBarHidden = false;
+        }, 500);
     });
 }
 exports.pageLoaded = pageLoaded;
