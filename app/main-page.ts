@@ -270,6 +270,14 @@ export function pageLoaded(args) {
         alert(error.message);
         if (error.stack) console.log(error.stack);
     })
+
+    application.on(application.orientationChangedEvent, ()=>{
+        const orientation = manager.device['getDisplayOrientation']();
+        if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+            page.actionBarHidden = true;
+        else 
+            page.actionBarHidden = false;
+    });
 }
 
 export function layoutLoaded(args) {
