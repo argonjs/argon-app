@@ -3,10 +3,10 @@ import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from '@argonjs/argon';
 import {NativescriptDeviceService} from './argon-device-service';
-import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
-import {Util} from './util'
-import {ArgonWebView} from 'argon-web-view'
+import {NativescriptViewService} from './argon-view-service';
+import {Util} from './util';
+import {LogItem} from 'argon-web-view';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
@@ -16,12 +16,7 @@ export interface LoadUrlEventData extends EventData {
 export class LayerDetails extends Observable {
     uri = '';
     title = '';
-    supportedInteractionModes:Array<InteractionMode> = [];
-    webView:ArgonWebView|null
-    constructor(webView:ArgonWebView|null) {
-        super();
-        this.webView = webView;
-    }
+    log = new ObservableArray<LogItem>();
 }
 
 export type InteractionMode = 'immersive'|'page';
@@ -61,11 +56,10 @@ export class AppViewModel extends Observable {
     }
 
     setReady() {
-
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
-        container.registerSingleton(Argon.RealityService, NativescriptRealityService);
         container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
+        container.registerSingleton(Argon.ViewService, NativescriptViewService);
 
         const manager = this.manager = Argon.init({
             container, 
@@ -75,38 +69,27 @@ export class AppViewModel extends Observable {
             }
         });
 
-        manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
+        manager.reality.default = Argon.RealityViewer.LIVE;
 
-        manager.reality.sessionDesiredRealityChangeEvent.addEventListener(({previous, current, session})=>{
-            if (session === manager.session.manager) return;
-            
-            if (previous) {
-                const previousRealityItem = bookmarks.realityMap.get(previous.uri);
-                if (previousRealityItem && !previousRealityItem.builtin) {
-                    var i = bookmarks.realityList.indexOf(previousRealityItem);
-                    bookmarks.realityList.splice(i, 1);
-                }
-            } 
-            if (current) {        
-                const currentRealityItem = bookmarks.realityMap.get(current.uri)
-                if (!currentRealityItem) bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
+        manager.reality.installedEvent.addEventListener(({viewer})=>{
+            let item = bookmarks.realityMap.get(viewer.uri);
+            if (!item) {
+                item = new bookmarks.BookmarkItem({uri: viewer.uri});
+                bookmarks.realityList.push();
             }
-            session.closeEvent.addEventListener(()=>{
-                const sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
-                if (sessionDesiredReality) {
-                    const sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
-                    if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-                            var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-                            bookmarks.realityList.splice(i, 1);
-                    }
-                }
-            });
-        })
+        });
 
-        manager.focus.sessionFocusEvent.addEventListener(()=>{
-            const focussedSession = manager.focus.getSession();    
-            console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
-        })
+        manager.reality.uninstalledEvent.addEventListener(({viewer})=>{
+            const item = bookmarks.realityMap.get(viewer.uri);
+            if (item && !item.builtin) {
+                var i = bookmarks.realityList.indexOf(item);
+                bookmarks.realityList.splice(i, 1);
+            }
+        });
+        
+        manager.focus.sessionFocusEvent.addEventListener(({current})=>{
+            console.log("Argon focus changed: " + (current ? current.uri : undefined));
+        });
 
         manager.vuforia.isAvailable().then((available)=>{
             if (available) {
@@ -222,5 +205,5 @@ export class AppViewModel extends Observable {
         this.set('bookmarksOpen', !url);
     }
 }
-    
+
 export const appViewModel = new AppViewModel;

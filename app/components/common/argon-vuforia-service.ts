@@ -3,54 +3,41 @@ import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as http from 'http';
 import * as file from 'file-system';
-import {NativescriptRealityService} from './argon-reality-service';
 import {NativescriptDeviceService, vuforiaCameraDeviceMode} from './argon-device-service';
 import {Util} from './util'
 import * as minimatch from 'minimatch'
+import * as URI from 'urijs'
 
 export const VIDEO_DELAY = -0.5/60;
 
-const Matrix3 = Argon.Cesium.Matrix3;
 const Matrix4 = Argon.Cesium.Matrix4;
 const Cartesian3 = Argon.Cesium.Cartesian3;
 const Quaternion = Argon.Cesium.Quaternion;
 const JulianDate = Argon.Cesium.JulianDate;
 const CesiumMath = Argon.Cesium.CesiumMath;
 
-const zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO);
 const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
-const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
-
-interface VuforiaLicenseData {
-    key?: string
-    origins?:string[]
-}
 
 @Argon.DI.inject(
-    Argon.DeviceService, 
-    Argon.RealityService, 
-    Argon.ContextService, 
-    Argon.ViewService)
+    Argon.DeviceService,
+    Argon.ContextService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
         
-    private scratchDate = new Argon.Cesium.JulianDate(0,0);
     private scratchCartesian = new Argon.Cesium.Cartesian3();
-    private scratchCartesian2 = new Argon.Cesium.Cartesian3();
     private scratchQuaternion = new Argon.Cesium.Quaternion();
-	private scratchMatrix4 = new Argon.Cesium.Matrix4();
 	private scratchMatrix3 = new Argon.Cesium.Matrix3();
     
     private vuforiaTrackerEntity = new Argon.Cesium.Entity({
-        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.orientationEntity),
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.eye),
         orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
     });
+
+    public stateUpdateEvent = new Argon.Event<Argon.Cesium.JulianDate>();
 	
 	constructor(
-        private deviceService:NativescriptDeviceService, 
-        private realityService:NativescriptRealityService,
-        private contextService:Argon.ContextService,
-        private viewService:Argon.ViewService) {
+            private deviceService:NativescriptDeviceService,
+            contextService:Argon.ContextService) {
         super();
         
         if (!vuforia.api) return;
@@ -65,8 +52,6 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             // we start the render)
             JulianDate.addSeconds(time, VIDEO_DELAY, time);
             
-            deviceService.update({orientation:true});
-            
             const vuforiaFrame = state.getFrame();
             const frameTimeStamp = vuforiaFrame.getTimeStamp();
                         
@@ -78,7 +63,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 const name = trackable.getName();
                 
                 const id = this._getIdForTrackable(trackable);
-                let entity = contextService.subscribedEntities.getById(id);
+                let entity = contextService.entities.getById(id);
                 
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
@@ -95,7 +80,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                     entityOrientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entityPosition.forwardExtrapolationDuration = 2/60;
                     entityOrientation.forwardExtrapolationDuration = 2/60;
-                    contextService.subscribedEntities.add(entity);
+                    contextService.entities.add(entity);
                 }
                 
                 const trackableTime = JulianDate.clone(time); 
@@ -113,23 +98,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
                 (entity.orientation as Argon.Cesium.SampledProperty).addSample(trackableTime, orientation);
             }
             
-            // if no one is listening, don't bother calculating the view state or raising an event. 
-            // (this can happen when the vuforia video reality is not the current reality, though
-            // we still want to update the trackables above in case an app is depending on them)
-            if (this.stateUpdateEvent.numberOfListeners === 0) return;
-            
-            const deviceState = this.deviceService.state;
-            const pose = Argon.getSerializedEntityPose(this.deviceService.displayEntity, time);
-            
-            // raise the event to let the vuforia service know we are ready!
-            this.stateUpdateEvent.raiseEvent({
-                time,
-                pose,
-                viewport: deviceState.viewport,
-                subviews: deviceState.subviews,
-                geolocationAccuracy: deviceState.geolocationAccuracy,
-                geolocationAltitudeAccuracy:  deviceState.geolocationAltitudeAccuracy
-            });
+            this.stateUpdateEvent.raiseEvent(time);
         };
         
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);
@@ -150,29 +119,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
         }
     }
     
-    private _viewerEnabled = false;
-    private _videoEnabled = true;
     private _trackingEnabled = true;
-    
-    get viewerEnabled() {
-        return this._viewerEnabled;
-    }
-    
-    set viewerEnabled(enabled) {
-        this._viewerEnabled = enabled;
-        const device = vuforia.api.getDevice();
-        if (device) device.setViewerActive(enabled);
-        this.deviceService.updateDeviceState();
-    }
-    
-    get videoEnabled() {
-        return this._videoEnabled;
-    }
-    
-    set videoEnabled(value:boolean) {
-        this._videoEnabled = value;
-        this._configureCameraAndTrackers();
-    }
     
     get trackingEnabled() {
         return this._trackingEnabled;
@@ -191,11 +138,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             }
         } else {
             this.objectTrackerStop();
-            if (this.videoEnabled) {
-                this.cameraDeviceStart()
-            } else {
-                this.cameraDeviceStop();
-            }
+            this.cameraDeviceStart();
         }
     }
     
@@ -212,7 +155,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             const {key,origins} : {key:string,origins:string[]} = JSON.parse(json);
             if (!session.uri) throw new Error('Invalid origin');
 
-            const origin = Argon.URI.parse(session.uri);
+            const origin = URI.parse(session.uri);
             if (!Array.isArray(<any>origins)) {
                 throw new Error("Vuforia License Data must specify allowed origins");
             }
@@ -263,11 +206,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
             
         const device = vuforia.api.getDevice();
         device.setMode(vuforia.DeviceMode.AR);
-        if (this.viewerEnabled) {
-            device.setViewerActive(true);
-        }
-            
-        this.deviceService.configureVuforiaVideoBackground();
+        
         this._configureCameraAndTrackers();
         return true;
     }

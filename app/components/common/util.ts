@@ -1,7 +1,6 @@
 import {View} from "ui/core/view";
 import * as platform from "platform";
 import {Color} from "color";
-import * as file from 'file-system'
 
 try {
   var ArgonPrivate = require('argon-private');
@@ -105,8 +104,8 @@ export function getIPAddressOfInterface($interface) {
 
         while (temp_addrPtr != null) {
             if (temp_addrPtr[0].ifa_addr[0].sa_family === 2) {
-                   var name = NSString.stringWithUTF8String(temp_addrPtr[0].ifa_name).toString().trim();
-                if (NSString.stringWithUTF8String(temp_addrPtr[0].ifa_name).toString() == $interface) {
+                var name = NSString.stringWithUTF8String(temp_addrPtr[0].ifa_name).toString().trim();
+                if (name == $interface) {
                     var ifa_addrPtr = temp_addrPtr[0].ifa_addr;
                     var ifa_addrPtrAsSockAddtr_in = new interop.Reference(sockaddr_in, ifa_addrPtr);
                     address = ipToString(ifa_addrPtrAsSockAddtr_in[0].sin_addr);

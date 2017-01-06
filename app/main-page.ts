@@ -4,16 +4,14 @@ import * as application from 'application';
 import * as utils from 'utils/utils';
 import {SearchBar} from 'ui/search-bar';
 import {Page} from 'ui/page';
-import {CreateViewEventData} from 'ui/placeholder';
 import {Button} from 'ui/button';
-import {View, getViewById} from 'ui/core/view';
+import {View} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
 import {PropertyChangeData} from 'data/observable';
 import {AnimationCurve} from 'ui/enums'
 import {GestureTypes} from 'ui/gestures'
 
-import {SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
@@ -251,22 +249,6 @@ export function pageLoaded(args) {
     }
     
     appViewModel.showBookmarks();
-
-
-    appViewModel.manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
-        type = 'hosted';
-        load(reality: Argon.RealityView, callback:(realitySession:Argon.SessionPort)=>void):void {
-            const url:string = reality.uri;
-            const webView = browserView.realityLayer.webView;
-            let sessionCallback = (data:SessionEventData)=>{
-                webView.off('session', sessionCallback);
-                callback(data.session);
-            }
-            webView.on('session', sessionCallback);
-            if (webView.src === url) webView.reload();
-            else webView.src = url;
-        }
-    });
     
     appViewModel.manager.session.errorEvent.addEventListener((error)=>{
         alert(error.message);
@@ -386,9 +368,9 @@ export function onAddChannel(args) {
 
 export function onReload(args) {
     if (browserView.focussedLayer === browserView.realityLayer) {
-        appViewModel.manager.reality.setDesired(appViewModel.manager.reality.getCurrent());
+        appViewModel.manager.reality.request({uri: appViewModel.manager.reality.current});
     } else {
-        browserView.focussedLayer.webView.reload();
+        browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
     }
 }
 
@@ -398,7 +380,7 @@ export function onFavoriteToggle(args) {
     if (!bookmarkItem) {
         bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
             uri: url,
-            title: browserView.focussedLayer.webView.title
+            title: appViewModel.layerDetails.title
         }));
     } else {
         var i = bookmarks.favoriteList.indexOf(bookmarkItem);
@@ -478,7 +460,7 @@ class IOSSearchBarController {
                 layout.on(GestureTypes.touch,()=>{
                     blurSearchBar();
                     layout.off(GestureTypes.touch);
-                    if (!browserView.focussedLayer.webView.url) appViewModel.hideCancelButton();
+                    if (!appViewModel.layerDetails.uri) appViewModel.hideCancelButton();
                 });
             } else {
                 this.setPlaceholderText(appViewModel.layerDetails.uri);

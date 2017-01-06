@@ -14,8 +14,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public title : string;
     public progress : number;
 
-    private _logs = new ObservableArray<def.Log>();
-    public get logs() {return this._logs};
+    private _log = new ObservableArray<def.LogItem>();
+    public get log() {return this._log};
 
     public session?:Argon.SessionPort;
     private _outputPort?:Argon.MessagePortLike;
@@ -26,7 +26,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public _didCommitNavigation() {
         if (this.session) this.session.close();
-        this.logs.length = 0;
+        this.log.length = 0;
         this.session = undefined;
         this._outputPort = undefined;
     }
@@ -68,10 +68,10 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
-        const log:def.Log = JSON.parse(message);
+        const log:def.LogItem = JSON.parse(message);
         log.lines = log.message.split(/\r\n|\r|\n/);
         console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
-        this.logs.push(log);
+        this.log.push(log);
         const args:def.LogEventData = {
             eventName: ArgonWebView.logEvent,
             object:this,

@@ -1,7 +1,7 @@
 import application = require('application');
 import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
-import {Observable, PropertyChangeData} from 'data/observable';
+import {Observable} from 'data/observable';
 
 import * as Argon from '@argonjs/argon'
 
@@ -25,21 +25,13 @@ class BookmarkItem extends Observable {
     }
 }
 
-class RealityBookmarkItem extends BookmarkItem {
-    constructor(
-        public reality:Argon.RealityView
-    ) {
-        super(reality)
-    }
-}
-
 const favoriteList = new ObservableArray<BookmarkItem>();
 const historyList = new ObservableArray<BookmarkItem>();
-const realityList = new ObservableArray<RealityBookmarkItem>();
+const realityList = new ObservableArray<BookmarkItem>();
 
 const favoriteMap = new Map<string, BookmarkItem>();
 const historyMap = new Map<string, BookmarkItem>();
-const realityMap = new Map<string, RealityBookmarkItem>();
+const realityMap = new Map<string, BookmarkItem>();
 
 function updateMap(data:ChangedData<BookmarkItem>, map:Map<string, BookmarkItem>) {
     const list = <ObservableArray<BookmarkItem>>data.object
@@ -76,13 +68,8 @@ builtinFavorites.forEach((item)=> {
     favoriteList.push(item);
 });
 
-const LIVE_VIDEO_REALITY = {
-    title: 'Live Video',
-    uri: 'reality:live-video'
-}
-
-const builtinRealities:Array<RealityBookmarkItem> = [
-    new RealityBookmarkItem(LIVE_VIDEO_REALITY)
+const builtinRealities:Array<BookmarkItem> = [
+    new BookmarkItem({uri:Argon.RealityViewer.LIVE, title:'Live'})
 ]
 
 builtinRealities.forEach((item)=> { 
@@ -130,12 +117,31 @@ historyList.on('change', saveHistory);
 
 export {
     BookmarkItem,
-    RealityBookmarkItem,
     favoriteList,
     historyList,
     realityList,
     favoriteMap,
     historyMap,
-    realityMap,
-    LIVE_VIDEO_REALITY
+    realityMap
+}
+
+export function pushToHistory(url:string, title?:string) {
+    const historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem) {
+        let i = historyList.indexOf(historyBookmarkItem);
+        historyList.splice(i, 1);
+        historyList.unshift(historyBookmarkItem);
+    } else {
+        historyList.unshift(new BookmarkItem({
+            uri: url,
+            title: title
+        }))
+    }
+}
+
+export function updateTitle(url:string, title:string) {
+    var historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem) {
+        historyBookmarkItem.set('title', title);
+    }
 }

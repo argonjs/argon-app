@@ -3,6 +3,7 @@ import * as common from './argon-web-view-common';
 import {WebView} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
+import * as dialogs from 'ui/dialogs';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
@@ -27,6 +28,8 @@ export class ArgonWebView extends common.ArgonWebView  {
         delete this._delegate // remove reference to UIWebView delegate created by super class
         this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         
+        this._ios.UIDelegate
+
         configuration.processPool = processPool;
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
@@ -132,6 +135,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         // delegate.  Not sure if this will cause a problem.
         // this._ios.navigationDelegate = null;
         super.onUnloaded();
+    }
+
+    reload() {
+        this._ios.reloadFromOrigin();
     }
 }
 
@@ -249,6 +256,14 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
         owner.set('title', webView.title);
         owner.set('progress', webView.estimatedProgress);
+    }
+
+	webViewDidReceiveAuthenticationChallengeCompletionHandler?(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
+        dialogs.confirm(`The identity of ${challenge.protectionSpace.host} cannot be verified. Would you like to continue anyway?`).then(function (result) {
+            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, NSURLCredential.credentialForTrust(challenge.protectionSpace.serverTrust!))
+        }).catch(()=>{
+            completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
+        });
     }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
