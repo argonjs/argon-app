@@ -50,7 +50,7 @@ export class AppViewModel extends Observable {
             })
         })
 
-        this.ready = new Promise((resolve) => {
+        this.ready = new Promise<void>((resolve) => {
             this._resolveReady = resolve;
         })
     }

@@ -2,7 +2,7 @@ import {PropertyChangeData} from 'data/observable';
 import {ObservableArray} from 'data/observable-array';
 import {Label} from 'ui/label';
 import {appViewModel} from '../common/AppViewModel';
-import {ArgonWebView, LogItem} from 'argon-web-view';
+import {LogItem} from 'argon-web-view';
 import {Color} from 'color';
 import * as enums from 'ui/enums';
 
@@ -18,7 +18,7 @@ export function onLoaded(args) {
     label.bindingContext = appViewModel;
     label.verticalAlignment = enums.VerticalAlignment.bottom;
 
-    appViewModel['getRecentLogs'] = function() {
+    appViewModel['getRecentLogItems'] = function() {
         const logs = appViewModel.layerDetails.log
         updateLogListener(logs);
         return label.text;

@@ -1,14 +1,15 @@
 "use strict";
-var observable_1 = require('data/observable');
-var bookmarks_1 = require('../common/bookmarks');
-var AppViewModel_1 = require('../common/AppViewModel');
-var gestures_1 = require('ui/gestures');
-var enums_1 = require('ui/enums');
+var observable_1 = require("data/observable");
+var bookmarks_1 = require("../common/bookmarks");
+var AppViewModel_1 = require("../common/AppViewModel");
+var gestures_1 = require("ui/gestures");
+var enums_1 = require("ui/enums");
 var FavoritesViewModel = (function (_super) {
     __extends(FavoritesViewModel, _super);
     function FavoritesViewModel() {
-        _super.apply(this, arguments);
-        this.favoriteList = bookmarks_1.favoriteList;
+        var _this = _super.apply(this, arguments) || this;
+        _this.favoriteList = bookmarks_1.favoriteList;
+        return _this;
     }
     return FavoritesViewModel;
 }(observable_1.Observable));

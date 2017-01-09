@@ -1,6 +1,6 @@
 import common = require('./vuforia-common');
-import def = require('nativescript-vuforia');
-import application = require('application');
+// import def = require('nativescript-vuforia');
+// import application = require('application');
 
 global.moduleMerge(common, exports);
 

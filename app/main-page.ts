@@ -15,6 +15,7 @@ import {GestureTypes} from 'ui/gestures'
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
+import {getDisplayOrientation} from './components/common/util';
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
@@ -253,6 +254,16 @@ export function pageLoaded(args) {
     appViewModel.manager.session.errorEvent.addEventListener((error)=>{
         alert(error.message);
         if (error.stack) console.log(error.stack);
+    })
+
+    application.on(application.orientationChangedEvent, ()=>{
+        setTimeout(()=>{
+            const orientation = getDisplayOrientation();
+            if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+                page.actionBarHidden = true;
+            else 
+                page.actionBarHidden = false;
+        }, 500);
     });
 }
 

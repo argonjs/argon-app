@@ -1,6 +1,4 @@
 import * as common from "./argon-web-view-common";
-import * as page from "ui/page";
-import * as Argon from "@argonjs/argon";
 import {View} from "ui/core/view";
 import {Color} from "color";
 

@@ -3,8 +3,9 @@ import * as vuforia from 'nativescript-vuforia';
 import * as enums from 'ui/enums';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {ArgonWebView, SessionEventData} from 'argon-web-view';
-import {getDisplayOrientation, vuforiaCameraDeviceMode} from './argon-device-service';
+import {vuforiaCameraDeviceMode} from './argon-device-service';
 import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
+import {getDisplayOrientation} from './util';
 
 import {
   GestureTypes,

@@ -1,9 +1,5 @@
 require('globals')
-import def = require('nativescript-vuforia')
-import observable = require('data/observable');
-import platform = require('platform');
-import application = require('application');
-import utils = require('utils/utils');
+import def = require('nativescript-vuforia');
 
 export abstract class APIBase implements def.API {
     abstract setLicenseKey(licenseKey:string) : boolean;

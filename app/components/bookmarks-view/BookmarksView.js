@@ -1,10 +1,11 @@
 "use strict";
-var observable_1 = require('data/observable');
+var observable_1 = require("data/observable");
 var BookmarksViewModel = (function (_super) {
     __extends(BookmarksViewModel, _super);
     function BookmarksViewModel() {
-        _super.apply(this, arguments);
-        this.index = 0;
+        var _this = _super.apply(this, arguments) || this;
+        _this.index = 0;
+        return _this;
     }
     BookmarksViewModel.prototype.setIndex = function (value) {
         this.set('index', value);

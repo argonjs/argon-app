@@ -1,14 +1,15 @@
 "use strict";
-var URI = require('urijs');
-var Argon = require('@argonjs/argon');
-var application = require('application');
-var utils = require('utils/utils');
-var search_bar_1 = require('ui/search-bar');
-var color_1 = require('color');
-var enums_1 = require('ui/enums');
-var gestures_1 = require('ui/gestures');
-var bookmarks = require('./components/common/bookmarks');
-var AppViewModel_1 = require('./components/common/AppViewModel');
+var URI = require("urijs");
+var Argon = require("@argonjs/argon");
+var application = require("application");
+var utils = require("utils/utils");
+var search_bar_1 = require("ui/search-bar");
+var color_1 = require("color");
+var enums_1 = require("ui/enums");
+var gestures_1 = require("ui/gestures");
+var bookmarks = require("./components/common/bookmarks");
+var AppViewModel_1 = require("./components/common/AppViewModel");
+var util_1 = require("./components/common/util");
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
 var searchBar;
@@ -229,31 +230,19 @@ function pageLoaded(args) {
         });
     }
     AppViewModel_1.appViewModel.showBookmarks();
-    AppViewModel_1.appViewModel.manager.reality.registerLoader(new (function (_super) {
-        __extends(HostedRealityLoader, _super);
-        function HostedRealityLoader() {
-            _super.apply(this, arguments);
-            this.type = 'hosted';
-        }
-        HostedRealityLoader.prototype.load = function (reality, callback) {
-            var url = reality.uri;
-            var webView = exports.browserView.realityLayer.webView;
-            var sessionCallback = function (data) {
-                webView.off('session', sessionCallback);
-                callback(data.session);
-            };
-            webView.on('session', sessionCallback);
-            if (webView.src === url)
-                webView.reload();
-            else
-                webView.src = url;
-        };
-        return HostedRealityLoader;
-    }(Argon.RealityLoader)));
     AppViewModel_1.appViewModel.manager.session.errorEvent.addEventListener(function (error) {
         alert(error.message);
         if (error.stack)
             console.log(error.stack);
+    });
+    application.on(application.orientationChangedEvent, function () {
+        setTimeout(function () {
+            var orientation = util_1.getDisplayOrientation();
+            if (orientation === 90 || orientation === -90 || AppViewModel_1.appViewModel.viewerEnabled)
+                exports.page.actionBarHidden = true;
+            else
+                exports.page.actionBarHidden = false;
+        }, 500);
     });
 }
 exports.pageLoaded = pageLoaded;
@@ -364,10 +353,10 @@ function onAddChannel(args) {
 exports.onAddChannel = onAddChannel;
 function onReload(args) {
     if (exports.browserView.focussedLayer === exports.browserView.realityLayer) {
-        AppViewModel_1.appViewModel.manager.reality.setDesired(AppViewModel_1.appViewModel.manager.reality.getCurrent());
+        AppViewModel_1.appViewModel.manager.reality.request({ uri: AppViewModel_1.appViewModel.manager.reality.current });
     }
     else {
-        exports.browserView.focussedLayer.webView.reload();
+        exports.browserView.focussedLayer.webView && exports.browserView.focussedLayer.webView.reload();
     }
 }
 exports.onReload = onReload;
@@ -377,7 +366,7 @@ function onFavoriteToggle(args) {
     if (!bookmarkItem) {
         bookmarks.favoriteList.push(new bookmarks.BookmarkItem({
             uri: url,
-            title: exports.browserView.focussedLayer.webView.title
+            title: AppViewModel_1.appViewModel.layerDetails.title
         }));
     }
     else {
@@ -452,7 +441,7 @@ var IOSSearchBarController = (function () {
                 exports.layout.on(gestures_1.GestureTypes.touch, function () {
                     blurSearchBar();
                     exports.layout.off(gestures_1.GestureTypes.touch);
-                    if (!exports.browserView.focussedLayer.webView.url)
+                    if (!AppViewModel_1.appViewModel.layerDetails.uri)
                         AppViewModel_1.appViewModel.hideCancelButton();
                 });
             }

@@ -1,10 +1,37 @@
 import {View} from "ui/core/view";
 import * as platform from "platform";
 import {Color} from "color";
+import * as application from "application";
+import * as utils from 'utils/utils';
 
 try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
+
+export function getDisplayOrientation() : number {
+    if (application.ios) {
+        const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
+        switch (orientation) {
+            case UIInterfaceOrientation.Unknown:
+            case UIInterfaceOrientation.Portrait: return 0;
+            case UIInterfaceOrientation.PortraitUpsideDown: return 180;
+            case UIInterfaceOrientation.LandscapeLeft: return 90;
+            case UIInterfaceOrientation.LandscapeRight: return -90;
+        }
+    }
+    if (application.android) {
+        const context:android.content.Context = utils.ad.getApplicationContext();
+        const display:android.view.Display = context.getSystemService(android.content.Context.WINDOW_SERVICE).getDefaultDisplay();
+        const rotation = display.getRotation();
+        switch (rotation) {
+            case android.view.Surface.ROTATION_0: return 0;
+            case android.view.Surface.ROTATION_180: return 180;
+            case android.view.Surface.ROTATION_90: return 90;
+            case android.view.Surface.ROTATION_270: return -90;
+        }
+    } 
+    return 0;
+}
 
 export class Util {
 
@@ -118,3 +145,4 @@ export function getIPAddressOfInterface($interface) {
     }
     return address;
 }
+

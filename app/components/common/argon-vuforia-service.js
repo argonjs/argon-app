@@ -1,48 +1,38 @@
 "use strict";
-var Argon = require('@argonjs/argon');
-var vuforia = require('nativescript-vuforia');
-var http = require('http');
-var file = require('file-system');
-var argon_device_service_1 = require('./argon-device-service');
-var util_1 = require('./util');
-var minimatch = require('minimatch');
+var Argon = require("@argonjs/argon");
+var vuforia = require("nativescript-vuforia");
+var http = require("http");
+var file = require("file-system");
+var argon_device_service_1 = require("./argon-device-service");
+var util_1 = require("./util");
+var minimatch = require("minimatch");
+var URI = require("urijs");
 exports.VIDEO_DELAY = -0.5 / 60;
-var Matrix3 = Argon.Cesium.Matrix3;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
 var Quaternion = Argon.Cesium.Quaternion;
 var JulianDate = Argon.Cesium.JulianDate;
 var CesiumMath = Argon.Cesium.CesiumMath;
-var zNeg90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -CesiumMath.PI_OVER_TWO);
 var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
-var x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 var NativescriptVuforiaServiceDelegate = (function (_super) {
     __extends(NativescriptVuforiaServiceDelegate, _super);
-    function NativescriptVuforiaServiceDelegate(deviceService, realityService, contextService, viewService) {
-        var _this = this;
-        _super.call(this);
-        this.deviceService = deviceService;
-        this.realityService = realityService;
-        this.contextService = contextService;
-        this.viewService = viewService;
-        this.scratchDate = new Argon.Cesium.JulianDate(0, 0);
-        this.scratchCartesian = new Argon.Cesium.Cartesian3();
-        this.scratchCartesian2 = new Argon.Cesium.Cartesian3();
-        this.scratchQuaternion = new Argon.Cesium.Quaternion();
-        this.scratchMatrix4 = new Argon.Cesium.Matrix4();
-        this.scratchMatrix3 = new Argon.Cesium.Matrix3();
-        this.vuforiaTrackerEntity = new Argon.Cesium.Entity({
-            position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.orientationEntity),
+    function NativescriptVuforiaServiceDelegate(deviceService, contextService) {
+        var _this = _super.call(this) || this;
+        _this.deviceService = deviceService;
+        _this.scratchCartesian = new Argon.Cesium.Cartesian3();
+        _this.scratchQuaternion = new Argon.Cesium.Quaternion();
+        _this.scratchMatrix3 = new Argon.Cesium.Matrix3();
+        _this.vuforiaTrackerEntity = new Argon.Cesium.Entity({
+            position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, _this.deviceService.eye),
             orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90, y180, {}))
         });
-        this._viewerEnabled = false;
-        this._videoEnabled = true;
-        this._trackingEnabled = true;
-        this.idDataSetMap = new Map();
-        this.dataSetUrlMap = new WeakMap();
+        _this.stateUpdateEvent = new Argon.Event();
+        _this._trackingEnabled = true;
+        _this.idDataSetMap = new Map();
+        _this.dataSetUrlMap = new WeakMap();
         if (!vuforia.api)
-            return;
+            return _this;
         var stateUpdateCallback = function (state) {
             var time = JulianDate.now();
             // subtract a few ms, since the video frame represents a time slightly in the past.
@@ -51,7 +41,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             // but in each app itself to we are as close as possible to the actual render time when
             // we start the render)
             JulianDate.addSeconds(time, exports.VIDEO_DELAY, time);
-            deviceService.update({ orientation: true });
             var vuforiaFrame = state.getFrame();
             var frameTimeStamp = vuforiaFrame.getTimeStamp();
             // update trackable results in context entity collection
@@ -61,7 +50,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var trackable = trackableResult.getTrackable();
                 var name = trackable.getName();
                 var id = _this._getIdForTrackable(trackable);
-                var entity = contextService.subscribedEntities.getById(id);
+                var entity = contextService.entities.getById(id);
                 if (!entity) {
                     entity = new Argon.Cesium.Entity({
                         id: id,
@@ -77,38 +66,24 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                     entityOrientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entityPosition.forwardExtrapolationDuration = 2 / 60;
                     entityOrientation.forwardExtrapolationDuration = 2 / 60;
-                    contextService.subscribedEntities.add(entity);
+                    contextService.entities.add(entity);
                 }
                 var trackableTime = JulianDate.clone(time);
                 // add any time diff from vuforia
                 var trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
                 if (trackableTimeDiff !== 0)
                     JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
-                var pose_1 = trackableResult.getPose();
-                var position = Matrix4.getTranslation(pose_1, _this.scratchCartesian);
-                var rotationMatrix = Matrix4.getRotation(pose_1, _this.scratchMatrix3);
+                var pose = trackableResult.getPose();
+                var position = Matrix4.getTranslation(pose, _this.scratchCartesian);
+                var rotationMatrix = Matrix4.getRotation(pose, _this.scratchMatrix3);
                 var orientation = Quaternion.fromRotationMatrix(rotationMatrix, _this.scratchQuaternion);
                 entity.position.addSample(trackableTime, position);
                 entity.orientation.addSample(trackableTime, orientation);
             }
-            // if no one is listening, don't bother calculating the view state or raising an event. 
-            // (this can happen when the vuforia video reality is not the current reality, though
-            // we still want to update the trackables above in case an app is depending on them)
-            if (_this.stateUpdateEvent.numberOfListeners === 0)
-                return;
-            var deviceState = _this.deviceService.state;
-            var pose = Argon.getSerializedEntityPose(_this.deviceService.displayEntity, time);
-            // raise the event to let the vuforia service know we are ready!
-            _this.stateUpdateEvent.raiseEvent({
-                time: time,
-                pose: pose,
-                viewport: deviceState.viewport,
-                subviews: deviceState.subviews,
-                geolocationAccuracy: deviceState.geolocationAccuracy,
-                geolocationAltitudeAccuracy: deviceState.geolocationAltitudeAccuracy
-            });
+            _this.stateUpdateEvent.raiseEvent(time);
         };
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);
+        return _this;
     }
     NativescriptVuforiaServiceDelegate.prototype.getCameraFieldOfViewRads = function () {
         var cameraDevice = vuforia.api.getCameraDevice();
@@ -124,31 +99,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             return 'vuforia_trackable_' + trackable.getId();
         }
     };
-    Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "viewerEnabled", {
-        get: function () {
-            return this._viewerEnabled;
-        },
-        set: function (enabled) {
-            this._viewerEnabled = enabled;
-            var device = vuforia.api.getDevice();
-            if (device)
-                device.setViewerActive(enabled);
-            this.deviceService.updateDeviceState();
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "videoEnabled", {
-        get: function () {
-            return this._videoEnabled;
-        },
-        set: function (value) {
-            this._videoEnabled = value;
-            this._configureCameraAndTrackers();
-        },
-        enumerable: true,
-        configurable: true
-    });
     Object.defineProperty(NativescriptVuforiaServiceDelegate.prototype, "trackingEnabled", {
         get: function () {
             return this._trackingEnabled;
@@ -170,12 +120,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         }
         else {
             this.objectTrackerStop();
-            if (this.videoEnabled) {
-                this.cameraDeviceStart();
-            }
-            else {
-                this.cameraDeviceStop();
-            }
+            this.cameraDeviceStart();
         }
     };
     NativescriptVuforiaServiceDelegate.prototype.isAvailable = function () {
@@ -189,7 +134,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             var _a = JSON.parse(json), key = _a.key, origins = _a.origins;
             if (!session.uri)
                 throw new Error('Invalid origin');
-            var origin = Argon.URI.parse(session.uri);
+            var origin = URI.parse(session.uri);
             if (!Array.isArray(origins)) {
                 throw new Error("Vuforia License Data must specify allowed origins");
             }
@@ -231,10 +176,6 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
             return false;
         var device = vuforia.api.getDevice();
         device.setMode(0 /* AR */);
-        if (this.viewerEnabled) {
-            device.setViewerActive(true);
-        }
-        this.deviceService.configureVuforiaVideoBackground();
         this._configureCameraAndTrackers();
         return true;
     };
@@ -355,11 +296,11 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         }
         return Promise.reject("Dataset is not associated with a url");
     };
-    NativescriptVuforiaServiceDelegate = __decorate([
-        Argon.DI.inject(Argon.DeviceService, Argon.RealityService, Argon.ContextService, Argon.ViewService)
-    ], NativescriptVuforiaServiceDelegate);
     return NativescriptVuforiaServiceDelegate;
 }(Argon.VuforiaServiceDelegateBase));
+NativescriptVuforiaServiceDelegate = __decorate([
+    Argon.DI.inject(Argon.DeviceService, Argon.ContextService)
+], NativescriptVuforiaServiceDelegate);
 exports.NativescriptVuforiaServiceDelegate = NativescriptVuforiaServiceDelegate;
 // TODO: make this cross platform somehow
 function _getDataSetLocation(xmlUrlString) {

@@ -6,9 +6,8 @@ var AndroidWebInterface = io.argonjs.AndroidWebInterface;
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
-        var _this = this;
-        _super.call(this);
-        this.on(view_1.View.loadedEvent, function () {
+        var _this = _super.call(this) || this;
+        _this.on(view_1.View.loadedEvent, function () {
             // Make transparent
             _this.backgroundColor = new color_1.Color(0, 255, 255, 255);
             _this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
@@ -36,7 +35,7 @@ var ArgonWebView = (function (_super) {
                 },
             }))(new java.lang.String(_this.id)), "__argon_android__");
         });
-        this.on(ArgonWebView.loadStartedEvent, function () {
+        _this.on(ArgonWebView.loadStartedEvent, function () {
             // Hook into the logging
             var injectLoggers = function () {
                 var logger = window.console.log;
@@ -66,6 +65,7 @@ var ArgonWebView = (function (_super) {
             };
             _this.evaluateJavascript("(" + injectLoggers.toString() + ")()");
         });
+        return _this;
     }
     Object.defineProperty(ArgonWebView.prototype, "progress", {
         get: function () {
@@ -87,8 +87,8 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype.bringToFront = function () {
         this.android.bringToFront();
     };
-    ArgonWebView.layersById = {};
     return ArgonWebView;
 }(common.ArgonWebView));
+ArgonWebView.layersById = {};
 exports.ArgonWebView = ArgonWebView;
 //# sourceMappingURL=argon-web-view.android.js.map

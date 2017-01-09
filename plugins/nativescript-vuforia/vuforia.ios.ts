@@ -3,10 +3,6 @@ import * as utils from 'utils/utils';
 import common = require('./vuforia-common');
 import def = require('nativescript-vuforia');
 import application = require('application');
-import http = require('http');
-import file = require('file-system');
-import frames = require('ui/frame');
-import views = require('ui/core/view');
 import placeholder = require('ui/placeholder');
 
 global.moduleMerge(common, exports);

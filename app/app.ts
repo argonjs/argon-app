@@ -1,6 +1,5 @@
 import application = require("application");
 
-
 /***
  * Creates a performance.now() function
  */

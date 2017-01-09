@@ -11,6 +11,29 @@ const processPool = WKProcessPool.new();
                         
 declare const window:any, webkit:any, document:any;
 
+/// In-memory certificate store.
+class CertStore {
+    private keys = new Set<string>();
+
+    public addCertificate(cert: any, origin:string) {
+        let data: NSData = SecCertificateCopyData(cert)
+        let key = this.keyForData(data, origin);
+        this.keys.add(key);
+    }
+
+    public containsCertificate(cert: any, origin:string) : boolean {
+        let data: NSData = SecCertificateCopyData(cert)
+        let key = this.keyForData(data, origin)
+        return this.keys.has(key);
+    }
+
+    private keyForData(data: NSData, origin:string) {
+        return `${origin}/${data.hash}`;
+    }
+}
+
+const _certStore = new CertStore();
+
 export class ArgonWebView extends common.ArgonWebView  {
 
     private _ios:WKWebView
@@ -149,7 +172,41 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     public static initWithOwner(owner:WeakRef<ArgonWebView>) {
         const delegate = <ArgonWebViewDelegate>ArgonWebViewDelegate.new()
         delegate._owner = owner;
+
+        const wkWebView = <WKWebView>owner.get().ios;
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "title", 0, <any>null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "URL", 0, <any>null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "estimatedProgress", 0, <any>null);
+
         return delegate;
+    }
+
+    observeValueForKeyPathOfObjectChangeContext(keyPath:string, object:any, change:any, context:any) {
+        const owner = this._owner.get();
+        if (!owner) return;        
+        
+        const wkWebView = <WKWebView>owner.ios;
+
+        switch (keyPath) {
+            case "title": 
+                owner.set(keyPath, wkWebView.title); 
+                break;
+            case "URL": 
+                this.updateURL();
+                break;
+            case "estimatedProgress":
+                owner.set('progress', wkWebView.estimatedProgress);
+                break;
+        }
+    }
+
+    private updateURL() {
+        const owner = this._owner.get();
+        if (!owner) return;     
+        const wkWebView = <WKWebView>owner.ios;
+        owner['_suspendLoading'] = true; 
+        owner.set("url", wkWebView.URL.absoluteString); 
+        owner['_suspendLoading'] = false; 
     }
     
     // WKScriptMessageHandler
@@ -217,53 +274,83 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
     webViewDidStartProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
         this._provisionalURL = webView.URL.absoluteString;
-        const owner = this._owner.get();
-        if (!owner) return;
-        owner.set('progress', webView.estimatedProgress);
-    }
-
-    webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
-        const owner = this._owner.get();
-        if (!owner) return;
-        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
         if (!owner) return;
         owner._didCommitNavigation();
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
+    }
+
+    webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
+        const owner = this._owner.get();
+        if (!owner) return;
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        this.updateURL();
     }
 
     webViewDidFinishNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
-        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString)
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString);
+        this.updateURL();
     }
 
     webViewDidFailNavigationWithError(webView: WKWebView, navigation: WKNavigation, error:NSError) {
         const owner = this._owner.get();
         if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
     }
 
+    private checkIfWebContentProcessHasCrashed(webView: WKWebView, error: NSError) : boolean {
+        if (error.code == WKErrorCode.WebContentProcessTerminated && error.domain == "WebKitErrorDomain") {
+            webView.reloadFromOrigin()
+            return true
+        }
+        return false
+    }
+
+    webViewDidFailProvisionalNavigationWithError(webView: WKWebView, navigation: WKNavigation, error: NSError) {
+        const owner = this._owner.get();
+        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        this.updateURL();
+
+        if (this.checkIfWebContentProcessHasCrashed(webView, error)) {
+            return;
+        }
+
+        const url = error.userInfo.objectForKey(NSURLErrorFailingURLErrorKey) as NSURL;
+        if (url && url.host && 
+            error.code === NSURLErrorServerCertificateUntrusted || 
+            error.code === NSURLErrorServerCertificateHasBadDate || 
+            error.code === NSURLErrorServerCertificateHasUnknownRoot || 
+            error.code === NSURLErrorServerCertificateNotYetValid) {
+                const certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
+                const cert = certChain && certChain[0];
+                dialogs.confirm(`${error.localizedDescription} Would you like to continue anyway?`).then(function (result) {
+                    if (result) {
+                        const origin = `${url.host}:${url.port||443}`;
+                        _certStore.addCertificate(cert, origin);
+                        webView.loadRequest(new NSURLRequest({URL:url}));
+                    }
+                }).catch(()=>{});
+        }
+    }
+
+
 	webViewDidReceiveAuthenticationChallengeCompletionHandler?(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
-        dialogs.confirm(`The identity of ${challenge.protectionSpace.host} cannot be verified. Would you like to continue anyway?`).then(function (result) {
-            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, NSURLCredential.credentialForTrust(challenge.protectionSpace.serverTrust!))
-        }).catch(()=>{
-            completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
-        });
+        // If this is a certificate challenge, see if the certificate has previously been
+        // accepted by the user.
+        const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
+        const trust = challenge.protectionSpace.serverTrust;
+        const cert = SecTrustGetCertificateAtIndex(trust, 0);
+        if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
+            trust && cert && _certStore.containsCertificate(cert, origin)) {
+            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
+            return;
+        }
+
+        completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
     }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];

@@ -157,7 +157,7 @@ export class BrowserView extends GridLayout {
     addLayer() : Layer {
         const layer:Layer = this._createLayer();
         
-        const webView = new ArgonWebView;
+        const webView = layer.webView = new ArgonWebView;
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
         layer.contentView.addChild(webView);
@@ -415,12 +415,14 @@ export class BrowserView extends GridLayout {
             translate: {x:0,y:TITLE_BAR_HEIGHT},
             duration: OVERVIEW_ANIMATION_DURATION
         })
+
         // Show titlebars
         layer.titleBar.visibility = Visibility.visible;
         layer.titleBar.animate({
             opacity: 1,
             duration: OVERVIEW_ANIMATION_DURATION
         })
+
         // Update for the first time & animate.
         const {translate, scale} = this._calculateTargetTransform(idx);
         layer.containerView.animate({
@@ -436,7 +438,6 @@ export class BrowserView extends GridLayout {
         
         layer.touchOverlay.style.visibility = 'collapsed';
 
-        // For transparent webviews, add a little bit of opacity
         layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
         layer.containerView.animate({
             opacity: 
@@ -448,7 +449,7 @@ export class BrowserView extends GridLayout {
             duration: OVERVIEW_ANIMATION_DURATION,
         });
 
-        layer.webView && layer.webView.animate({
+        layer.contentView && layer.contentView.animate({
             translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
         }).then(()=>{
@@ -467,6 +468,7 @@ export class BrowserView extends GridLayout {
         }).then(()=>{
             layer.titleBar.visibility = Visibility.collapse;
         })
+
         // Update for the first time & animate.
         layer.visualIndex = idx;
         return layer.containerView.animate({

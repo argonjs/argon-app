@@ -1,24 +1,47 @@
 "use strict";
-var Argon = require('@argonjs/argon');
-var common = require('./argon-web-view-common');
-var web_view_1 = require('ui/web-view');
-var trace = require('trace');
-var utils = require('utils/utils');
+var Argon = require("@argonjs/argon");
+var common = require("./argon-web-view-common");
+var web_view_1 = require("ui/web-view");
+var trace = require("trace");
+var utils = require("utils/utils");
+var dialogs = require("ui/dialogs");
 var ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 var processPool = WKProcessPool.new();
+/// In-memory certificate store.
+var CertStore = (function () {
+    function CertStore() {
+        this.keys = new Set();
+    }
+    CertStore.prototype.addCertificate = function (cert, origin) {
+        var data = SecCertificateCopyData(cert);
+        var key = this.keyForData(data, origin);
+        this.keys.add(key);
+    };
+    CertStore.prototype.containsCertificate = function (cert, origin) {
+        var data = SecCertificateCopyData(cert);
+        var key = this.keyForData(data, origin);
+        return this.keys.has(key);
+    };
+    CertStore.prototype.keyForData = function (data, origin) {
+        return origin + "/" + data.hash;
+    };
+    return CertStore;
+}());
+var _certStore = new CertStore();
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
-        _super.call(this);
+        var _this = _super.call(this) || this;
         var configuration = WKWebViewConfiguration.alloc().init();
         // We want to replace the UIWebView created by superclass with WKWebView instance
-        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
-        delete this._delegate; // remove reference to UIWebView delegate created by super class
-        this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
+        _this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        delete _this._delegate; // remove reference to UIWebView delegate created by super class
+        _this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(_this));
+        _this._ios.UIDelegate;
         configuration.processPool = processPool;
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
+        configuration.userContentController.addScriptMessageHandlerName(_this._argonDelegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(_this._argonDelegate, "argoncheck");
+        configuration.userContentController.addScriptMessageHandlerName(_this._argonDelegate, "log");
         configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly("(" + function () {
             var _originalLog = console.log;
             console.log = function () {
@@ -80,11 +103,12 @@ var ArgonWebView = (function (_super) {
                 return name;
             }
         }.toString() + "())", 0 /* AtDocumentStart */, true));
-        this._ios.allowsBackForwardNavigationGestures = true;
-        this._ios['customUserAgent'] = ARGON_USER_AGENT;
+        _this._ios.allowsBackForwardNavigationGestures = true;
+        _this._ios['customUserAgent'] = ARGON_USER_AGENT;
         // style appropriately
-        this._ios.scrollView.layer.masksToBounds = false;
-        this._ios.layer.masksToBounds = false;
+        _this._ios.scrollView.layer.masksToBounds = false;
+        _this._ios.layer.masksToBounds = false;
+        return _this;
     }
     ArgonWebView.prototype._setIsArgonApp = function (flag) {
         if (!this.isArgonApp && flag) {
@@ -124,18 +148,51 @@ var ArgonWebView = (function (_super) {
         // this._ios.navigationDelegate = null;
         _super.prototype.onUnloaded.call(this);
     };
+    ArgonWebView.prototype.reload = function () {
+        this._ios.reloadFromOrigin();
+    };
     return ArgonWebView;
 }(common.ArgonWebView));
 exports.ArgonWebView = ArgonWebView;
 var ArgonWebViewDelegate = (function (_super) {
     __extends(ArgonWebViewDelegate, _super);
     function ArgonWebViewDelegate() {
-        _super.apply(this, arguments);
+        return _super.apply(this, arguments) || this;
     }
     ArgonWebViewDelegate.initWithOwner = function (owner) {
         var delegate = ArgonWebViewDelegate.new();
         delegate._owner = owner;
+        var wkWebView = owner.get().ios;
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "title", 0, null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "URL", 0, null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "estimatedProgress", 0, null);
         return delegate;
+    };
+    ArgonWebViewDelegate.prototype.observeValueForKeyPathOfObjectChangeContext = function (keyPath, object, change, context) {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        var wkWebView = owner.ios;
+        switch (keyPath) {
+            case "title":
+                owner.set(keyPath, wkWebView.title);
+                break;
+            case "URL":
+                this.updateURL();
+                break;
+            case "estimatedProgress":
+                owner.set('progress', wkWebView.estimatedProgress);
+                break;
+        }
+    };
+    ArgonWebViewDelegate.prototype.updateURL = function () {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        var wkWebView = owner.ios;
+        owner['_suspendLoading'] = true;
+        owner.set("url", wkWebView.URL.absoluteString);
+        owner['_suspendLoading'] = false;
     };
     // WKScriptMessageHandler
     ArgonWebViewDelegate.prototype.userContentControllerDidReceiveScriptMessage = function (userContentController, message) {
@@ -198,48 +255,79 @@ var ArgonWebViewDelegate = (function (_super) {
     };
     ArgonWebViewDelegate.prototype.webViewDidStartProvisionalNavigation = function (webView, navigation) {
         this._provisionalURL = webView.URL.absoluteString;
-        var owner = this._owner.get();
-        if (!owner)
-            return;
-        owner.set('progress', webView.estimatedProgress);
-    };
-    ArgonWebViewDelegate.prototype.webViewDidFailProvisionalNavigation = function (webView, navigation) {
-        var owner = this._owner.get();
-        if (!owner)
-            return;
-        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
     };
     ArgonWebViewDelegate.prototype.webViewDidCommitNavigation = function (webView, navigation) {
         var owner = this._owner.get();
         if (!owner)
             return;
         owner._didCommitNavigation();
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
+    };
+    ArgonWebViewDelegate.prototype.webViewDidFailProvisionalNavigation = function (webView, navigation) {
+        var owner = this._owner.get();
+        if (!owner)
+            return;
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        this.updateURL();
     };
     ArgonWebViewDelegate.prototype.webViewDidFinishNavigation = function (webView, navigation) {
         var owner = this._owner.get();
         if (owner)
             owner['_onLoadFinished'](webView.URL.absoluteString);
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
     };
     ArgonWebViewDelegate.prototype.webViewDidFailNavigationWithError = function (webView, navigation, error) {
         var owner = this._owner.get();
         if (owner)
             owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
     };
-    ArgonWebViewDelegate.ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
+    ArgonWebViewDelegate.prototype.checkIfWebContentProcessHasCrashed = function (webView, error) {
+        if (error.code == 2 /* WebContentProcessTerminated */ && error.domain == "WebKitErrorDomain") {
+            webView.reloadFromOrigin();
+            return true;
+        }
+        return false;
+    };
+    ArgonWebViewDelegate.prototype.webViewDidFailProvisionalNavigationWithError = function (webView, navigation, error) {
+        var owner = this._owner.get();
+        if (owner)
+            owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        this.updateURL();
+        if (this.checkIfWebContentProcessHasCrashed(webView, error)) {
+            return;
+        }
+        var url = error.userInfo.objectForKey(NSURLErrorFailingURLErrorKey);
+        if (url && url.host &&
+            error.code === NSURLErrorServerCertificateUntrusted ||
+            error.code === NSURLErrorServerCertificateHasBadDate ||
+            error.code === NSURLErrorServerCertificateHasUnknownRoot ||
+            error.code === NSURLErrorServerCertificateNotYetValid) {
+            var certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
+            var cert_1 = certChain && certChain[0];
+            dialogs.confirm(error.localizedDescription + " Would you like to continue anyway?").then(function (result) {
+                if (result) {
+                    var origin = url.host + ":" + (url.port || 443);
+                    _certStore.addCertificate(cert_1, origin);
+                    webView.loadRequest(new NSURLRequest({ URL: url }));
+                }
+            }).catch(function () { });
+        }
+    };
+    ArgonWebViewDelegate.prototype.webViewDidReceiveAuthenticationChallengeCompletionHandler = function (webView, challenge, completionHandler) {
+        // If this is a certificate challenge, see if the certificate has previously been
+        // accepted by the user.
+        var origin = challenge.protectionSpace.host + ":" + challenge.protectionSpace.port;
+        var trust = challenge.protectionSpace.serverTrust;
+        var cert = SecTrustGetCertificateAtIndex(trust, 0);
+        if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
+            trust && cert && _certStore.containsCertificate(cert, origin)) {
+            completionHandler(0 /* UseCredential */, new NSURLCredential(trust));
+            return;
+        }
+        completionHandler(1 /* PerformDefaultHandling */, undefined);
+    };
     return ArgonWebViewDelegate;
 }(NSObject));
+ArgonWebViewDelegate.ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
 //# sourceMappingURL=argon-web-view.ios.js.map

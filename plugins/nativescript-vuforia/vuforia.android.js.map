@@ -1,1 +1,1 @@
-{"version":3,"file":"vuforia.android.js","sourceRoot":"","sources":["vuforia.android.ts"],"names":[],"mappings":";AAAA,IAAO,MAAM,WAAW,kBAAkB,CAAC,CAAC;AAI5C,MAAM,CAAC,WAAW,CAAC,MAAM,EAAE,OAAO,CAAC,CAAC;AAEvB,eAAO,GAAG,EAAE,CAAC;AAEb,WAAG,GAAG,SAAS,CAAC"}
+{"version":3,"file":"vuforia.android.js","sourceRoot":"","sources":["vuforia.android.ts"],"names":[],"mappings":";AAAA,yCAA4C;AAC5C,gDAAgD;AAChD,+CAA+C;AAE/C,MAAM,CAAC,WAAW,CAAC,MAAM,EAAE,OAAO,CAAC,CAAC;AAEvB,QAAA,OAAO,GAAG,EAAE,CAAC;AAEb,QAAA,GAAG,GAAG,SAAS,CAAC"}

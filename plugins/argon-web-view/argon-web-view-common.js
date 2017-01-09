@@ -1,16 +1,17 @@
 "use strict";
-var web_view_1 = require('ui/web-view');
-var Argon = require('@argonjs/argon');
-var observable_array_1 = require('data/observable-array');
+var web_view_1 = require("ui/web-view");
+var Argon = require("@argonjs/argon");
+var observable_array_1 = require("data/observable-array");
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
-        _super.call(this);
-        this.isArgonApp = false;
-        this._logs = new observable_array_1.ObservableArray();
+        var _this = _super.call(this) || this;
+        _this.isArgonApp = false;
+        _this._log = new observable_array_1.ObservableArray();
+        return _this;
     }
-    Object.defineProperty(ArgonWebView.prototype, "logs", {
-        get: function () { return this._logs; },
+    Object.defineProperty(ArgonWebView.prototype, "log", {
+        get: function () { return this._log; },
         enumerable: true,
         configurable: true
     });
@@ -18,7 +19,7 @@ var ArgonWebView = (function (_super) {
     ArgonWebView.prototype._didCommitNavigation = function () {
         if (this.session)
             this.session.close();
-        this.logs.length = 0;
+        this.log.length = 0;
         this.session = undefined;
         this._outputPort = undefined;
     };
@@ -57,7 +58,7 @@ var ArgonWebView = (function (_super) {
         var log = JSON.parse(message);
         log.lines = log.message.split(/\r\n|\r|\n/);
         console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > '));
-        this.logs.push(log);
+        this.log.push(log);
         var args = {
             eventName: ArgonWebView.logEvent,
             object: this,
@@ -65,9 +66,9 @@ var ArgonWebView = (function (_super) {
         };
         this.notify(args);
     };
-    ArgonWebView.sessionEvent = 'session';
-    ArgonWebView.logEvent = 'log';
     return ArgonWebView;
 }(web_view_1.WebView));
+ArgonWebView.sessionEvent = 'session';
+ArgonWebView.logEvent = 'log';
 exports.ArgonWebView = ArgonWebView;
 //# sourceMappingURL=argon-web-view-common.js.map

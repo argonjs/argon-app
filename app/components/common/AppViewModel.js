@@ -1,19 +1,20 @@
 "use strict";
-var observable_1 = require('data/observable');
-var bookmarks = require('./bookmarks');
-var Argon = require('@argonjs/argon');
-var argon_device_service_1 = require('./argon-device-service');
-var argon_reality_service_1 = require('./argon-reality-service');
-var argon_vuforia_service_1 = require('./argon-vuforia-service');
-var util_1 = require('./util');
+var observable_1 = require("data/observable");
+var observable_array_1 = require("data/observable-array");
+var bookmarks = require("./bookmarks");
+var Argon = require("@argonjs/argon");
+var argon_device_service_1 = require("./argon-device-service");
+var argon_vuforia_service_1 = require("./argon-vuforia-service");
+var argon_view_service_1 = require("./argon-view-service");
+var util_1 = require("./util");
 var LayerDetails = (function (_super) {
     __extends(LayerDetails, _super);
-    function LayerDetails(webView) {
-        _super.call(this);
-        this.uri = '';
-        this.title = '';
-        this.supportedInteractionModes = [];
-        this.webView = webView;
+    function LayerDetails() {
+        var _this = _super.apply(this, arguments) || this;
+        _this.uri = '';
+        _this.title = '';
+        _this.log = new observable_array_1.ObservableArray();
+        return _this;
     }
     return LayerDetails;
 }(observable_1.Observable));
@@ -21,34 +22,34 @@ exports.LayerDetails = LayerDetails;
 var AppViewModel = (function (_super) {
     __extends(AppViewModel, _super);
     function AppViewModel() {
-        var _this = this;
-        _super.call(this);
-        this.menuOpen = false;
-        this.cancelButtonShown = false;
-        this.realityChooserOpen = false;
-        this.overviewOpen = false;
-        this.bookmarksOpen = false;
-        this.debugEnabled = false;
-        this.viewerEnabled = false;
-        this.interactionMode = 'immersive';
-        this.interactionModeButtonEnabled = false;
-        this.layerDetails = new LayerDetails(null);
-        this.currentUri = '';
-        this.isFavorite = false;
+        var _this = _super.call(this) || this;
+        _this.menuOpen = false;
+        _this.cancelButtonShown = false;
+        _this.realityChooserOpen = false;
+        _this.overviewOpen = false;
+        _this.bookmarksOpen = false;
+        _this.debugEnabled = false;
+        _this.viewerEnabled = false;
+        _this.interactionMode = 'immersive';
+        _this.interactionModeButtonEnabled = false;
+        _this.layerDetails = new LayerDetails(null);
+        _this.currentUri = '';
+        _this.isFavorite = false;
         bookmarks.favoriteList.on('change', function () {
             setTimeout(function () {
                 _this.updateFavoriteStatus();
             });
         });
-        this.ready = new Promise(function (resolve) {
+        _this.ready = new Promise(function (resolve) {
             _this._resolveReady = resolve;
         });
+        return _this;
     }
     AppViewModel.prototype.setReady = function () {
         var container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
-        container.registerSingleton(Argon.RealityService, argon_reality_service_1.NativescriptRealityService);
         container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
+        container.registerSingleton(Argon.ViewService, argon_view_service_1.NativescriptViewService);
         var manager = this.manager = Argon.init({
             container: container,
             configuration: {
@@ -56,37 +57,26 @@ var AppViewModel = (function (_super) {
                 name: 'ArgonApp'
             }
         });
-        manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
-        manager.reality.sessionDesiredRealityChangeEvent.addEventListener(function (_a) {
-            var previous = _a.previous, current = _a.current, session = _a.session;
-            if (session === manager.session.manager)
-                return;
-            if (previous) {
-                var previousRealityItem = bookmarks.realityMap.get(previous.uri);
-                if (previousRealityItem && !previousRealityItem.builtin) {
-                    var i = bookmarks.realityList.indexOf(previousRealityItem);
-                    bookmarks.realityList.splice(i, 1);
-                }
+        manager.reality.default = Argon.RealityViewer.LIVE;
+        manager.reality.installedEvent.addEventListener(function (_a) {
+            var viewer = _a.viewer;
+            var item = bookmarks.realityMap.get(viewer.uri);
+            if (!item) {
+                item = new bookmarks.BookmarkItem({ uri: viewer.uri });
+                bookmarks.realityList.push();
             }
-            if (current) {
-                var currentRealityItem = bookmarks.realityMap.get(current.uri);
-                if (!currentRealityItem)
-                    bookmarks.realityList.push(new bookmarks.RealityBookmarkItem(current));
-            }
-            session.closeEvent.addEventListener(function () {
-                var sessionDesiredReality = manager.reality.desiredRealityMap.get(session);
-                if (sessionDesiredReality) {
-                    var sessionDesiredRealityItem = bookmarks.realityMap.get(sessionDesiredReality.uri);
-                    if (sessionDesiredRealityItem && !sessionDesiredRealityItem.builtin) {
-                        var i = bookmarks.realityList.indexOf(sessionDesiredRealityItem);
-                        bookmarks.realityList.splice(i, 1);
-                    }
-                }
-            });
         });
-        manager.focus.sessionFocusEvent.addEventListener(function () {
-            var focussedSession = manager.focus.getSession();
-            console.log("Argon focus changed: " + (focussedSession ? focussedSession.uri : undefined));
+        manager.reality.uninstalledEvent.addEventListener(function (_a) {
+            var viewer = _a.viewer;
+            var item = bookmarks.realityMap.get(viewer.uri);
+            if (item && !item.builtin) {
+                var i = bookmarks.realityList.indexOf(item);
+                bookmarks.realityList.splice(i, 1);
+            }
+        });
+        manager.focus.sessionFocusEvent.addEventListener(function (_a) {
+            var current = _a.current;
+            console.log("Argon focus changed: " + (current ? current.uri : undefined));
         });
         manager.vuforia.isAvailable().then(function (available) {
             if (available) {
@@ -179,9 +169,9 @@ var AppViewModel = (function (_super) {
         this.layerDetails.set('uri', url);
         this.set('bookmarksOpen', !url);
     };
-    AppViewModel.loadUrlEvent = 'loadUrl';
     return AppViewModel;
 }(observable_1.Observable));
+AppViewModel.loadUrlEvent = 'loadUrl';
 exports.AppViewModel = AppViewModel;
 exports.appViewModel = new AppViewModel;
 //# sourceMappingURL=AppViewModel.js.map

@@ -1,11 +1,11 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argon4-test",
+    "id": "edu.gatech.ael.argon4-010617",
     "tns-android": {
       "version": "2.3.0"
     },
     "tns-ios": {
-      "version": "2.4.0-2016-9-28-1"
+      "version": "2.4.0"
     }
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "babylon": "6.9.2",
     "lazy": "1.0.11",
     "nativescript-dev-typescript": "^0.3.1",
-    "typescript": "^2.0.2"
+    "tns-platform-declarations": "^2.4.4",
+    "typescript": "^2.1.4"
   }
 }

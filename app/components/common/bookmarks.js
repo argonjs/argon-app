@@ -1,13 +1,15 @@
 "use strict";
-var application = require('application');
-var applicationSettings = require('application-settings');
-var observable_array_1 = require('data/observable-array');
-var observable_1 = require('data/observable');
+var application = require("application");
+var applicationSettings = require("application-settings");
+var observable_array_1 = require("data/observable-array");
+var observable_1 = require("data/observable");
+var Argon = require("@argonjs/argon");
 var BookmarkItem = (function (_super) {
     __extends(BookmarkItem, _super);
     function BookmarkItem(item) {
-        _super.call(this, item);
-        this.builtin = false;
+        var _this = _super.call(this, item) || this;
+        _this.builtin = false;
+        return _this;
     }
     BookmarkItem.prototype.toJSON = function () {
         return {
@@ -18,15 +20,6 @@ var BookmarkItem = (function (_super) {
     return BookmarkItem;
 }(observable_1.Observable));
 exports.BookmarkItem = BookmarkItem;
-var RealityBookmarkItem = (function (_super) {
-    __extends(RealityBookmarkItem, _super);
-    function RealityBookmarkItem(reality) {
-        _super.call(this, reality);
-        this.reality = reality;
-    }
-    return RealityBookmarkItem;
-}(BookmarkItem));
-exports.RealityBookmarkItem = RealityBookmarkItem;
 var favoriteList = new observable_array_1.ObservableArray();
 exports.favoriteList = favoriteList;
 var historyList = new observable_array_1.ObservableArray();
@@ -70,13 +63,8 @@ builtinFavorites.forEach(function (item) {
     item.builtin = true;
     favoriteList.push(item);
 });
-var LIVE_VIDEO_REALITY = {
-    title: 'Live Video',
-    uri: 'reality:live-video'
-};
-exports.LIVE_VIDEO_REALITY = LIVE_VIDEO_REALITY;
 var builtinRealities = [
-    new RealityBookmarkItem(LIVE_VIDEO_REALITY)
+    new BookmarkItem({ uri: Argon.RealityViewer.LIVE, title: 'Live' })
 ];
 builtinRealities.forEach(function (item) {
     item.builtin = true;
@@ -113,4 +101,26 @@ function saveBookmarks() {
 application.on(application.suspendEvent, saveBookmarks);
 favoriteList.on('change', saveFavorites);
 historyList.on('change', saveHistory);
+function pushToHistory(url, title) {
+    var historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem) {
+        var i = historyList.indexOf(historyBookmarkItem);
+        historyList.splice(i, 1);
+        historyList.unshift(historyBookmarkItem);
+    }
+    else {
+        historyList.unshift(new BookmarkItem({
+            uri: url,
+            title: title
+        }));
+    }
+}
+exports.pushToHistory = pushToHistory;
+function updateTitle(url, title) {
+    var historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem) {
+        historyBookmarkItem.set('title', title);
+    }
+}
+exports.updateTitle = updateTitle;
 //# sourceMappingURL=bookmarks.js.map

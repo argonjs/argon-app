@@ -1,8 +1,8 @@
 "use strict";
-var utils = require('utils/utils');
-var common = require('./vuforia-common');
-var application = require('application');
-var placeholder = require('ui/placeholder');
+var utils = require("utils/utils");
+var common = require("./vuforia-common");
+var application = require("application");
+var placeholder = require("ui/placeholder");
 global.moduleMerge(common, exports);
 var VUFORIA_AVAILABLE = typeof VuforiaSession !== 'undefined';
 var iosVideoView = (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
@@ -48,10 +48,11 @@ function configureVuforiaSurface() {
 var API = (function (_super) {
     __extends(API, _super);
     function API() {
-        _super.apply(this, arguments);
-        this.cameraDevice = new CameraDevice();
-        this.device = new Device();
-        this.renderer = new Renderer();
+        var _this = _super.apply(this, arguments) || this;
+        _this.cameraDevice = new CameraDevice();
+        _this.device = new Device();
+        _this.renderer = new Renderer();
+        return _this;
     }
     API.prototype.setLicenseKey = function (licenseKey) {
         return VuforiaSession.setLicenseKey(licenseKey) === 0;
@@ -245,8 +246,9 @@ exports.TrackableResult = TrackableResult;
 var Marker = (function (_super) {
     __extends(Marker, _super);
     function Marker(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return Marker;
 }(Trackable));
@@ -254,8 +256,9 @@ exports.Marker = Marker;
 var MarkerResult = (function (_super) {
     __extends(MarkerResult, _super);
     function MarkerResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return MarkerResult;
 }(TrackableResult));
@@ -263,8 +266,9 @@ exports.MarkerResult = MarkerResult;
 var Word = (function (_super) {
     __extends(Word, _super);
     function Word(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return Word;
 }(Trackable));
@@ -272,8 +276,9 @@ exports.Word = Word;
 var WordResult = (function (_super) {
     __extends(WordResult, _super);
     function WordResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return WordResult;
 }(TrackableResult));
@@ -281,8 +286,9 @@ exports.WordResult = WordResult;
 var ObjectTarget = (function (_super) {
     __extends(ObjectTarget, _super);
     function ObjectTarget(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     ObjectTarget.prototype.getUniqueTargetId = function () {
         return this.ios.getUniqueTargetId();
@@ -296,8 +302,9 @@ exports.ObjectTarget = ObjectTarget;
 var ObjectTargetResult = (function (_super) {
     __extends(ObjectTargetResult, _super);
     function ObjectTargetResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return ObjectTargetResult;
 }(TrackableResult));
@@ -305,24 +312,27 @@ exports.ObjectTargetResult = ObjectTargetResult;
 var ImageTarget = (function (_super) {
     __extends(ImageTarget, _super);
     function ImageTarget(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return ImageTarget;
 }(ObjectTarget));
 var ImageTargetResult = (function (_super) {
     __extends(ImageTargetResult, _super);
     function ImageTargetResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return ImageTargetResult;
 }(ObjectTargetResult));
 var MultiTarget = (function (_super) {
     __extends(MultiTarget, _super);
     function MultiTarget(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return MultiTarget;
 }(ObjectTarget));
@@ -330,8 +340,9 @@ exports.MultiTarget = MultiTarget;
 var MultiTargetResult = (function (_super) {
     __extends(MultiTargetResult, _super);
     function MultiTargetResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return MultiTargetResult;
 }(ObjectTargetResult));
@@ -339,16 +350,18 @@ exports.MultiTargetResult = MultiTargetResult;
 var CylinderTarget = (function (_super) {
     __extends(CylinderTarget, _super);
     function CylinderTarget(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return CylinderTarget;
 }(ObjectTarget));
 var CylinderTargetResult = (function (_super) {
     __extends(CylinderTargetResult, _super);
     function CylinderTargetResult(ios) {
-        _super.call(this, ios);
-        this.ios = ios;
+        var _this = _super.call(this, ios) || this;
+        _this.ios = ios;
+        return _this;
     }
     return CylinderTargetResult;
 }(ObjectTargetResult));
@@ -758,7 +771,7 @@ var DataSet = (function () {
 var ObjectTracker = (function (_super) {
     __extends(ObjectTracker, _super);
     function ObjectTracker() {
-        _super.apply(this, arguments);
+        return _super.apply(this, arguments) || this;
     }
     ObjectTracker.prototype.start = function () {
         return VuforiaObjectTracker.getInstance().start();
