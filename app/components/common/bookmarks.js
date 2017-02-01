@@ -9,6 +9,14 @@ var BookmarkItem = (function (_super) {
     function BookmarkItem(item) {
         var _this = _super.call(this, item) || this;
         _this.builtin = false;
+        var uri = item.uri;
+        // reuse an existing BookmarkItem if one exists
+        if (historyMap.has(uri))
+            return historyMap.get(uri);
+        if (realityMap.has(uri))
+            return realityMap.get(uri);
+        if (favoriteMap.has(uri))
+            return favoriteMap.get(uri);
         return _this;
     }
     BookmarkItem.prototype.toJSON = function () {
@@ -76,7 +84,8 @@ if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
     console.log(applicationSettings.getString(FAVORITE_LIST_KEY));
     var savedFavorites = JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY));
     savedFavorites.forEach(function (item) {
-        favoriteList.push(new BookmarkItem(item));
+        if (!favoriteMap.has(item.uri))
+            favoriteList.push(new BookmarkItem(item));
     });
 }
 if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {

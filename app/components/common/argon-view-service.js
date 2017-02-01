@@ -8,21 +8,17 @@ var NativescriptViewService = (function (_super) {
     function NativescriptViewService(container, sessionService, contextService, focusService) {
         return _super.call(this, container, sessionService, contextService, focusService) || this;
     }
-    NativescriptViewService.prototype._requestEnterHMD = function (session) {
+    NativescriptViewService.prototype._requestEnterHmd = function (session) {
         this._ensurePersmission(session);
         var device = vuforia.api && vuforia.api.getDevice();
-        if (device && device.setViewerActive(true)) {
-            return Promise.resolve();
-        }
-        throw new Error("Unable to enter HMD mode");
+        device && device.setViewerActive(true);
+        return Promise.resolve();
     };
     NativescriptViewService.prototype._requestExitHmd = function (session) {
         this._ensurePersmission(session);
         var device = vuforia.api && vuforia.api.getDevice();
-        if (device && device.setViewerActive(false)) {
-            return Promise.resolve();
-        }
-        throw new Error("Unable to exit HMD mode");
+        device && device.setViewerActive(false);
+        return Promise.resolve();
     };
     NativescriptViewService.prototype._isHmdActive = function () {
         var device = vuforia.api && vuforia.api.getDevice();

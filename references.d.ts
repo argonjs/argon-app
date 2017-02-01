@@ -7,8 +7,8 @@ declare module 'polyfill-crypto.getrandomvalues';
 
 declare function alert(message?: any): void;
 
-interface HTMLElement {}
-interface HTMLDivElement {}
+type HTMLElement = never;
+type HTMLDivElement = never;
 
 interface Thenable<R> {
     then<U>(onFulfilled?: (value: R) => U | Thenable<U>,  onRejected?: (error: any) => U | Thenable<U>): Thenable<U>;

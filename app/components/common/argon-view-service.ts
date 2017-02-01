@@ -13,22 +13,18 @@ export class NativescriptViewService extends Argon.ViewService {
         super(container, sessionService, contextService, focusService);
     }
     
-    _requestEnterHMD(session:Argon.SessionPort) {
+    _requestEnterHmd(session:Argon.SessionPort) {
         this._ensurePersmission(session);
         const device = vuforia.api && vuforia.api.getDevice();
-        if (device && device.setViewerActive(true)) {
-            return Promise.resolve();
-        }
-        throw new Error("Unable to enter HMD mode");
+        device && device.setViewerActive(true);
+        return Promise.resolve();
     }
 
     _requestExitHmd(session:Argon.SessionPort) {
         this._ensurePersmission(session);
         const device = vuforia.api && vuforia.api.getDevice();
-        if (device && device.setViewerActive(false)) {
-            return Promise.resolve();
-        }        
-        throw new Error("Unable to exit HMD mode");
+        device && device.setViewerActive(false);
+        return Promise.resolve();
     }
 
     public _isHmdActive() {

@@ -3,9 +3,10 @@ import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from '@argonjs/argon';
 import {NativescriptDeviceService} from './argon-device-service';
-import {NativescriptVuforiaServiceDelegate} from './argon-vuforia-service';
+import {NativescriptVuforiaServiceManager} from './argon-vuforia-manager';
 import {NativescriptViewService} from './argon-view-service';
-import {Util} from './util';
+import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
+import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
 
 export interface LoadUrlEventData extends EventData {
@@ -17,6 +18,30 @@ export class LayerDetails extends Observable {
     uri = '';
     title = '';
     log = new ObservableArray<LogItem>();
+}
+
+@Argon.DI.inject(Argon.DI.Factory.of(NativescriptLiveRealityViewer), Argon.DI.Factory.of(NativescriptHostedRealityViewer))
+export abstract class NativescriptRealityViewerFactory {
+    constructor(
+        private _createLiveReality, 
+        private _createHostedReality) {
+    }
+
+    createRealityViewer(uri:string) : Argon.RealityViewer {
+        const viewerType = Argon.RealityViewer.getType(uri);
+        switch (viewerType) {
+            case Argon.RealityViewer.LIVE:
+                var realityViewer = this._createLiveReality();
+                realityViewer.uri = uri;
+                return realityViewer;
+            case 'hosted':
+                var realityViewer = this._createHostedReality();
+                realityViewer.uri = uri;
+                return realityViewer;
+            default:
+                throw new Error('Unsupported Reality Viewer URI: ' + uri)
+        }
+    }
 }
 
 export type InteractionMode = 'immersive'|'page';
@@ -58,32 +83,28 @@ export class AppViewModel extends Observable {
     setReady() {
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
-        container.registerSingleton(Argon.VuforiaServiceDelegate, NativescriptVuforiaServiceDelegate);
+        container.registerSingleton(Argon.VuforiaServiceManager, NativescriptVuforiaServiceManager);
         container.registerSingleton(Argon.ViewService, NativescriptViewService);
+        container.registerSingleton(Argon.RealityViewerFactory, NativescriptRealityViewerFactory);
 
-        const manager = this.manager = Argon.init({
-            container, 
-            configuration: {
-                role: Argon.Role.MANAGER,
-                name: 'ArgonApp'
-            }
-        });
+        const manager = this.manager = Argon.init(null, {
+            role: Argon.Role.MANAGER,
+            title: 'ArgonApp'
+        }, container);
 
         manager.reality.default = Argon.RealityViewer.LIVE;
 
         manager.reality.installedEvent.addEventListener(({viewer})=>{
-            let item = bookmarks.realityMap.get(viewer.uri);
-            if (!item) {
-                item = new bookmarks.BookmarkItem({uri: viewer.uri});
-                bookmarks.realityList.push();
+            if (!bookmarks.realityMap.get(viewer.uri)) {
+                bookmarks.realityList.push(new bookmarks.BookmarkItem({uri: viewer.uri}));
             }
         });
 
         manager.reality.uninstalledEvent.addEventListener(({viewer})=>{
             const item = bookmarks.realityMap.get(viewer.uri);
-            if (item && !item.builtin) {
-                var i = bookmarks.realityList.indexOf(item);
-                bookmarks.realityList.splice(i, 1);
+            if (item) {
+                var idx = bookmarks.realityList.indexOf(item);
+                bookmarks.realityList.splice(idx, 1);
             }
         });
         
@@ -93,16 +114,16 @@ export class AppViewModel extends Observable {
 
         manager.vuforia.isAvailable().then((available)=>{
             if (available) {
-                const primaryVuforiaLicenseKey = Util.getInternalVuforiaKey();
+                const primaryVuforiaLicenseKey = getInternalVuforiaKey();
                 if (!primaryVuforiaLicenseKey) {
-                    alert("Unable to locate Vuforia License Key");
+                    alert("Unable to locate internal Vuforia License Key");
                     return;
                 }
                 manager.vuforia.initWithUnencryptedKey({key:primaryVuforiaLicenseKey}).catch((err)=>{
                     alert(err.message);
                 });
             }
-        })
+        });
         
         this._resolveReady();
     }
@@ -168,11 +189,13 @@ export class AppViewModel extends Observable {
     }
     
     toggleViewer() {
-        this.set('viewerEnabled', !this.viewerEnabled);
+        this.setViewerEnabled(!this.viewerEnabled);
     }
     
     setViewerEnabled(enabled:boolean) {
         this.set('viewerEnabled', enabled);
+        if (enabled) this.manager.view.requestEnterHmd();
+        else this.manager.view.requestExitHmd();
     }
 
     _onLayerDetailsChange(data:PropertyChangeData) {

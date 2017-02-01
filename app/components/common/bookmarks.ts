@@ -14,7 +14,13 @@ class BookmarkItem extends Observable {
         title?:string,
         uri:string
     }) {
-        super(item)
+        super(item);
+        const uri = item.uri;
+        // reuse an existing BookmarkItem if one exists
+        if (historyMap.has(uri)) return historyMap.get(uri)!; 
+        if (realityMap.has(uri)) return realityMap.get(uri)!; 
+        if (favoriteMap.has(uri)) return favoriteMap.get(uri)!; 
+        return this;
     }
     
     toJSON() {
@@ -84,7 +90,8 @@ if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
     console.log(applicationSettings.getString(FAVORITE_LIST_KEY))
     const savedFavorites:Array<BookmarkItem> = JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY));
     savedFavorites.forEach((item)=>{
-        favoriteList.push(new BookmarkItem(item));
+        if (!favoriteMap.has(item.uri))
+            favoriteList.push(new BookmarkItem(item));
     });
 }
 

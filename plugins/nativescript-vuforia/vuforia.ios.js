@@ -67,6 +67,7 @@ var API = (function (_super) {
                 if (result === 100 /* SUCCESS */) {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
+                    setTimeout(configureVuforiaSurface, 500);
                     VuforiaSession.registerCallback(function (state) {
                         if (_this.callback)
                             _this.callback(new State(state));
@@ -115,10 +116,7 @@ var API = (function (_super) {
         return VuforiaSession.scaleFactor();
     };
     API.prototype.onSurfaceChanged = function (width, height) {
-        VuforiaSession.onSurfaceChanged({
-            x: width,
-            y: height
-        });
+        VuforiaSession.onSurfaceChangedWidthHeight(width, height);
         var orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
             case 1 /* Portrait */:

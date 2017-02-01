@@ -3,10 +3,18 @@ var Argon = require("@argonjs/argon");
 var vuforia = require("nativescript-vuforia");
 var http = require("http");
 var file = require("file-system");
-var argon_device_service_1 = require("./argon-device-service");
+var platform = require("platform");
+var absolute_layout_1 = require("ui/layouts/absolute-layout");
 var util_1 = require("./util");
 var minimatch = require("minimatch");
 var URI = require("urijs");
+var DEBUG_DISABLE_ORIGIN_CHECK = true;
+exports.vuforiaCameraDeviceMode = -3 /* OpimizeQuality */;
+if (vuforia.videoView.ios) {
+    vuforia.videoView.ios.contentScaleFactor =
+        exports.vuforiaCameraDeviceMode === -2 /* OptimizeSpeed */ ?
+            1 : platform.screen.mainScreen.scale;
+}
 exports.VIDEO_DELAY = -0.5 / 60;
 var Matrix4 = Argon.Cesium.Matrix4;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -29,6 +37,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         });
         _this.stateUpdateEvent = new Argon.Event();
         _this._trackingEnabled = true;
+        _this._config = {};
         _this.idDataSetMap = new Map();
         _this.dataSetUrlMap = new WeakMap();
         if (!vuforia.api)
@@ -130,7 +139,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         return vuforia.api.setHint(hint, value);
     };
     NativescriptVuforiaServiceDelegate.prototype.decryptLicenseKey = function (encryptedLicenseData, session) {
-        return util_1.Util.decrypt(encryptedLicenseData.trim()).then(function (json) {
+        return util_1.decrypt(encryptedLicenseData.trim()).then(function (json) {
             var _a = JSON.parse(json), key = _a.key, origins = _a.origins;
             if (!session.uri)
                 throw new Error('Invalid origin');
@@ -144,7 +153,7 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
                 var pathPattern = parts[1] || '**';
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             });
-            if (!match) {
+            if (!match && !DEBUG_DISABLE_ORIGIN_CHECK) {
                 throw new Error('Invalid origin');
             }
             return key;
@@ -167,15 +176,61 @@ var NativescriptVuforiaServiceDelegate = (function (_super) {
         vuforia.api.getCameraDevice().deinit();
         vuforia.api.deinit();
     };
+    NativescriptVuforiaServiceDelegate.prototype.configureVuforiaVideoBackground = function (viewport, enabled, reflection) {
+        if (reflection === void 0) { reflection = 0 /* Default */; }
+        var viewWidth = viewport.width;
+        var viewHeight = viewport.height;
+        var cameraDevice = vuforia.api.getCameraDevice();
+        var videoMode = cameraDevice.getVideoMode(exports.vuforiaCameraDeviceMode);
+        var videoWidth = videoMode.width;
+        var videoHeight = videoMode.height;
+        var orientation = util_1.getDisplayOrientation();
+        if (orientation === 0 || orientation === 180) {
+            videoWidth = videoMode.height;
+            videoHeight = videoMode.width;
+        }
+        var widthRatio = viewWidth / videoWidth;
+        var heightRatio = viewHeight / videoHeight;
+        // aspect fill
+        var scale = Math.max(widthRatio, heightRatio);
+        // aspect fit
+        // const scale = Math.min(widthRatio, heightRatio);
+        var videoView = vuforia.videoView;
+        var contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
+        // apply the video config
+        var config = this._config;
+        config.enabled = enabled;
+        config.sizeX = videoWidth * scale * contentScaleFactor;
+        config.sizeY = videoHeight * scale * contentScaleFactor;
+        config.positionX = 0;
+        config.positionY = 0;
+        config.reflection = 0 /* Default */;
+        // console.log(`Vuforia configuring video background...
+        //     contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
+        //     viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
+        //     config: ${JSON.stringify(config)}
+        // `);
+        absolute_layout_1.AbsoluteLayout.setLeft(videoView, viewport.x);
+        absolute_layout_1.AbsoluteLayout.setTop(videoView, viewport.y);
+        videoView.width = viewWidth;
+        videoView.height = viewHeight;
+        vuforia.api.getRenderer().setVideoBackgroundConfig(config);
+    };
     NativescriptVuforiaServiceDelegate.prototype.cameraDeviceInitAndStart = function () {
         var cameraDevice = vuforia.api.getCameraDevice();
         console.log("Vuforia initializing camera device");
         if (!cameraDevice.init(0 /* Default */))
             return false;
-        if (!cameraDevice.selectVideoMode(argon_device_service_1.vuforiaCameraDeviceMode))
+        if (!cameraDevice.selectVideoMode(exports.vuforiaCameraDeviceMode))
             return false;
         var device = vuforia.api.getDevice();
         device.setMode(0 /* AR */);
+        this.configureVuforiaVideoBackground({
+            x: 0,
+            y: 0,
+            width: vuforia.videoView.getMeasuredWidth(),
+            height: vuforia.videoView.getMeasuredHeight()
+        }, false);
         this._configureCameraAndTrackers();
         return true;
     };

@@ -251,7 +251,7 @@ typedef NS_ENUM (NSInteger, VuforiaRotation) {
 
 
 /// Executes AR-specific tasks upon the onSurfaceChanged render surface event
-+ (void) onSurfaceChanged:(VuforiaVec2I)size;
++ (void) onSurfaceChangedWidth:(int)w height:(int)h;
 
 /// Set the scale factor for rendering the video
 + (void) setScaleFactor:(float)f;

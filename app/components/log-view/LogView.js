@@ -5,13 +5,9 @@ var enums = require("ui/enums");
 var label;
 var shadow;
 function onLayoutLoaded(args) {
-    args.object.backgroundColor = new color_1.Color('transparent');
-}
-exports.onLayoutLoaded = onLayoutLoaded;
-function onLoaded(args) {
-    label = args.object;
-    label.bindingContext = AppViewModel_1.appViewModel;
-    label.verticalAlignment = enums.VerticalAlignment.bottom;
+    var layout = args.object;
+    layout.backgroundColor = new color_1.Color('transparent');
+    layout.bindingContext = AppViewModel_1.appViewModel;
     AppViewModel_1.appViewModel['getRecentLogItems'] = function () {
         var logs = AppViewModel_1.appViewModel.layerDetails.log;
         updateLogListener(logs);
@@ -22,6 +18,11 @@ function onLoaded(args) {
             updateLogListener(AppViewModel_1.appViewModel.layerDetails.log);
         }
     });
+}
+exports.onLayoutLoaded = onLayoutLoaded;
+function onLoaded(args) {
+    label = args.object;
+    label.verticalAlignment = enums.VerticalAlignment.bottom;
 }
 exports.onLoaded = onLoaded;
 function onShadowLoaded(args) {

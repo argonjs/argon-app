@@ -1,7 +1,7 @@
+import * as URI from 'urijs';
 import {View} from 'ui/core/view';
 import {ScrollView} from 'ui/scroll-view'
 import {Color} from 'color';
-import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
 import {Label} from 'ui/label';
 import {Button} from 'ui/button';
@@ -17,7 +17,7 @@ import {
 import {
   GestureTypes
 } from 'ui/gestures';
-import {Util} from './common/util';
+import {bringToFront} from './common/util';
 import {PropertyChangeData} from 'data/observable'
 import * as vuforia from 'nativescript-vuforia';
 import * as application from 'application';
@@ -101,10 +101,8 @@ export class BrowserView extends GridLayout {
         if (this.videoView) {
             this.videoView.horizontalAlignment = 'stretch';
             this.videoView.verticalAlignment = 'stretch';
-            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
-            const videoViewLayout = new AbsoluteLayout();
-            videoViewLayout.addChild(this.videoView);
-            layer.contentView.addChild(videoViewLayout);
+            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
+            layer.contentView.addChild(this.videoView);
         }
 
         appViewModel.ready.then(()=>{
@@ -115,6 +113,7 @@ export class BrowserView extends GridLayout {
                     const webView = viewer.webView;
                     webView.horizontalAlignment = 'stretch';
                     webView.verticalAlignment = 'stretch';
+                    webView.visibility = 'collapse';
                     layer.contentView.addChild(webView);
                     this.realityWebviews.set(viewer.uri, webView);
                 }
@@ -131,6 +130,7 @@ export class BrowserView extends GridLayout {
                 const viewer = manager.reality.getViewerByURI(current!)!;
                 const details = layer.details;
                 details.set('uri', viewer.uri);
+                details.set('title', 'Reality: ' + getHost(viewer.uri));
 
                 var sessionPromise = new Promise<Argon.SessionPort>((resolve, reject) => {
                     if (viewer.session && !viewer.session.isClosed) {
@@ -145,7 +145,7 @@ export class BrowserView extends GridLayout {
 
                 sessionPromise.then((session)=>{
                     if (current === manager.reality.current) {
-                        details.set('title', 'Reality: ' + session.info.title);
+                        if (session.info.title) details.set('title', 'Reality: ' + session.info.title);
                     }
                 });
             });
@@ -168,8 +168,9 @@ export class BrowserView extends GridLayout {
                     layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
-                    bookmarks.updateTitle(webView.url, eventData.value);
-                    layer.details.set('title', eventData.value);
+                    const title = webView.title || getHost(webView.url);
+                    bookmarks.updateTitle(webView.url, title);
+                    layer.details.set('title', title);
                     break;
                 case 'isArgonApp':
                     const isArgonApp = eventData.value;
@@ -215,11 +216,6 @@ export class BrowserView extends GridLayout {
                 layer.session = undefined;
             })
         });
-
-        layer.titleLabel.bind({
-            sourceProperty: 'title',
-            targetProperty: 'text'
-        }, layer.details);
 
         layer.details.set('log', webView.log);
         
@@ -305,6 +301,11 @@ export class BrowserView extends GridLayout {
         };
         
         this.layers.push(layer);
+
+        layer.titleLabel.bind({
+            sourceProperty: 'title',
+            targetProperty: 'text'
+        }, layer.details);
 
         return layer;
     }
@@ -516,7 +517,7 @@ export class BrowserView extends GridLayout {
     public loadUrl(url:string) {
         if (this.focussedLayer !== this.realityLayer) {
             this.focussedLayer.details.set('uri',url);
-            this.focussedLayer.details.set('title','');
+            this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite',false);
         }
         if (this.focussedLayer.webView) {
@@ -537,7 +538,7 @@ export class BrowserView extends GridLayout {
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
                 this.layers.push(layer);
-                Util.bringToFront(layer.containerView);
+                bringToFront(layer.containerView);
             }
         }
     }
@@ -545,4 +546,9 @@ export class BrowserView extends GridLayout {
     get focussedLayer() {
         return this._focussedLayer;
     }
+}
+
+
+function getHost(uri:string) {
+    return URI.parse(uri).hostname;
 }

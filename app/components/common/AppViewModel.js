@@ -4,8 +4,9 @@ var observable_array_1 = require("data/observable-array");
 var bookmarks = require("./bookmarks");
 var Argon = require("@argonjs/argon");
 var argon_device_service_1 = require("./argon-device-service");
-var argon_vuforia_service_1 = require("./argon-vuforia-service");
+var argon_vuforia_manager_1 = require("./argon-vuforia-manager");
 var argon_view_service_1 = require("./argon-view-service");
+var argon_reality_viewers_1 = require("./argon-reality-viewers");
 var util_1 = require("./util");
 var LayerDetails = (function (_super) {
     __extends(LayerDetails, _super);
@@ -19,6 +20,32 @@ var LayerDetails = (function (_super) {
     return LayerDetails;
 }(observable_1.Observable));
 exports.LayerDetails = LayerDetails;
+var NativescriptRealityViewerFactory = (function () {
+    function NativescriptRealityViewerFactory(_createLiveReality, _createHostedReality) {
+        this._createLiveReality = _createLiveReality;
+        this._createHostedReality = _createHostedReality;
+    }
+    NativescriptRealityViewerFactory.prototype.createRealityViewer = function (uri) {
+        var viewerType = Argon.RealityViewer.getType(uri);
+        switch (viewerType) {
+            case Argon.RealityViewer.LIVE:
+                var realityViewer = this._createLiveReality();
+                realityViewer.uri = uri;
+                return realityViewer;
+            case 'hosted':
+                var realityViewer = this._createHostedReality();
+                realityViewer.uri = uri;
+                return realityViewer;
+            default:
+                throw new Error('Unsupported Reality Viewer URI: ' + uri);
+        }
+    };
+    return NativescriptRealityViewerFactory;
+}());
+NativescriptRealityViewerFactory = __decorate([
+    Argon.DI.inject(Argon.DI.Factory.of(argon_reality_viewers_1.NativescriptLiveRealityViewer), Argon.DI.Factory.of(argon_reality_viewers_1.NativescriptHostedRealityViewer))
+], NativescriptRealityViewerFactory);
+exports.NativescriptRealityViewerFactory = NativescriptRealityViewerFactory;
 var AppViewModel = (function (_super) {
     __extends(AppViewModel, _super);
     function AppViewModel() {
@@ -48,30 +75,26 @@ var AppViewModel = (function (_super) {
     AppViewModel.prototype.setReady = function () {
         var container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, argon_device_service_1.NativescriptDeviceService);
-        container.registerSingleton(Argon.VuforiaServiceDelegate, argon_vuforia_service_1.NativescriptVuforiaServiceDelegate);
+        container.registerSingleton(Argon.VuforiaServiceManager, argon_vuforia_manager_1.NativescriptVuforiaServiceManager);
         container.registerSingleton(Argon.ViewService, argon_view_service_1.NativescriptViewService);
-        var manager = this.manager = Argon.init({
-            container: container,
-            configuration: {
-                role: Argon.Role.MANAGER,
-                name: 'ArgonApp'
-            }
-        });
+        container.registerSingleton(Argon.RealityViewerFactory, NativescriptRealityViewerFactory);
+        var manager = this.manager = Argon.init(null, {
+            role: Argon.Role.MANAGER,
+            title: 'ArgonApp'
+        }, container);
         manager.reality.default = Argon.RealityViewer.LIVE;
         manager.reality.installedEvent.addEventListener(function (_a) {
             var viewer = _a.viewer;
-            var item = bookmarks.realityMap.get(viewer.uri);
-            if (!item) {
-                item = new bookmarks.BookmarkItem({ uri: viewer.uri });
-                bookmarks.realityList.push();
+            if (!bookmarks.realityMap.get(viewer.uri)) {
+                bookmarks.realityList.push(new bookmarks.BookmarkItem({ uri: viewer.uri }));
             }
         });
         manager.reality.uninstalledEvent.addEventListener(function (_a) {
             var viewer = _a.viewer;
             var item = bookmarks.realityMap.get(viewer.uri);
-            if (item && !item.builtin) {
-                var i = bookmarks.realityList.indexOf(item);
-                bookmarks.realityList.splice(i, 1);
+            if (item) {
+                var idx = bookmarks.realityList.indexOf(item);
+                bookmarks.realityList.splice(idx, 1);
             }
         });
         manager.focus.sessionFocusEvent.addEventListener(function (_a) {
@@ -80,9 +103,9 @@ var AppViewModel = (function (_super) {
         });
         manager.vuforia.isAvailable().then(function (available) {
             if (available) {
-                var primaryVuforiaLicenseKey = util_1.Util.getInternalVuforiaKey();
+                var primaryVuforiaLicenseKey = util_1.getInternalVuforiaKey();
                 if (!primaryVuforiaLicenseKey) {
-                    alert("Unable to locate Vuforia License Key");
+                    alert("Unable to locate internal Vuforia License Key");
                     return;
                 }
                 manager.vuforia.initWithUnencryptedKey({ key: primaryVuforiaLicenseKey }).catch(function (err) {
@@ -138,10 +161,14 @@ var AppViewModel = (function (_super) {
         this.set('debugEnabled', enabled);
     };
     AppViewModel.prototype.toggleViewer = function () {
-        this.set('viewerEnabled', !this.viewerEnabled);
+        this.setViewerEnabled(!this.viewerEnabled);
     };
     AppViewModel.prototype.setViewerEnabled = function (enabled) {
         this.set('viewerEnabled', enabled);
+        if (enabled)
+            this.manager.view.requestEnterHmd();
+        else
+            this.manager.view.requestExitHmd();
     };
     AppViewModel.prototype._onLayerDetailsChange = function (data) {
         if (data.propertyName === 'uri') {

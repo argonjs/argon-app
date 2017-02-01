@@ -1,6 +1,5 @@
 "use strict";
 var URI = require("urijs");
-var Argon = require("@argonjs/argon");
 var application = require("application");
 var utils = require("utils/utils");
 var search_bar_1 = require("ui/search-bar");
@@ -19,8 +18,8 @@ AppViewModel_1.appViewModel.on('propertyChange', function (evt) {
         setSearchBarText(AppViewModel_1.appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
-        var vuforiaDelegate = AppViewModel_1.appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
-        vuforiaDelegate.viewerEnabled = evt.value;
+        // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
+        // vuforiaDelegate.viewerEnabled = evt.value;
         if (evt.value) {
             orientationModule.setCurrentOrientation("landscape");
         }

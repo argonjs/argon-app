@@ -10,13 +10,9 @@ let label:Label;
 let shadow:Label;
 
 export function onLayoutLoaded(args) {
-    args.object.backgroundColor = new Color('transparent');
-}
-
-export function onLoaded(args) {
-    label = args.object;
-    label.bindingContext = appViewModel;
-    label.verticalAlignment = enums.VerticalAlignment.bottom;
+    const layout = args.object;
+    layout.backgroundColor = new Color('transparent');
+    layout.bindingContext = appViewModel;
 
     appViewModel['getRecentLogItems'] = function() {
         const logs = appViewModel.layerDetails.log
@@ -29,6 +25,11 @@ export function onLoaded(args) {
             updateLogListener(appViewModel.layerDetails.log);
         }
     })
+}
+
+export function onLoaded(args) {
+    label = args.object;
+    label.verticalAlignment = enums.VerticalAlignment.bottom;
 }
 
 export function onShadowLoaded(args) {

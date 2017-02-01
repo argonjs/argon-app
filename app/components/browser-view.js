@@ -1,7 +1,7 @@
 "use strict";
+var URI = require("urijs");
 var scroll_view_1 = require("ui/scroll-view");
 var color_1 = require("color");
-var absolute_layout_1 = require("ui/layouts/absolute-layout");
 var grid_layout_1 = require("ui/layouts/grid-layout");
 var label_1 = require("ui/label");
 var button_1 = require("ui/button");
@@ -66,9 +66,7 @@ var BrowserView = (function (_super) {
             this.videoView.verticalAlignment = 'stretch';
             if (this.videoView.parent)
                 this.videoView.parent._removeView(this.videoView);
-            var videoViewLayout = new absolute_layout_1.AbsoluteLayout();
-            videoViewLayout.addChild(this.videoView);
-            layer.contentView.addChild(videoViewLayout);
+            layer.contentView.addChild(this.videoView);
         }
         AppViewModel_1.appViewModel.ready.then(function () {
             var manager = AppViewModel_1.appViewModel.manager;
@@ -78,6 +76,7 @@ var BrowserView = (function (_super) {
                     var webView = viewer.webView;
                     webView.horizontalAlignment = 'stretch';
                     webView.verticalAlignment = 'stretch';
+                    webView.visibility = 'collapse';
                     layer.contentView.addChild(webView);
                     _this.realityWebviews.set(viewer.uri, webView);
                 }
@@ -94,6 +93,7 @@ var BrowserView = (function (_super) {
                 var viewer = manager.reality.getViewerByURI(current);
                 var details = layer.details;
                 details.set('uri', viewer.uri);
+                details.set('title', 'Reality: ' + getHost(viewer.uri));
                 var sessionPromise = new Promise(function (resolve, reject) {
                     if (viewer.session && !viewer.session.isClosed) {
                         resolve(viewer.session);
@@ -107,7 +107,8 @@ var BrowserView = (function (_super) {
                 });
                 sessionPromise.then(function (session) {
                     if (current === manager.reality.current) {
-                        details.set('title', 'Reality: ' + session.info.title);
+                        if (session.info.title)
+                            details.set('title', 'Reality: ' + session.info.title);
                     }
                 });
             });
@@ -127,8 +128,9 @@ var BrowserView = (function (_super) {
                     layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
-                    bookmarks.updateTitle(webView.url, eventData.value);
-                    layer.details.set('title', eventData.value);
+                    var title = webView.title || getHost(webView.url);
+                    bookmarks.updateTitle(webView.url, title);
+                    layer.details.set('title', title);
                     break;
                 case 'isArgonApp':
                     var isArgonApp = eventData.value;
@@ -174,10 +176,6 @@ var BrowserView = (function (_super) {
                 layer.session = undefined;
             });
         });
-        layer.titleLabel.bind({
-            sourceProperty: 'title',
-            targetProperty: 'text'
-        }, layer.details);
         layer.details.set('log', webView.log);
         if (this.isLoaded)
             this.setFocussedLayer(layer);
@@ -250,6 +248,10 @@ var BrowserView = (function (_super) {
             details: new AppViewModel_1.LayerDetails()
         };
         this.layers.push(layer);
+        layer.titleLabel.bind({
+            sourceProperty: 'title',
+            targetProperty: 'text'
+        }, layer.details);
         return layer;
     };
     BrowserView.prototype.removeLayerAtIndex = function (index) {
@@ -428,7 +430,7 @@ var BrowserView = (function (_super) {
     BrowserView.prototype.loadUrl = function (url) {
         if (this.focussedLayer !== this.realityLayer) {
             this.focussedLayer.details.set('uri', url);
-            this.focussedLayer.details.set('title', '');
+            this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite', false);
         }
         if (this.focussedLayer.webView) {
@@ -449,7 +451,7 @@ var BrowserView = (function (_super) {
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
                 this.layers.push(layer);
-                util_1.Util.bringToFront(layer.containerView);
+                util_1.bringToFront(layer.containerView);
             }
         }
     };
@@ -463,4 +465,7 @@ var BrowserView = (function (_super) {
     return BrowserView;
 }(grid_layout_1.GridLayout));
 exports.BrowserView = BrowserView;
+function getHost(uri) {
+    return URI.parse(uri).hostname;
+}
 //# sourceMappingURL=browser-view.js.map

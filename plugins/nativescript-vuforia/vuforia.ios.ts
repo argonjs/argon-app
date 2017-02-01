@@ -79,6 +79,7 @@ export class API extends common.APIBase {
                 if (result === VuforiaInitResult.SUCCESS) {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
+                    setTimeout(configureVuforiaSurface, 500);
                     VuforiaSession.registerCallback((state)=>{
                         if (this.callback)
                          this.callback(new State(state));
@@ -136,10 +137,7 @@ export class API extends common.APIBase {
     }
 
     onSurfaceChanged(width:number, height:number) : void {
-        VuforiaSession.onSurfaceChanged({
-            x: width,
-            y: height
-        });
+        VuforiaSession.onSurfaceChangedWidthHeight(width, height);
         const orientation:UIInterfaceOrientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
             case UIInterfaceOrientation.Portrait: 
@@ -571,7 +569,7 @@ export class Renderer {
     getRecommendedFps(flags: def.FPSHint): number {
         return VuforiaRenderer.getRecommendedFps(<number>flags);
     }
-    getVideoBackgroundConfig(): def.VideoBackgroundConfig {
+    getVideoBackgroundConfig() : def.VideoBackgroundConfig {
         return VuforiaRenderer.getVideoBackgroundConfig();
     }
     setTargetFps(fps: number): boolean {

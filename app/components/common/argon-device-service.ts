@@ -4,7 +4,6 @@ import * as geolocation from 'speigg-nativescript-geolocation';
 import * as dialogs from 'ui/dialogs';
 import * as enums from 'ui/enums';
 import * as frames from 'ui/frame';
-import * as platform from 'platform';
 
 import * as Argon from "@argonjs/argon";
 import * as vuforia from 'nativescript-vuforia';
@@ -22,13 +21,6 @@ const ONE = new Cartesian3(1,1,1);
 
 const scratchQuaternion = new Quaternion;
 const scratchMatrix4 = new Matrix4;
-
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor = 
-        vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
-        1 : platform.screen.mainScreen.scale;
-}
 
 @Argon.DI.inject(Argon.SessionService, Argon.ContextService, Argon.ViewService)
 export class NativescriptDeviceService extends Argon.DeviceService {
@@ -66,11 +58,12 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         // const cameraDevice = vuforia.api.getCameraDevice();
         // const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode);
 
-        if (vuforia.api && vuforia.api.getDevice().isViewerActive()) {
-            const device = vuforia.api.getDevice();
-            const renderingPrimitives = device.getRenderingPrimitives();
-            const renderingViews = renderingPrimitives.getRenderingViews();
-            const numViews = renderingViews.getNumViews()
+        const device = vuforia.api && vuforia.api.getDevice();
+        const renderingPrimitives = device && device.getRenderingPrimitives();
+        const renderingViews = renderingPrimitives && renderingPrimitives.getRenderingViews();
+        const numViews = renderingViews && renderingViews.getNumViews();
+
+        if (numViews > 0) {
 
             const contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor;
 
@@ -99,8 +92,8 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 const subviewViewport = subview.viewport = subview.viewport || <Argon.Viewport>{};
                 subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
                 subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
-                // const subviewWidth = subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
-                // const subviewHeight = subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
+                subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
+                subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
 
                 // Determine the desired subview projection matrix
 
@@ -220,13 +213,13 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
     private ensureLocationManager() {
         if (application.ios && !this.locationManager) {
+            this.locationManager = CLLocationManager.alloc().init();
 
             switch (CLLocationManager.authorizationStatus()) {
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedWhenInUse:
                 case CLAuthorizationStatus.kCLAuthorizationStatusAuthorizedAlways: 
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusNotDetermined:
-                    this.locationManager = CLLocationManager.alloc().init();
                     this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case CLAuthorizationStatus.kCLAuthorizationStatusDenied:
@@ -365,7 +358,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
                 let headingAccuracy:number|undefined;
                 if (utils.ios.getter(locationManager, locationManager.headingAvailable)) {
-                    headingAccuracy = locationManager.heading.headingAccuracy;
+                    headingAccuracy = locationManager.heading ? locationManager.heading.headingAccuracy : undefined;
                 }
 
                 this._setOrientation(orientation, displayOrientationDegrees, headingAccuracy);

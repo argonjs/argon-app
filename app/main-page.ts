@@ -1,5 +1,4 @@
 import * as URI from 'urijs';
-import * as Argon from '@argonjs/argon';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 import {SearchBar} from 'ui/search-bar';
@@ -37,8 +36,8 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         setSearchBarText(appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
-        const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
-        vuforiaDelegate.viewerEnabled = evt.value;
+        // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
+        // vuforiaDelegate.viewerEnabled = evt.value;
         if (evt.value) {
             orientationModule.setCurrentOrientation("landscape");
         } else {

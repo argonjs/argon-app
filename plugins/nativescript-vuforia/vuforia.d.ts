@@ -13,7 +13,7 @@ declare module "nativescript-vuforia" {
         DelayedLoadingObjectDatasets = 2
     }
     
-    const enum InitResult {
+    export enum InitResult {
         SUCCESS = 100,
         ERROR = -1,
         DEVICE_NOT_SUPPORTED = -2,

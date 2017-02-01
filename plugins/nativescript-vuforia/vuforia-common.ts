@@ -1,5 +1,19 @@
 require('globals')
 import def = require('nativescript-vuforia');
+    
+export enum InitResult {
+    SUCCESS = 100,
+    ERROR = -1,
+    DEVICE_NOT_SUPPORTED = -2,
+    NO_CAMERA_ACCESS = -3,
+    LICENSE_ERROR_MISSING_KEY = -4,
+    LICENSE_ERROR_INVALID_KEY = -5,
+    LICENSE_ERROR_NO_NETWORK_PERMANENT = -6,
+    LICENSE_ERROR_NO_NETWORK_TRANSIENT = -7,
+    LICENSE_ERROR_CANCELED_KEY = -8,
+    LICENSE_ERROR_PRODUCT_TYPE_MISMATCH = -9,
+    EXTERNAL_DEVICE_NOT_DETECTED = -10
+}
 
 export abstract class APIBase implements def.API {
     abstract setLicenseKey(licenseKey:string) : boolean;

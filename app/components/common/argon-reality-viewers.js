@@ -2,10 +2,7 @@
 var Argon = require("@argonjs/argon");
 var vuforia = require("nativescript-vuforia");
 var enums = require("ui/enums");
-var absolute_layout_1 = require("ui/layouts/absolute-layout");
 var argon_web_view_1 = require("argon-web-view");
-var argon_device_service_1 = require("./argon-device-service");
-var util_1 = require("./util");
 var gestures_1 = require("ui/gestures");
 var NativescriptLiveRealityViewer = (function (_super) {
     __extends(NativescriptLiveRealityViewer, _super);
@@ -18,7 +15,6 @@ var NativescriptLiveRealityViewer = (function (_super) {
         _this._scratchTouchPos1 = new Argon.Cesium.Cartesian2;
         _this._scratchTouchPos2 = new Argon.Cesium.Cartesian2;
         _this._scratchFrustum = new Argon.Cesium.PerspectiveFrustum;
-        _this._lastEnabledState = false;
         _this.presentChangeEvent.addEventListener(function () {
             _this.videoView.visibility = _this.isPresenting ? enums.Visibility.visible : enums.Visibility.collapse;
         });
@@ -58,7 +54,7 @@ var NativescriptLiveRealityViewer = (function (_super) {
                 this._currentPinchDistance = dist;
                 this._handlePinchGestureEventData({
                     state: gestures_1.GestureStateTypes.changed,
-                    scale: this._startPinchDistance / this._currentPinchDistance
+                    scale: this._currentPinchDistance / this._startPinchDistance
                 });
             }
         }
@@ -66,7 +62,7 @@ var NativescriptLiveRealityViewer = (function (_super) {
             if (this._startPinchDistance !== undefined) {
                 this._handlePinchGestureEventData({
                     state: gestures_1.GestureStateTypes.ended,
-                    scale: this._startPinchDistance / this._currentPinchDistance
+                    scale: this._currentPinchDistance / this._startPinchDistance
                 });
                 this._startPinchDistance = undefined;
                 this._currentPinchDistance = undefined;
@@ -76,7 +72,8 @@ var NativescriptLiveRealityViewer = (function (_super) {
     NativescriptLiveRealityViewer.prototype.setupInternalSession = function (session) {
         var _this = this;
         _super.prototype.setupInternalSession.call(this, session);
-        vuforia.videoView.on(gestures_1.GestureTypes.pinch, this._handlePinchGestureEventData, this);
+        console.log("Setting up Vuforia viewer session");
+        vuforia.videoView.parent.on(gestures_1.GestureTypes.pinch, this._handlePinchGestureEventData, this);
         session.on['ar.view.uievent'] = function (uievent) {
             _this._handleForwardedDOMTouchEventData(uievent);
         };
@@ -103,7 +100,7 @@ var NativescriptLiveRealityViewer = (function (_super) {
                 // apply the projection scale
                 vuforia.api.setScaleFactor(_this._effectiveZoomFactor);
                 // configure video
-                _this.configureVuforiaVideoBackground(device.viewport);
+                _this._vuforiaDelegate.configureVuforiaVideoBackground(device.viewport, _this.isPresenting);
                 var viewState = {
                     time: time,
                     subviews: subviews,
@@ -118,57 +115,10 @@ var NativescriptLiveRealityViewer = (function (_super) {
         });
         session.closeEvent.addEventListener(function () { return remove(); });
     };
-    NativescriptLiveRealityViewer.prototype.configureVuforiaVideoBackground = function (viewport) {
-        var enabled = this.isPresenting;
-        if (viewport && this._lastViewportState &&
-            this._lastViewportState.x == viewport.x &&
-            this._lastViewportState.y == viewport.y &&
-            this._lastViewportState.width == viewport.width &&
-            this._lastViewportState.height == viewport.height &&
-            this._lastEnabledState == enabled)
-            return; // already configured
-        this._lastViewportState = Argon.Viewport.clone(viewport, this._lastViewportState);
-        this._lastEnabledState = enabled;
-        var viewWidth = viewport.width;
-        var viewHeight = viewport.height;
-        var videoView = vuforia.videoView;
-        absolute_layout_1.AbsoluteLayout.setLeft(videoView, viewport.x);
-        absolute_layout_1.AbsoluteLayout.setTop(videoView, viewport.y);
-        videoView.width = viewWidth;
-        videoView.height = viewHeight;
-        var cameraDevice = vuforia.api.getCameraDevice();
-        var videoMode = cameraDevice.getVideoMode(argon_device_service_1.vuforiaCameraDeviceMode);
-        var videoWidth = videoMode.width;
-        var videoHeight = videoMode.height;
-        var orientation = util_1.getDisplayOrientation();
-        if (orientation === 0 || orientation === 180) {
-            videoWidth = videoMode.height;
-            videoHeight = videoMode.width;
-        }
-        var widthRatio = viewWidth / videoWidth;
-        var heightRatio = viewHeight / videoHeight;
-        // aspect fill
-        var scale = Math.max(widthRatio, heightRatio);
-        // aspect fit
-        // const scale = Math.min(widthRatio, heightRatio);
-        var contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
-        // apply the video config
-        var config = {
-            enabled: enabled,
-            positionX: 0,
-            positionY: 0,
-            sizeX: videoWidth * scale * contentScaleFactor,
-            sizeY: videoHeight * scale * contentScaleFactor,
-            reflection: 0 /* Default */
-        };
-        console.log("Vuforia configuring video background...\n            contentScaleFactor: " + contentScaleFactor + " orientation: " + orientation + " \n            viewWidth: " + viewWidth + " viewHeight: " + viewHeight + " videoWidth: " + videoWidth + " videoHeight: " + videoHeight + " \n            config: " + JSON.stringify(config) + "\n        ");
-        vuforia.api.getRenderer().setVideoBackgroundConfig(config);
-        vuforia.api.onSurfaceChanged(viewWidth * contentScaleFactor, viewHeight * contentScaleFactor);
-    };
     return NativescriptLiveRealityViewer;
 }(Argon.LiveRealityViewer));
 NativescriptLiveRealityViewer = __decorate([
-    Argon.DI.inject(Argon.SessionService, Argon.ViewService, Argon.DeviceService, Argon.VuforiaServiceDelegate)
+    Argon.DI.inject(Argon.SessionService, Argon.ViewService, Argon.DeviceService, Argon.VuforiaServiceManager)
 ], NativescriptLiveRealityViewer);
 exports.NativescriptLiveRealityViewer = NativescriptLiveRealityViewer;
 Argon.DI.inject(Argon.SessionService, Argon.ViewService);

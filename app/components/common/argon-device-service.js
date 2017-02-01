@@ -5,7 +5,6 @@ var geolocation = require("speigg-nativescript-geolocation");
 var dialogs = require("ui/dialogs");
 var enums = require("ui/enums");
 var frames = require("ui/frame");
-var platform = require("platform");
 var Argon = require("@argonjs/argon");
 var vuforia = require("nativescript-vuforia");
 var util_1 = require("./util");
@@ -18,12 +17,6 @@ var z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 var ONE = new Cartesian3(1, 1, 1);
 var scratchQuaternion = new Quaternion;
 var scratchMatrix4 = new Matrix4;
-exports.vuforiaCameraDeviceMode = -3 /* OpimizeQuality */;
-if (vuforia.videoView.ios) {
-    vuforia.videoView.ios.contentScaleFactor =
-        exports.vuforiaCameraDeviceMode === -2 /* OptimizeSpeed */ ?
-            1 : platform.screen.mainScreen.scale;
-}
 var NativescriptDeviceService = (function (_super) {
     __extends(NativescriptDeviceService, _super);
     function NativescriptDeviceService(session, context, view) {
@@ -49,11 +42,11 @@ var NativescriptDeviceService = (function (_super) {
     NativescriptDeviceService.prototype.onUpdateSubviews = function (subviews) {
         // const cameraDevice = vuforia.api.getCameraDevice();
         // const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode);
-        if (vuforia.api && vuforia.api.getDevice().isViewerActive()) {
-            var device = vuforia.api.getDevice();
-            var renderingPrimitives = device.getRenderingPrimitives();
-            var renderingViews = renderingPrimitives.getRenderingViews();
-            var numViews = renderingViews.getNumViews();
+        var device = vuforia.api && vuforia.api.getDevice();
+        var renderingPrimitives = device && device.getRenderingPrimitives();
+        var renderingViews = renderingPrimitives && renderingPrimitives.getRenderingViews();
+        var numViews = renderingViews && renderingViews.getNumViews();
+        if (numViews > 0) {
             var contentScaleFactor = vuforia.videoView.ios.contentScaleFactor;
             for (var i = 0; i < numViews; i++) {
                 var view = renderingViews.getView(i);
@@ -81,8 +74,8 @@ var NativescriptDeviceService = (function (_super) {
                 var subviewViewport = subview.viewport = subview.viewport || {};
                 subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
                 subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
-                // const subviewWidth = subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
-                // const subviewHeight = subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
+                subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
+                subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
                 // Determine the desired subview projection matrix
                 // Start with the projection matrix for this subview
                 // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
@@ -175,12 +168,12 @@ var NativescriptDeviceService = (function (_super) {
     };
     NativescriptDeviceService.prototype.ensureLocationManager = function () {
         if (application.ios && !this.locationManager) {
+            this.locationManager = CLLocationManager.alloc().init();
             switch (CLLocationManager.authorizationStatus()) {
                 case 4 /* kCLAuthorizationStatusAuthorizedWhenInUse */:
                 case 3 /* kCLAuthorizationStatusAuthorizedAlways */:
                     break;
                 case 0 /* kCLAuthorizationStatusNotDetermined */:
-                    this.locationManager = CLLocationManager.alloc().init();
                     this.locationManager.requestWhenInUseAuthorization();
                     break;
                 case 2 /* kCLAuthorizationStatusDenied */:
@@ -279,7 +272,7 @@ var NativescriptDeviceService = (function (_super) {
                 var locationManager = this.locationManager;
                 var headingAccuracy = void 0;
                 if (utils.ios.getter(locationManager, locationManager.headingAvailable)) {
-                    headingAccuracy = locationManager.heading.headingAccuracy;
+                    headingAccuracy = locationManager.heading ? locationManager.heading.headingAccuracy : undefined;
                 }
                 this._setOrientation(orientation, displayOrientationDegrees, headingAccuracy);
             }
