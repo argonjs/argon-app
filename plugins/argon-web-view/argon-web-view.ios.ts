@@ -52,7 +52,11 @@ export class ArgonWebView extends common.ArgonWebView  {
         this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         
         this._ios.UIDelegate
-
+        
+        configuration.allowsInlineMediaPlayback = true;
+        configuration.allowsAirPlayForMediaPlayback = true;
+        configuration.allowsPictureInPictureMediaPlayback = true;
+        configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
         configuration.processPool = processPool;
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
