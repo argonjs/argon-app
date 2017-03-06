@@ -2,6 +2,7 @@ import * as application from "application";
 import * as utils from 'utils/utils';
 import * as geolocation from 'speigg-nativescript-geolocation';
 import * as dialogs from 'ui/dialogs';
+import * as enums from 'ui/enums';
 
 import * as Argon from "@argonjs/argon";
 
@@ -19,6 +20,7 @@ const scratchTime = new JulianDate(0,0);
 const scratchCartesian3 = new Cartesian3;
 const scratchQuaternion = new Quaternion;
 const scratchECEFQuaternion = new Quaternion;
+const scratchMotionQuaternion = new Quaternion;
 const scratchMatrix4 = new Matrix4;
 const scratchMatrix3 = new Matrix3;
 
@@ -30,12 +32,15 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     private motionManager?:CMMotionManager;
     private calibStartTime: Argon.Cesium.JulianDate;
     private calibrating: boolean;
+    private androidMotionInitialized: boolean;
 
     constructor(context:Argon.ContextService) {
         super(context);
 
         this.calibStartTime = JulianDate.now();
         this.calibrating = false;
+
+        this.androidMotionInitialized = false;
 
         const geolocationPositionProperty = new Argon.Cesium.SampledPositionProperty(Argon.Cesium.ReferenceFrame.FIXED);
         this.geolocationEntity.position = geolocationPositionProperty;
@@ -80,8 +85,9 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         (e)=>{
             console.log(e);
         }, <geolocation.Options>{
-            desiredAccuracy: application.ios ? kCLLocationAccuracyBest : 0,
-            updateDistance: application.ios ? kCLDistanceFilterNone : 0
+            desiredAccuracy: application.ios ? kCLLocationAccuracyBest : enums.Accuracy.high,
+            updateDistance: application.ios ? kCLDistanceFilterNone : 0,
+            minimumUpdateTime : 0
         });
         
         console.log("Creating location watcher. " + this.locationWatchId);
@@ -127,32 +133,57 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     }
     
     ensureDeviceOrientation() {
-        if (this.motionManager) return;
+        if (application.ios) {
+            if (this.motionManager) return;
 
-        const motionManager = CMMotionManager.alloc().init();
-        motionManager.deviceMotionUpdateInterval = 1.0 / 100.0;
-        if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
-            console.log("NO Magnetometer and/or Gyro. " );
-            alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
-        } else {
-            let effectiveReferenceFrame:CMAttitudeReferenceFrame;
-            if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.XTrueNorthZVertical) {
-                effectiveReferenceFrame = CMAttitudeReferenceFrame.XTrueNorthZVertical;
-
-                // During testing of orientation problems, we tried 
-                // turning on each of the individual updateds
-                // to see if that helped.  It didn't, but here's the code:
-                // motionManager.startMagnetometerUpdates();
-                // motionManager.startGyroUpdates();
-                // motionManager.startAccelerometerUpdates();
-                
-                motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+            const motionManager = CMMotionManager.alloc().init();
+            motionManager.deviceMotionUpdateInterval = 1.0 / 100.0;
+            if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
+                console.log("NO Magnetometer and/or Gyro. " );
+                alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
             } else {
-                alert("Need a device with magnetometer to get full 3D device orientation");
-                console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
+                let effectiveReferenceFrame:CMAttitudeReferenceFrame;
+                if (CMMotionManager.availableAttitudeReferenceFrames() & CMAttitudeReferenceFrame.XTrueNorthZVertical) {
+                    effectiveReferenceFrame = CMAttitudeReferenceFrame.XTrueNorthZVertical;
+
+                    // During testing of orientation problems, we tried 
+                    // turning on each of the individual updateds
+                    // to see if that helped.  It didn't, but here's the code:
+                    // motionManager.startMagnetometerUpdates();
+                    // motionManager.startGyroUpdates();
+                    // motionManager.startAccelerometerUpdates();
+                    
+                    motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
+                } else {
+                    alert("Need a device with magnetometer to get full 3D device orientation");
+                    console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
+                }
             }
+            this.motionManager = motionManager;
         }
-        this.motionManager = motionManager;
+
+        if (application.android && !this.androidMotionInitialized) {
+
+            var sensorManager = application.android.foregroundActivity.getSystemService(android.content.Context.SENSOR_SERVICE);
+            var rotationSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR);
+
+            sensorManager.registerListener(new android.hardware.SensorEventListener({
+                onAccuracyChanged: (sensor, accuracy) => {
+                    //console.log("onAccuracyChanged: " + accuracy);
+                },
+                onSensorChanged: (event) => {
+                    const time = JulianDate.now();
+                    Quaternion.unpack(<number[]>event.values, 0, scratchMotionQuaternion);
+                    const sampledOrientation = this.orientationEntity.orientation as Argon.Cesium.SampledProperty;
+                    sampledOrientation.addSample(time, scratchMotionQuaternion);
+                    if (!Argon.Cesium.defined(this.orientationEntity.position)) {
+                        this.orientationEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.geolocationEntity);
+                    }
+                }
+            }), rotationSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME);
+
+            this.androidMotionInitialized = true;
+        }
 
         // make sure the device entity has a defined pose relative to the device orientation entity
         if (this.entity.position instanceof Argon.Cesium.ConstantPositionProperty == false) {
@@ -251,10 +282,15 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     }
 }
 
+var cachedOrientation: number = 0;
 
-export function getDisplayOrientation() : number {
+export function updateDisplayOrientation() {
+    cachedOrientation = queryDisplayOrientation();
+}
+
+export function queryDisplayOrientation() : number {
     if (application.ios) {
-        const orientation =                             utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
+        const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
             case UIInterfaceOrientation.Unknown:
             case UIInterfaceOrientation.Portrait: return 0;
@@ -270,9 +306,13 @@ export function getDisplayOrientation() : number {
         switch (rotation) {
             case android.view.Surface.ROTATION_0: return 0;
             case android.view.Surface.ROTATION_180: return 180;
-            case android.view.Surface.ROTATION_90: return 90;
-            case android.view.Surface.ROTATION_270: return -90;
+            case android.view.Surface.ROTATION_90: return -90;
+            case android.view.Surface.ROTATION_270: return 90;
         }
     } 
     return 0;
+}
+
+export function getDisplayOrientation() : number {
+    return cachedOrientation;
 }

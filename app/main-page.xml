@@ -12,10 +12,10 @@
                 <SearchBar col="0" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
                 <Label col="1" width="10" />
                 <Label col="4" width="5%" />
-                <Button id="overviewButton" col="2" width="30" id="overviewButton" class="material-icon action-btn" tap="onOverview" />
-                <Button id="menuButton" col="3" width="30" id="menuButton" class="material-icon action-btn" tap="onMenu" />
+                <Button id="overviewButton" col="2" width="50" id="overviewButton" class="material-icon action-btn" tap="onOverview" />
+                <Button id="menuButton" col="3" width="50" id="menuButton" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="2" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
-                <Button id="addButton" visibility="collapse" width="30" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
+                <Button id="addButton" visibility="collapse" width="50" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>
             </ActionBar.titleView>
         </ActionBar>
@@ -28,7 +28,7 @@
         <Button text="exit_to_app" class="material-icon action-btn" horizontalAlignment="center" verticalAlignment="bottom" tap="onViewerToggle" visibility="{{ viewerEnabled ? 'visible' : 'collapsed' }}"></Button>
         <StackLayout id="touchOverlay" visibility="collapsed" loaded="touchOverlayLoaded" />
         <StackLayout id="menu" width="220" loaded="menuLoaded" visibility="collapsed" horizontalAlignment="right" verticalAlignment="top" orientation="vertical">
-            <GridLayout rows="*" columns="*,*,*" class="menuItem" horizontalAlignment="stretch" orientation="horizontal" height="44">
+            <GridLayout rows="*" columns="*,*,*" class="menuItem" horizontalAlignment="stretch" orientation="horizontal" height="50" padding="5">
                 <Button col="0" id="reload" class="material-icon action-btn" text="refresh" tap="onReload"/>
                 <Button col="1" id="favorite" class="{{ isFavorite ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off' }}" text="{{ isFavorite ? 'star' : 'star_border' }}" tap="onFavoriteToggle"/>
                 <Button col="2" id="interaction" class="{{ interactionModeButtonEnabled ? 'material-icon action-btn' : 'material-icon action-btn-disabled' }}" text="{{interactionMode === 'immersive' ? 'description' : 'public'}}" isEnabled="{{interactionModeButtonEnabled}}" tap="onInteractionToggle"/>

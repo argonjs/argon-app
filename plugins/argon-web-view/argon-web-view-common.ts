@@ -36,8 +36,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
         if (this.session && !this.session.isConnected) return;
 
         if (!this.session) { 
-            // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
-            const sessionUrl = this.url;
+            const sessionUrl = this.getCurrentUrl();
             
             console.log('Connecting to argon.js session at ' + sessionUrl);
             const manager = Argon.ArgonSystem.instance!;
@@ -68,9 +67,15 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
+        console.log("*** _handleLogMessage: " + message);
+
+        if (!message)
+            return;
         const log:def.Log = JSON.parse(message);
+        if (!log.message)
+            return;
         log.lines = log.message.split(/\r\n|\r|\n/);
-        console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
+        console.log(this.getCurrentUrl() + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
         this.logs.push(log);
         const args:def.LogEventData = {
             eventName: ArgonWebView.logEvent,
@@ -83,5 +88,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public abstract evaluateJavascript(script:string) : Promise<any>;
 
     public abstract bringToFront();
+
+    public abstract getCurrentUrl() : string;
 
 }

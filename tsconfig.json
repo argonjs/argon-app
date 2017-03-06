@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es5",
-        "sourceMap": true,
+        //"sourceMap": true, // this is giving me trouble in visual studio code, disable for now
         "experimentalDecorators": true,
         "noEmitHelpers": true,
         "noEmitOnError": true,

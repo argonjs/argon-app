@@ -133,6 +133,11 @@ export class ArgonWebView extends common.ArgonWebView  {
         // this._ios.navigationDelegate = null;
         super.onUnloaded();
     }
+
+    public getCurrentUrl() : string {
+        // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
+        return this.url;
+    }
 }
 
 class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, WKNavigationDelegate {

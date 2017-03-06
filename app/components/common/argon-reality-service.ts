@@ -21,8 +21,8 @@ const scratchFrustum = new Argon.Cesium.PerspectiveFrustum();
 
 const ONE = new Cartesian3(1,1,1);
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.videoView.ios) {
+export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OptimizeSpeed;
+if (vuforia.videoView && vuforia.videoView.ios) {
     (<UIView>vuforia.videoView.ios).contentScaleFactor = 
         vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
         1 : platform.screen.mainScreen.scale;
@@ -43,8 +43,8 @@ export class NativescriptRealityService extends Argon.RealityService {
         return {
             x: 0,
             y: 0,
-            width: contentView.getMeasuredWidth(),
-            height: contentView.getMeasuredHeight()
+            width: contentView.getActualSize().width, //contentView.getMeasuredWidth(),
+            height: contentView.getActualSize().height //contentView.getMeasuredHeight()
         }
     }
 
@@ -79,7 +79,7 @@ export class NativescriptRealityService extends Argon.RealityService {
         const numViews = renderingViews.getNumViews()
 
         const subviews = <Array<Argon.SerializedSubview>>[];
-        const contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor;
+        const contentScaleFactor = vuforia.videoView.ios ? vuforia.videoView.ios.contentScaleFactor : platform.screen.mainScreen.scale;
 
         for (let i = 0; i < numViews; i++) {
             const view = renderingViews.getView(i);
@@ -206,7 +206,7 @@ export class NativescriptRealityService extends Argon.RealityService {
 
         const viewWidth = viewport.width;
         const viewHeight = viewport.height;
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
+        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : platform.screen.mainScreen.scale;
         
         const cameraDevice = vuforia.api.getCameraDevice();
         const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode);

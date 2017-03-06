@@ -17,7 +17,7 @@ import {SessionEventData} from 'argon-web-view';
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {manager, appViewModel, AppViewModel, LoadUrlEventData, vuforiaDelegate} from './components/common/AppViewModel';
-import {getDisplayOrientation} from './components/common/argon-device-service';
+import {updateDisplayOrientation, getDisplayOrientation} from './components/common/argon-device-service';
 
 manager.reality.registerLoader(new class HostedRealityLoader extends Argon.RealityLoader {
     type = 'hosted';
@@ -48,6 +48,7 @@ export let realityChooserView:View;
 
 let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
+let androidSearchBarController:AndroidSearchBarController;
 
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
@@ -272,15 +273,46 @@ export function pageLoaded(args) {
         if (error.stack) console.log(error.stack);
     })
 
-    application.on(application.orientationChangedEvent, ()=>{
+    application.on(application.orientationChangedEvent, (args)=>{
         setTimeout(()=>{
+            updateDisplayOrientation();
             const orientation = getDisplayOrientation();
-            if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
-                page.actionBarHidden = true;
-            else 
-                page.actionBarHidden = false;
+            if (orientation == 90 || orientation == -90 || appViewModel.viewerEnabled) {
+                if (page.ios) {
+                    page.actionBarHidden = true;
+                }
+                if (page.android) {
+                    let window = application.android.foregroundActivity.getWindow();
+                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                }
+            } else {
+                if (page.ios) {
+                    page.actionBarHidden = false;
+                }
+                if (page.android) {
+                    let window = application.android.foregroundActivity.getWindow();
+                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                }
+            }
         }, 500)
     });
+
+    updateDisplayOrientation();
+
+    if (application.android) {
+        var activity = application.android.foregroundActivity;
+        activity.onBackPressed = () => {
+            if (browserView.focussedLayer != browserView.realityLayer) {
+                if (browserView.focussedLayer.webView.android.canGoBack()) {
+                    browserView.focussedLayer.webView.android.goBack();
+                }
+            }
+        }
+    }
 }
 
 export function layoutLoaded(args) {
@@ -315,6 +347,10 @@ export function searchBarLoaded(args) {
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
     }
+
+    if (application.android) {
+        androidSearchBarController = new AndroidSearchBarController(searchBar);
+    }
 }
 
 function setSearchBarText(url:string) {
@@ -326,9 +362,7 @@ function setSearchBarText(url:string) {
 }
 
 function blurSearchBar() {
-    if (searchBar.ios) {
-        (searchBar.ios as UISearchBar).resignFirstResponder();
-    }
+    searchBar.dismissSoftInput();
 }
 
 export function browserViewLoaded(args) {
@@ -513,5 +547,33 @@ class IOSSearchBarController {
         if (!utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
             this.setPlaceholderText(url);
         }
+    }
+}
+
+class AndroidSearchBarController {
+
+    private searchView:android.widget.SearchView;
+
+    constructor(public searchBar:SearchBar) {
+        this.searchView = searchBar.android;
+
+        this.searchView.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        this.searchView.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_GO);
+        this.searchView.clearFocus();
+
+        const focusHandler = new android.view.View.OnFocusChangeListener({
+            onFocusChange(v: android.view.View, hasFocus: boolean) {
+                if (hasFocus) {
+                    if (browserView.focussedLayer === browserView.realityLayer) {
+                        appViewModel.showRealityChooser();
+                    } else {
+                        appViewModel.showBookmarks();
+                    }
+                    appViewModel.showCancelButton();
+                }
+            }
+        });
+
+        this.searchView.setOnQueryTextFocusChangeListener(focusHandler);
     }
 }

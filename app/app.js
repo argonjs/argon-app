@@ -1,6 +1,11 @@
 "use strict";
 var application = require("application");
-application.mainModule = "main-page";
+if (application.android) {
+    application.mainModule = "entry-page";
+}
+else {
+    application.mainModule = "main-page";
+}
 application.cssFile = "./app.css";
 application.start();
-//# sourceMappingURL=app.js.map
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYXBwLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiYXBwLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSx5Q0FBNEM7QUFDNUMsRUFBRSxDQUFDLENBQUMsV0FBVyxDQUFDLE9BQU8sQ0FBQyxDQUFDLENBQUM7SUFDdEIsV0FBVyxDQUFDLFVBQVUsR0FBRyxZQUFZLENBQUE7QUFDekMsQ0FBQztBQUFDLElBQUksQ0FBQyxDQUFDO0lBQ0osV0FBVyxDQUFDLFVBQVUsR0FBRyxXQUFXLENBQUE7QUFDeEMsQ0FBQztBQUNELFdBQVcsQ0FBQyxPQUFPLEdBQUcsV0FBVyxDQUFDO0FBQ2xDLFdBQVcsQ0FBQyxLQUFLLEVBQUUsQ0FBQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBhcHBsaWNhdGlvbiA9IHJlcXVpcmUoXCJhcHBsaWNhdGlvblwiKTtcbmlmIChhcHBsaWNhdGlvbi5hbmRyb2lkKSB7XG4gICAgYXBwbGljYXRpb24ubWFpbk1vZHVsZSA9IFwiZW50cnktcGFnZVwiXG59IGVsc2Uge1xuICAgIGFwcGxpY2F0aW9uLm1haW5Nb2R1bGUgPSBcIm1haW4tcGFnZVwiXG59XG5hcHBsaWNhdGlvbi5jc3NGaWxlID0gXCIuL2FwcC5jc3NcIjtcbmFwcGxpY2F0aW9uLnN0YXJ0KCk7XG4iXX0=

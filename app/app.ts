@@ -1,4 +1,8 @@
 import application = require("application");
-application.mainModule = "main-page"
+if (application.android) {
+    application.mainModule = "entry-page"
+} else {
+    application.mainModule = "main-page"
+}
 application.cssFile = "./app.css";
 application.start();

@@ -7,8 +7,8 @@
     rows="44,auto,*" 
     columns="*">
     <GridLayout loaded="onTabLayoutLoaded" row="0" rows="*" columns="*,*" backgroundColor="#FEFEFE">
-        <Button col="0" text="star_border" class="{{ index === 0 ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off'}}" tap="onTabSelect" />
-        <Button col="1" text="history" class="{{ index === 1 ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off'}}" tap="onTabSelect" />
+        <Button col="0" backgroundColor="#FFFFFF" text="star_border" class="{{ index === 0 ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off'}}" tap="onTabSelect" />
+        <Button col="1" backgroundColor="#FFFFFF" text="history" class="{{ index === 1 ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off'}}" tap="onTabSelect" />
     </GridLayout>
     <GridLayout row="1" height="1px" backgroundColor="#BBBBBB"></GridLayout>
     <GridLayout loaded="onContentLayoutLoaded" row="2" orientation="horizontal">

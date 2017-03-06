@@ -53,7 +53,7 @@ export class AppViewModel extends Observable {
             })
         })
 
-        this.ready = new Promise((resolve) => {
+        this.ready = new Promise<void>((resolve) => {
             this._resolveReady = resolve;
         })
     }
@@ -184,7 +184,12 @@ manager.reality.setDefault(bookmarks.LIVE_VIDEO_REALITY);
 appViewModel.ready.then(()=>{
     manager.vuforia.isAvailable().then((available)=>{
         if (available) {
-            const primaryVuforiaLicenseKey = Util.getInternalVuforiaKey();
+            var primaryVuforiaLicenseKey;
+            if (NativescriptVuforiaServiceDelegate.hasOwnProperty('DEVELOPMENT_VUFORIA_KEY')) {
+                primaryVuforiaLicenseKey = NativescriptVuforiaServiceDelegate['DEVELOPMENT_VUFORIA_KEY'];
+            } else {
+                primaryVuforiaLicenseKey = Util.getInternalVuforiaKey();
+            }
             if (!primaryVuforiaLicenseKey) {
                 alert("Unable to locate Vuforia License Key");
                 return;

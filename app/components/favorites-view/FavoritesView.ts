@@ -1,3 +1,4 @@
+import * as application from 'application';
 import {Observable} from 'data/observable';
 import {View} from 'ui/core/view';
 import {ListView,ItemEventData} from 'ui/list-view';
@@ -56,25 +57,28 @@ export function onItemLoaded(args) {
     var cell = {contentView, deleteView};
     
     var panStart=0;
-    contentView.on(GestureTypes.pan, (data:PanGestureEventData)=>{
-        
-        if (data.state === GestureStateTypes.began) {
-            panStart = contentView.translateX;
-            closeAllCells(cell);
-            editing = true;
-        }
-        
-        contentView.translateX = Math.min(Math.max(panStart + data.deltaX, -1000), 0);
-        
-        if (data.state === GestureStateTypes.ended) {
-            editing = false;
-            var open = contentView.translateX < swipeLimit*0.75;
-            toggleCellSwipeState(cell, open);
-        } else {
-            deleteView.visibility = 'visible';
-        }
-        
-    })
+    // todo: fix for Android
+    if (application.ios) {
+        contentView.on(GestureTypes.pan, (data:PanGestureEventData)=>{
+            
+            if (data.state === GestureStateTypes.began) {
+                panStart = contentView.translateX;
+                closeAllCells(cell);
+                editing = true;
+            }
+            
+            contentView.translateX = Math.min(Math.max(panStart + data.deltaX, -1000), 0);
+            
+            if (data.state === GestureStateTypes.ended) {
+                editing = false;
+                var open = contentView.translateX < swipeLimit*0.75;
+                toggleCellSwipeState(cell, open);
+            } else {
+                deleteView.visibility = 'visible';
+            }
+            
+        })
+    }
 }
 
 function closeAllCells(exceptCell?:CellViews) {

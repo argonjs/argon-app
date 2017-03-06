@@ -33,6 +33,10 @@ interface VuforiaLicenseData {
     Argon.ViewService)
 export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDelegateBase {
         
+    // uncomment the following to use your own vuforia license key (unencrypted)
+    //static DEVELOPMENT_VUFORIA_KEY = 'your_vuforia_key';
+    static DEVELOPMENT_VUFORIA_KEY = '';
+
     private scratchDate = new Argon.Cesium.JulianDate(0,0);
     private scratchCartesian = new Argon.Cesium.Cartesian3();
     private scratchCartesian2 = new Argon.Cesium.Cartesian3();
@@ -205,6 +209,11 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
 
     decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
+        if (NativescriptVuforiaServiceDelegate.hasOwnProperty('DEVELOPMENT_VUFORIA_KEY')) {
+            return new Promise(function(resolve, reject) {
+                return resolve(NativescriptVuforiaServiceDelegate['DEVELOPMENT_VUFORIA_KEY']);
+            });
+        }
         return Util.decrypt(encryptedLicenseData.trim()).then((json)=>{
             const {key,origins} : {key:string,origins:string[]} = JSON.parse(json);
             if (!session.uri) throw new Error('Invalid origin');
@@ -230,14 +239,14 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     init(options: Argon.VuforiaServiceDelegateInitOptions): Promise<Argon.VuforiaInitResult> {
-        if (!vuforia.api.setLicenseKey(options.key)) {
-            return Promise.reject(new Error("Unable to set the license key"));
-        }
-        console.log("Vuforia initializing...")
-        return vuforia.api.init().then((result)=>{
-            console.log("Vuforia Init Result: " + result);
-            return <number>result;
-        });
+            if (!vuforia.api.setLicenseKey(options.key)) {
+                return Promise.reject(new Error("Unable to set the license key"));
+            }
+            console.log("Vuforia initializing...")
+            return vuforia.api.init().then((result)=>{
+                console.log("Vuforia Init Result: " + result);
+                return <number>result;
+            });
     }
     
     deinit(): void {            
@@ -400,8 +409,10 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
 
 // TODO: make this cross platform somehow
 export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
+    /*
     const xmlUrl = NSURL.URLWithString(xmlUrlString);
     const datUrl = xmlUrl.URLByDeletingPathExtension.URLByAppendingPathExtension("dat");
+    const datUrlString = datUrl.absoluteString;
     
     const directoryPathUrl = xmlUrl.URLByDeletingLastPathComponent;
     const directoryHash = directoryPathUrl.hash;
@@ -412,7 +423,34 @@ export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
     
     const xmlDestPath = directoryHashPath + file.path.separator + xmlUrl.lastPathComponent;
     const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
+    */
+
+    const directoryPath = xmlUrlString.substring(0, xmlUrlString.lastIndexOf("/"));
+    const filename = xmlUrlString.substring(xmlUrlString.lastIndexOf("/") + 1);
+    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf("."));
+
+    const datUrlString = directoryPath + file.path.separator + filenameWithoutExt + ".dat";
+
+    const directoryHash = hashCode(directoryPath);
+    const tmpPath = file.knownFolders.temp().path;
+    const directoryHashPath = tmpPath + file.path.separator + directoryHash;
+
+    file.Folder.fromPath(directoryHashPath);
     
+    const xmlDestPath = directoryHashPath + file.path.separator + filename;
+    const datDestPath = directoryHashPath + file.path.separator + filenameWithoutExt + ".dat";
+
+    function hashCode(s:string) {
+        var hash = 0, i, chr, len;
+        if (s.length === 0) return hash;
+        for (i = 0, len = s.length; i < len; i++) {
+            chr   = s.charCodeAt(i);
+            hash  = ((hash << 5) - hash) + chr;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    }
+
     function downloadIfNeeded(url:string, destPath:string) {
         let lastModified:Date|undefined;
         if (file.File.exists(destPath)) {
@@ -437,9 +475,9 @@ export function _getDataSetLocation(xmlUrlString:string) : Promise<string> {
             }
         })
     }
-    
+
     return Promise.all([
-        downloadIfNeeded(xmlUrl.absoluteString,xmlDestPath), 
-        downloadIfNeeded(datUrl.absoluteString,datDestPath)
+        downloadIfNeeded(xmlUrlString,xmlDestPath), 
+        downloadIfNeeded(datUrlString,datDestPath)
     ]).then(()=>xmlDestPath);
 } 
