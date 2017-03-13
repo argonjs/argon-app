@@ -4,7 +4,8 @@
     xmlns:bookmarksView="components/bookmarks-view"
     xmlns:logView="components/log-view"
     xmlns:realityChooser="components/reality-chooser"
-    loaded="pageLoaded">
+    loaded="pageLoaded"
+    navigatedTo="navigatedTo">
     <Page.actionBar>
         <ActionBar>
             <ActionBar.titleView margin="0px" padding="0px" >

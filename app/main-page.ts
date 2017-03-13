@@ -240,7 +240,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 })
 
 export function pageLoaded(args) {
-    
+
     page = args.object;
     page.bindingContext = appViewModel;
     appViewModel.setReady();
@@ -252,6 +252,9 @@ export function pageLoaded(args) {
     // Set the icon for the overview button
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
+}
+
+export function navigatedTo(args) {
     
     // focus on the topmost layer
     browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
@@ -278,24 +281,25 @@ export function pageLoaded(args) {
             updateDisplayOrientation();
             const orientation = getDisplayOrientation();
             if (orientation == 90 || orientation == -90 || appViewModel.viewerEnabled) {
-                if (page.ios) {
-                    page.actionBarHidden = true;
-                }
+                page.actionBarHidden = true;
                 if (page.android) {
                     let window = application.android.foregroundActivity.getWindow();
-                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
-                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+                    let decorView = window.getDecorView();
+                    let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | (<any>android.view.View).SYSTEM_UI_FLAG_FULLSCREEN
+                            | (<any>android.view.View).SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+                    decorView.setSystemUiVisibility(uiOptions);
                 }
             } else {
-                if (page.ios) {
-                    page.actionBarHidden = false;
-                }
+                page.actionBarHidden = false;
                 if (page.android) {
                     let window = application.android.foregroundActivity.getWindow();
-                    window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-                    window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    let decorView = window.getDecorView();
+                    let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_VISIBLE;
+                    decorView.setSystemUiVisibility(uiOptions);
                 }
             }
         }, 500)
@@ -313,7 +317,23 @@ export function pageLoaded(args) {
             }
         }
     }
+
+    appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
+        browserView.loadUrl(data.url);
+        blurSearchBar();
+    })
 }
+
+application.on(application.resumeEvent, ()=> {
+    if (application.android) {
+        // on android the page is unloaded/reloaded after a suspend
+        // open back to bookmarks if necessary
+        if (appViewModel.bookmarksOpen) {
+            // force a property change event
+            appViewModel.notifyPropertyChange('bookmarksOpen', true);
+        }
+    }
+});
 
 export function layoutLoaded(args) {
     layout = args.object
@@ -342,6 +362,7 @@ export function searchBarLoaded(args) {
         appViewModel.hideBookmarks();
         appViewModel.hideRealityChooser();
         appViewModel.hideCancelButton();
+        blurSearchBar();
     });
 
     if (application.ios) {
@@ -363,14 +384,13 @@ function setSearchBarText(url:string) {
 
 function blurSearchBar() {
     searchBar.dismissSoftInput();
+    if (searchBar.android) {
+        searchBar.android.clearFocus();
+    }
 }
 
 export function browserViewLoaded(args) {
     browserView = args.object;
-    
-    appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
-        browserView.loadUrl(data.url);
-    })
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
