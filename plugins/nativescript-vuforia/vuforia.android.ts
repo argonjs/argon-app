@@ -227,6 +227,51 @@ function createMatrix44(mat:vuforia.Matrix44F) : def.Matrix44 {
             ];
 }
 
+function convert2GLMatrix(mat:vuforia.Matrix34F) : def.Matrix44 {
+    var data = mat.getData();
+    return  [
+                data[0],
+                data[4],
+                data[8],
+                0,
+                data[1],
+                data[5],
+                data[9],
+                0,
+                data[2],
+                data[6],
+                data[10],
+                0,
+                data[3],
+                data[7],
+                data[11],
+                1
+            ];
+}
+
+// https://library.vuforia.com/articles/Solution/How-To-Access-Camera-Parameters
+function convertPerspectiveProjection2GLMatrix(mat:vuforia.Matrix34F, near:number, far:number) : def.Matrix44 {
+    var data = mat.getData();
+    return  [
+                data[0],
+                data[4],
+                data[8],
+                0,
+                data[1],
+                data[5],
+                data[9],
+                0,
+                data[2],
+                data[6],
+                (far + near) / (far - near),
+                1,
+                data[3],
+                data[7],
+                -near * (1 + (far + near) / (far - near)),
+                0
+            ];
+}
+
 export class Trackable {
     
     static createTrackable(android:vuforia.Trackable) {
@@ -294,8 +339,7 @@ export class TrackableResult {
     
     getPose(): def.Matrix44 {
         var mat34 = this.android.getPose();
-        var mat44 = vuforia.Tool.convertPose2GLMatrix(mat34);
-        return createMatrix44(mat44);
+        return convert2GLMatrix(mat34);
     }
     
     getTimeStamp() : number {
@@ -738,8 +782,7 @@ export class RenderingPrimitives {
     
     getEyeDisplayAdjustmentMatrix(viewID: def.View): def.Matrix44 {
         var mat34 = this.android.getEyeDisplayAdjustmentMatrix(<number>viewID);
-        var mat44 = vuforia.Tool.convertPose2GLMatrix(mat34);
-        return createMatrix44(mat44);
+        return convert2GLMatrix(mat34);
     }
     
     getNormalizedViewport(viewID: def.View): def.Vec4 {
@@ -748,8 +791,7 @@ export class RenderingPrimitives {
     
     getProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
         var mat34 = this.android.getProjectionMatrix(<number>viewID, <number>csType);
-        var mat44 = vuforia.Tool.convertPerspectiveProjection2GLMatrix(mat34, 0.001, 10000000);
-        return createMatrix44(mat44);
+        return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000);
     }
     
     getRenderingViews(): ViewList {
@@ -763,8 +805,7 @@ export class RenderingPrimitives {
     
     getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
         var mat34 = this.android.getVideoBackgroundProjectionMatrix(<number>viewID, <number>csType);
-        var mat44 = vuforia.Tool.convertPerspectiveProjection2GLMatrix(mat34, 0.01, 10000000);
-        return createMatrix44(mat44);
+        return convert2GLMatrix(mat34);
     }
     
     getViewport(viewID: def.View): def.Vec4 {
