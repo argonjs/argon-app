@@ -646,8 +646,11 @@ export class BrowserView extends GridLayout {
             this.focussedLayer.details.set('isFavorite',false);
             this.focussedLayer.details.set('supportedInteractionModes',['page', 'immersive']);
         }
-        if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload();
-        else this.focussedLayer.webView.src = url;
+        //if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload(); // src isn't safe to use here, as it's the original url (not the current)
+        if (this.focussedLayer.webView.getCurrentUrl() === url)
+            this.focussedLayer.webView.reload();
+        else
+            this.focussedLayer.webView.src = url;
     }
 
     public setFocussedLayer(layer:Layer) {
