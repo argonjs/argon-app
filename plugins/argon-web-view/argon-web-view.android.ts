@@ -105,7 +105,7 @@ export class ArgonWebView extends common.ArgonWebView {
     }
 
     _setIsArgonApp(flag:boolean) {
-        console.log("_setIsArgonApp: " + flag);
+        //console.log("_setIsArgonApp: " + flag);
         if (!this.isArgonApp && flag) {
             this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             this.set("isArgonApp", true);
