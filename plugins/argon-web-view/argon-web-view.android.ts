@@ -37,61 +37,50 @@ export class ArgonWebView extends common.ArgonWebView {
             if (!this.id) {
                 this.id = Date.now().toString();
             }
-            ArgonWebView.layersById[this.id] = this;
+            //ArgonWebView.layersById[this.id] = this;
+
+            // Create a unique class name for 'extend' to bind the object to this particular webview
+            var classname = "io_argonjs_AndroidWebInterface_ArgonWebView_" + this.id;
 
             // Inject Javascript Interface
-            this.android.addJavascriptInterface(new (AndroidWebInterface.extend({
+            this.android.addJavascriptInterface(new ((<any>AndroidWebInterface).extend(classname, {
                 onArgonEvent: (id: string, event: string, data: string) => {
-                    const self = ArgonWebView.layersById[id];
-                    if (self) {
+                    //const self = ArgonWebView.layersById[id];
+                    //if (self) {
                         if (event === "argon") {
                             // just in case we thought below that the page was not an
                             // argon page, perhaps because argon.js loaded asyncronously 
                             // and the programmer didn't set up an argon meta tag
-                            self._setIsArgonApp(true);
-                            self._handleArgonMessage(data);
-                        } else if (event === "log") {
-                            self._handleLogMessage(data);
+                            this._setIsArgonApp(true);
+                            this._handleArgonMessage(data);
                         }
-                    }
+                    //}
                 },
             }))(new java.lang.String(this.id)), "__argon_android__");
+
+            // Create a unique class name for 'extend' to bind the object to this particular webview
+            classname = "android_webkit_WebChromeClient_ArgonWebView_" + this.id;
+
+            // Extend WebChromeClient to capture log output
+            this.android.setWebChromeClient(new ((<any>android.webkit.WebChromeClient).extend(classname, {
+                onConsoleMessage: (consoleMessage: android.webkit.ConsoleMessage): boolean => {
+                    var level = 'log';
+                    if (consoleMessage.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.WARNING) {
+                        level = 'warn';
+                    } else if (consoleMessage.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                        level = 'error';
+                    }
+                    let data = JSON.stringify({type:level, message:consoleMessage.message()});
+                    this._handleLogMessage(data);
+                    return false;
+                }
+            })));
         });
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
             this._didCommitNavigation();
             this.currentUrl = args.url;
             this.set('title', this.android.getTitle());
-            //this.set('progress', this.android.getProgress());
-
-            // Hook into the logging
-            const injectLoggers = () => {
-                const logger = window.console.log;
-                window.console.log = function () {
-                    if (window["__argon_android__"]) {
-                        window["__argon_android__"].emit("log", JSON.stringify({type:'log', args:[].slice.call(arguments)}));
-                    }
-                    logger.apply(window.console, arguments);
-                };
-                const warnLogger = window.console.warn;
-                window.console.warn = function () {
-                    if (window["__argon_android__"]) {
-                        window["__argon_android__"].emit("log", JSON.stringify({type:'warn', args:[].slice.call(arguments)}));
-                    }
-                    warnLogger.apply(window.console, arguments);
-                };
-                const errorLogger = window.console.error;
-                window.console.error = function () {
-                    if (window["__argon_android__"]) {
-                        window["__argon_android__"].emit("log", JSON.stringify({type:'error', args:[].slice.call(arguments)}));
-                    }
-                    errorLogger.apply(window.console, arguments);
-                };
-                window.addEventListener('error', function(e) {
-                    console.error('Unhandled Error: ' + e.message + ' (' + e.source + ':' + e.lineno + ')');
-                }, false);
-            };
-            this.evaluateJavascript("(" + injectLoggers.toString() + ")()");
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {

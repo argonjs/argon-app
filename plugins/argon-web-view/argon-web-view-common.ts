@@ -67,8 +67,6 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
-        console.log("*** _handleLogMessage: " + message);
-
         if (!message)
             return;
         const log:def.Log = JSON.parse(message);
