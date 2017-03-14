@@ -23,15 +23,12 @@ declare module "argon-web-view" {
 
         isArgonApp: boolean;
 
+        public evaluateJavascriptWithoutPromise(source:string) : void;
+
         /**
          * Raised when a session event occurs.
          */
         on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
-
-        /**
-         * Raised when a log event occurs.
-         */
-        on(event: "log", callback: (args: LogEventData) => void, thisArg?: any);
 
         on(event: string, callback: (args: EventData) => void, thisArg?: any);
     }

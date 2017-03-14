@@ -47,8 +47,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             const port = messageChannel.port2;
             port.onmessage = (msg:Argon.MessageEventLike) => {
                 if (!this.session) return;
-                const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
-                this.evaluateJavascript(injectedMessage);
+                const injectedMessage = "__ARGON_PORT__.postMessage("+msg.data+")";
+                this.evaluateJavascriptWithoutPromise(injectedMessage);
             }
                  
             const args:def.SessionEventData = {
@@ -70,17 +70,12 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public _handleLogMessage(message:string) {
         const log:def.LogItem = JSON.parse(message);
         log.lines = log.message.split(/\r\n|\r|\n/);
-        console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
+        // console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
         this.log.push(log);
-        const args:def.LogEventData = {
-            eventName: ArgonWebView.logEvent,
-            object:this,
-            log: log
-        }
-        this.notify(args);
     }
 
     public abstract evaluateJavascript(script:string) : Promise<any>;
+    public abstract evaluateJavascriptWithoutPromise(script:string) : void;
 
     public abstract bringToFront();
 

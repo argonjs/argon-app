@@ -148,6 +148,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         })
     }
 
+    public evaluateJavascriptWithoutPromise(script:string) : void {
+        this._ios.evaluateJavaScriptCompletionHandler(script, <any>null)
+    }
+
     public bringToFront() {
         this._ios.superview.bringSubviewToFront(this._ios);
     }
@@ -209,7 +213,7 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         if (!owner) return;     
         const wkWebView = <WKWebView>owner.ios;
         owner['_suspendLoading'] = true; 
-        owner.set("url", wkWebView.URL.absoluteString); 
+        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString); 
         owner['_suspendLoading'] = false; 
     }
     
