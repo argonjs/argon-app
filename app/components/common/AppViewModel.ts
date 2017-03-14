@@ -2,9 +2,8 @@ import {Observable, PropertyChangeData, EventData} from 'data/observable'
 import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from '@argonjs/argon';
-import {NativescriptDeviceService} from './argon-device-service';
-import {NativescriptVuforiaServiceManager} from './argon-vuforia-manager';
-import {NativescriptViewService} from './argon-view-service';
+import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
+import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
@@ -60,7 +59,7 @@ export class AppViewModel extends Observable {
     currentUri = '';
     isFavorite = false;
 
-    public manager:Argon.ArgonSystem;
+    public argon:Argon.ArgonSystem;
 
     private _resolveReady:Function;
     ready:Promise<void>;
@@ -83,24 +82,24 @@ export class AppViewModel extends Observable {
     setReady() {
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
-        container.registerSingleton(Argon.VuforiaServiceManager, NativescriptVuforiaServiceManager);
-        container.registerSingleton(Argon.ViewService, NativescriptViewService);
+        container.registerSingleton(Argon.VuforiaServiceProvider, NativescriptVuforiaServiceProvider);
+        container.registerSingleton(Argon.DeviceServiceProvider, NativescriptDeviceServiceProvider);
         container.registerSingleton(Argon.RealityViewerFactory, NativescriptRealityViewerFactory);
 
-        const manager = this.manager = Argon.init(null, {
+        const argon = this.argon = Argon.init(null, {
             role: Argon.Role.MANAGER,
             title: 'ArgonApp'
         }, container);
 
-        manager.reality.default = Argon.RealityViewer.LIVE;
+        argon.reality.default = Argon.RealityViewer.LIVE;
 
-        manager.reality.installedEvent.addEventListener(({viewer})=>{
+        argon.provider.reality.installedEvent.addEventListener(({viewer})=>{
             if (!bookmarks.realityMap.get(viewer.uri)) {
                 bookmarks.realityList.push(new bookmarks.BookmarkItem({uri: viewer.uri}));
             }
         });
 
-        manager.reality.uninstalledEvent.addEventListener(({viewer})=>{
+        argon.provider.reality.uninstalledEvent.addEventListener(({viewer})=>{
             const item = bookmarks.realityMap.get(viewer.uri);
             if (item) {
                 var idx = bookmarks.realityList.indexOf(item);
@@ -108,18 +107,18 @@ export class AppViewModel extends Observable {
             }
         });
         
-        manager.focus.sessionFocusEvent.addEventListener(({current})=>{
+        argon.provider.focus.sessionFocusEvent.addEventListener(({current})=>{
             console.log("Argon focus changed: " + (current ? current.uri : undefined));
         });
 
-        manager.vuforia.isAvailable().then((available)=>{
+        argon.vuforia.isAvailable().then((available)=>{
             if (available) {
                 const primaryVuforiaLicenseKey = getInternalVuforiaKey();
                 if (!primaryVuforiaLicenseKey) {
                     alert("Unable to locate internal Vuforia License Key");
                     return;
                 }
-                manager.vuforia.initWithUnencryptedKey({key:primaryVuforiaLicenseKey}).catch((err)=>{
+                argon.vuforia.initWithUnencryptedKey(primaryVuforiaLicenseKey).catch((err)=>{
                     alert(err.message);
                 });
             }
@@ -194,8 +193,8 @@ export class AppViewModel extends Observable {
     
     setViewerEnabled(enabled:boolean) {
         this.set('viewerEnabled', enabled);
-        if (enabled) this.manager.view.requestEnterHmd();
-        else this.manager.view.requestExitHmd();
+        if (enabled) this.argon.device.requestPresentHMD();
+        else this.argon.device.exitPresentHMD();
     }
 
     _onLayerDetailsChange(data:PropertyChangeData) {

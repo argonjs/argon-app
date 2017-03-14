@@ -5,8 +5,7 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
-import {NativescriptDeviceService} from './argon-device-service';
-import {decrypt, getDisplayOrientation} from './util'
+import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
@@ -31,41 +30,54 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
 
-@Argon.DI.inject(
-    Argon.SessionService,
-    Argon.ContextService,
-    Argon.FocusService,
-    Argon.DeviceService)
-export class NativescriptVuforiaServiceManager {
+class VuforiaSessionData {
+    commandQueue = new Argon.CommandQueue;
+    initResultResolver?:(result:vuforia.InitResult)=>void;
+    loadedDataSets = new Set<string>();
+    activatedDataSets = new Set<string>();
+    dataSetUriById = new Map<string, string>();
+    dataSetIdByUri = new Map<string, string>();
+    dataSetInstanceById = new Map<string, vuforia.DataSet>();
+    constructor(public keyPromise: Promise<string>) {}
+}
+
+@Argon.DI.autoinject
+export class NativescriptVuforiaServiceProvider {
 
     public stateUpdateEvent = new Argon.Event<Argon.Cesium.JulianDate>();
     
     public vuforiaTrackerEntity = new Argon.Cesium.Entity({
-        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.deviceService.eye),
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.contextService.display),
         orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
     });
-        
+
     private _scratchCartesian = new Argon.Cesium.Cartesian3();
     private _scratchQuaternion = new Argon.Cesium.Quaternion();
 	private _scratchMatrix3 = new Argon.Cesium.Matrix3();
 
     private _controllingSession?: Argon.SessionPort;
     private _sessionSwitcherCommandQueue = new Argon.CommandQueue();
-    private _sessionCommandQueue = new WeakMap<Argon.SessionPort, Argon.CommandQueue>();
-    private _sessionKeyPromise = new WeakMap<Argon.SessionPort, Promise<string>>();
 
-    private _sessionLoadedDataSets = new WeakMap<Argon.SessionPort, Set<string>>();
-    private _sessionActivatedDataSets = new WeakMap<Argon.SessionPort, Set<string>>();
-
-    private _dataSetUriById = new Map<string, string>();
-    private _dataSetIdByUri = new Map<string, string>();
-    private _dataSetInstanceById = new Map<string, vuforia.DataSet>();
-	
+    private _sessionData = new WeakMap<Argon.SessionPort,VuforiaSessionData>();
+    
 	constructor(
             private sessionService:Argon.SessionService,
-            contextService:Argon.ContextService,
-            private focusService:Argon.FocusService,
-            private deviceService:NativescriptDeviceService) {
+            private focusServiceProvider:Argon.FocusServiceProvider,
+            private contextService:Argon.ContextService,
+            // private deviceService:Argon.DeviceService,
+            private contextServiceProvider:Argon.ContextServiceProvider,
+            realityService:Argon.RealityService) {
+
+        // this.sessionService.connectEvent.addEventListener(()=>{
+        //     this.stateUpdateEvent.addEventListener(()=>{
+        //         const reality = this.contextService.serializedFrameState.reality;
+        //         if (reality === Argon.RealityViewer.LIVE) this.deviceService.update();
+        //     });
+        //     setTimeout(()=>{
+        //         const reality = this.contextService.serializedFrameState.reality;
+        //         if (reality !== Argon.RealityViewer.LIVE) this.deviceService.update();
+        //     }, 60)
+        // })
         
         sessionService.connectEvent.addEventListener((session)=>{
             if (!vuforia.api) {
@@ -92,9 +104,7 @@ export class NativescriptVuforiaServiceManager {
                 // backwards compatability
                 session.on['ar.vuforia.dataSetFetch'] = session.on['ar.vuforia.objectTrackerLoadDataSet'];
                 session.on['ar.vuforia.dataSetLoad'] = ({id}:{id:string}) => {
-                    this._handleObjectTrackerLoadDataSet(session, id).then( trackables => {
-                        return {id, trackables}
-                    });
+                    return this._handleObjectTrackerLoadDataSet(session, id);
                 }
             }
 
@@ -102,6 +112,14 @@ export class NativescriptVuforiaServiceManager {
         });
 
         if (!vuforia.api) return;
+        
+        // // switch to AR mode when LIVE reality is presenting
+        // realityService.changeEvent.addEventListener(({current})=>{
+        //     this._setDeviceMode(
+        //         current === Argon.RealityViewer.LIVE ? 
+        //             vuforia.DeviceMode.AR : vuforia.DeviceMode.VR
+        //     );
+        // });
         
         const stateUpdateCallback = (state:vuforia.State) => { 
             
@@ -139,9 +157,10 @@ export class NativescriptVuforiaServiceManager {
                     entityOrientation.maxNumSamples = 10;
                     entityPosition.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
                     entityOrientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
-                    entityPosition.forwardExtrapolationDuration = 2/60;
-                    entityOrientation.forwardExtrapolationDuration = 2/60;
+                    entityPosition.forwardExtrapolationDuration = 10/60;
+                    entityOrientation.forwardExtrapolationDuration = 10/60;
                     contextService.entities.add(entity);
+                    this.contextServiceProvider.publishingReferenceFrameMap.set(id, this.contextService.user.id);
                 }
                 
                 const trackableTime = JulianDate.clone(time); 
@@ -154,42 +173,63 @@ export class NativescriptVuforiaServiceManager {
                 const position = Matrix4.getTranslation(pose, this._scratchCartesian);
                 const rotationMatrix = Matrix4.getRotation(pose, this._scratchMatrix3);
                 const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this._scratchQuaternion);
+
+                // const inverseVideoOrientation = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, getScreenOrientation() * CesiumMath.RADIANS_PER_DEGREE, this._scratchScreenOrientationQuaternion);
+                // Quaternion.multiply(orientation, inverseVideoOrientation, orientation);
                 
                 (entity.position as Argon.Cesium.SampledPositionProperty).addSample(trackableTime, position);
                 (entity.orientation as Argon.Cesium.SampledProperty).addSample(trackableTime, orientation);
             }
             
-            this.stateUpdateEvent.raiseEvent(time);
+            // try {
+                this.stateUpdateEvent.raiseEvent(time);
+            // } catch(e) {
+                // this.sessionService.errorEvent.raiseEvent(e);
+            // }
         };
         
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);
 	}
+        
+    // private _deviceMode = vuforia.DeviceMode.VR;
+    // private _setDeviceMode(deviceMode: vuforia.DeviceMode) {
+    //     this._deviceMode = deviceMode;
+    //     // following may fail (return false) if vuforia is not currently initialized, 
+    //     // but that's okay (since next time we initilaize we will use the saved mode). 
+    //     vuforia.api.getDevice().setMode(deviceMode); 
+    // } 
 
-    private _ensureCommandQueueForSession(session:Argon.SessionPort) {
-        const commandQueue = this._sessionCommandQueue.get(session);
-        if (!commandQueue) throw new Error('Vuforia must be initialized first')
-        return commandQueue;
+    private _getSessionData(session:Argon.SessionPort) {
+        const sessionData = this._sessionData.get(session);
+        if (!sessionData) throw new Error('Vuforia must be initialized first')
+        return sessionData;
+    }
+
+    private _getCommandQueueForSession(session:Argon.SessionPort) {
+        const sessionData = this._sessionData.get(session)!;
+        if (!sessionData.commandQueue) throw new Error('Vuforia must be initialized first')
+        return sessionData.commandQueue;
     }
     
     private _selectControllingSession() {
-        const focusSession = this.focusService.session;
+        const focusSession = this.focusServiceProvider.session;
 
         if (focusSession && 
             focusSession.isConnected && 
-            this._sessionCommandQueue.get(focusSession)) {
+            this._sessionData.has(focusSession)) {
             this._setControllingSession(focusSession);
             return;
         }
 
         if (this._controllingSession && 
             this._controllingSession.isConnected &&
-            this._sessionCommandQueue.get(this._controllingSession)) 
+            this._sessionData.has(this._controllingSession)) 
             return;
 
         // pick a different session as the controlling session
         // TODO: prioritize any sessions other than the focussed session?
         for (const session of this.sessionService.managedSessions) {
-            if (this._sessionCommandQueue.get(session)) {
+            if (this._sessionData.has(session)) {
                 this._setControllingSession(session);
                 return;
             }
@@ -197,7 +237,7 @@ export class NativescriptVuforiaServiceManager {
 
         // if no other session is available,
         // fallback to the manager as the controlling session
-        if (this._sessionCommandQueue.get(this.sessionService.manager))
+        if (this._sessionData.has(this.sessionService.manager))
             this._setControllingSession(this.sessionService.manager);
     }
 
@@ -225,25 +265,31 @@ export class NativescriptVuforiaServiceManager {
     private _pauseSession(session:Argon.SessionPort): Promise<void> {
         console.log('Vuforia: Pausing session ' + session.uri + '...');
 
-        const commandQueue = this._sessionCommandQueue.get(session)!;
+        const sessionData = this._getSessionData(session);
+        const commandQueue = sessionData.commandQueue;
 
         return commandQueue.push(() => {
             commandQueue.pause();
+            
+            // If the session is closed, we set the permanent flag to true.
+            // Likewise, if the session is not closed, we set the permanent flat to false,
+            // maintaining the current session state.
+            const permanent = session.isClosed;
 
             const objectTracker = vuforia.api.getObjectTracker();
             if (objectTracker) objectTracker.stop();
 
-            const activatedDataSets = this._sessionActivatedDataSets.get(session);
+            const activatedDataSets = sessionData.activatedDataSets;
             if (activatedDataSets) {
                 activatedDataSets.forEach((id) => {
-                    this._objectTrackerDeactivateDataSet(session, id);
+                    this._objectTrackerDeactivateDataSet(session, id, permanent);
                 });
             }
 
-            const createdDataSets = this._sessionLoadedDataSets.get(session);
-            if (createdDataSets) {
-                createdDataSets.forEach((id) => {
-                    this._objectTrackerUnloadDataSet(session, id);
+            const loadedDataSets = sessionData.loadedDataSets;
+            if (loadedDataSets) {
+                loadedDataSets.forEach((id) => {
+                    this._objectTrackerUnloadDataSet(session, id, permanent);
                 });
             }
 
@@ -252,14 +298,15 @@ export class NativescriptVuforiaServiceManager {
             vuforia.api.getCameraDevice().deinit();
             vuforia.api.deinitObjectTracker();
             vuforia.api.deinit();
+
+            if (permanent) {
+                this._sessionData.delete(session);
+            }
         }, true);
     }
     
     private _resumeSession(session: Argon.SessionPort): Promise<void> {
-        const commandQueue = this._sessionCommandQueue.get(session);
-
-        if (!commandQueue) 
-            throw new Error('Vuforia: Invalid State. Attempted to resume a session which has not been initialized');
+        const commandQueue = this._getCommandQueueForSession(session);
 
         console.log('Vuforia: Resuming session ' + session.uri + '...');
 
@@ -269,7 +316,8 @@ export class NativescriptVuforiaServiceManager {
     }
 
     private _init(session:Argon.SessionPort) : Promise<void> {
-        const keyPromise = this._sessionKeyPromise.get(session);
+        const sessionData = this._getSessionData(session);
+        const keyPromise = sessionData.keyPromise;
         if (!keyPromise) throw new Error('Vuforia: Invalid State. Missing Key.');
         
         return keyPromise.then<void>( key => {
@@ -282,7 +330,14 @@ export class NativescriptVuforiaServiceManager {
 
             return vuforia.api.init().then((result)=>{
                 console.log('Vuforia: Init Result: ' + result);
-                if (result === vuforia.InitResult.SUCCESS) {
+
+                const resolveInitResult = sessionData.initResultResolver;
+                if (resolveInitResult) {
+                    resolveInitResult(result);
+                    sessionData.initResultResolver = undefined;
+                }
+
+                if (result !== vuforia.InitResult.SUCCESS) {
                     throw new Error(vuforia.InitResult[result]);
                 }
 
@@ -301,30 +356,30 @@ export class NativescriptVuforiaServiceManager {
                 if (!cameraDevice.selectVideoMode(vuforiaCameraDeviceMode))
                     throw new Error('Unable to select video mode');
                     
-                if (!vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR)) 
+                if (!vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR))
                     throw new Error('Unable to set device mode');
 
-                this.configureVuforiaVideoBackground({
-                    x:0,
-                    y:0,
-                    width:vuforia.videoView.getMeasuredWidth(), 
-                    height:vuforia.videoView.getMeasuredHeight()
-                }, false);
+                // this.configureVuforiaVideoBackground({
+                //     x:0,
+                //     y:0,
+                //     width:vuforia.videoView.getMeasuredWidth(), 
+                //     height:vuforia.videoView.getMeasuredHeight()
+                // }, false);
                     
                 if (!vuforia.api.getCameraDevice().start()) 
                     throw new Error('Unable to start camera');
 
-                const createdDataSets = this._sessionLoadedDataSets.get(session);
+                const loadedDataSets = sessionData.loadedDataSets;
                 const loadPromises:Promise<any>[] = [];
-                if (createdDataSets) {
-                    createdDataSets.forEach((id)=>{
+                if (loadedDataSets) {
+                    loadedDataSets.forEach((id)=>{
                         loadPromises.push(this._objectTrackerLoadDataSet(session, id));
                     });
                 }
 
                 return Promise.all(loadPromises);
             }).then(()=>{
-                const activatedDataSets = this._sessionActivatedDataSets.get(session);                
+                const activatedDataSets = sessionData.activatedDataSets;                
                 const activatePromises:Promise<any>[] = [];
                 if (activatedDataSets) {
                     activatedDataSets.forEach((id) => {
@@ -341,10 +396,10 @@ export class NativescriptVuforiaServiceManager {
     }
 
     private _handleInit(session:Argon.SessionPort, options:{encryptedLicenseData?:string, key?:string}) {
-        if (!options.key && !options.encryptedLicenseData) 
+        if (!options.key && !options.encryptedLicenseData)
             throw new Error('No license key was provided. Get one from https://developer.vuforia.com/');
 
-        if (this._sessionCommandQueue.get(session)) 
+        if (this._sessionData.has(session))
             throw new Error('Already initialized');
 
         if (DEBUG_DEVELOPMENT_LICENSE_KEY) options.key = DEBUG_DEVELOPMENT_LICENSE_KEY;
@@ -352,19 +407,20 @@ export class NativescriptVuforiaServiceManager {
         const keyPromise = options.key ? 
             Promise.resolve(options.key) : 
             this._decryptLicenseKey(options.encryptedLicenseData!, session);
-        this._sessionKeyPromise.set(session, keyPromise);
 
-        const commandQueue = new Argon.CommandQueue;
-        this._sessionCommandQueue.set(session,commandQueue);
+        const sessionData = new VuforiaSessionData(keyPromise);
+        this._sessionData.set(session, sessionData);
 
-        return commandQueue.push<void>(() => {
-            return this._init(session);
+        const initResult = new Promise((resolve)=>{
+            sessionData.initResultResolver = resolve;
         });
+
+        this._selectControllingSession();
+
+        return initResult;
     }
 
     private _handleClose(session:Argon.SessionPort) {
-        this._sessionKeyPromise.delete(session);
-        this._sessionCommandQueue.delete(session);
         if (this._controllingSession === session) {
             this._selectControllingSession();
         }
@@ -372,23 +428,26 @@ export class NativescriptVuforiaServiceManager {
     
     private _handleObjectTrackerCreateDataSet(session:Argon.SessionPort, uri:string) {
         return fetchDataSet(uri).then(()=>{
-            let id = this._dataSetIdByUri.get(uri);
+            const sessionData = this._getSessionData(session);
+            let id = sessionData.dataSetIdByUri.get(uri);
             if (!id) {
                 id = Argon.Cesium.createGuid();
-                this._dataSetIdByUri.set(uri, id);
-                this._dataSetUriById.set(id, uri);
+                sessionData.dataSetIdByUri.set(uri, id);
+                sessionData.dataSetUriById.set(id, uri);
             } 
             return {id};
         });
     }
     
     private _objectTrackerLoadDataSet(session:Argon.SessionPort, id: string): Promise<Argon.VuforiaTrackables> {
-        const uri = this._dataSetUriById.get(id);
+        const sessionData = this._getSessionData(session);
+
+        const uri = sessionData.dataSetUriById.get(id);
         if (!uri) throw new Error(`Vuforia: Unknown DataSet id: ${id}`);
         const objectTracker = vuforia.api.getObjectTracker();
         if (!objectTracker) throw new Error('Vuforia: Invalid State. Unable to get ObjectTracker instance.')
 
-        let dataSet = this._dataSetInstanceById.get(id);
+        let dataSet = sessionData.dataSetInstanceById.get(id);
 
         let trackablesPromise:Promise<Argon.VuforiaTrackables>;
 
@@ -399,22 +458,26 @@ export class NativescriptVuforiaServiceManager {
             trackablesPromise = fetchDataSet(uri).then<Argon.VuforiaTrackables>((location)=>{
                 dataSet = objectTracker.createDataSet();
                 if (!dataSet) throw new Error(`Vuforia: Unable to create dataset instance`);
-                this._dataSetInstanceById.set(id, dataSet);
                 
                 if (dataSet.load(location, vuforia.StorageType.Absolute)) {
+                    sessionData.dataSetInstanceById.set(id, dataSet);
+                    sessionData.loadedDataSets.add(id);
                     const trackables = this._getTrackablesFromDataSet(dataSet);
                     console.log('Vuforia loaded dataset file with trackables:\n' + JSON.stringify(trackables));
                     return trackables;
                 }
 
+                objectTracker.destroyDataSet(dataSet);
                 console.log(`Unable to load downloaded dataset at ${location} from ${uri}`);
                 throw new Error('Unable to load dataset');
             });
         }
 
-        trackablesPromise.then((trackables)=>{
-            session.send('ar.vuforia.objectTrackerLoadDataSetEvent', { id, trackables });
-        });
+        if (session.version[0] > 0) {
+            trackablesPromise.then((trackables)=>{
+                session.send('ar.vuforia.objectTrackerLoadDataSetEvent', { id, trackables });
+            });
+        }
 
         return trackablesPromise;
     }
@@ -433,7 +496,7 @@ export class NativescriptVuforiaServiceManager {
     }
 
     private _handleObjectTrackerLoadDataSet(session:Argon.SessionPort, id:string) : Promise<Argon.VuforiaTrackables> {
-        return this._ensureCommandQueueForSession(session).push(()=>{
+        return this._getCommandQueueForSession(session).push(()=>{
             return this._objectTrackerLoadDataSet(session, id);
         });
     }
@@ -444,11 +507,13 @@ export class NativescriptVuforiaServiceManager {
         const objectTracker = vuforia.api.getObjectTracker();
         if (!objectTracker) throw new Error('Vuforia: Invalid State. Unable to get ObjectTracker instance.')
 
-        let dataSet = this._dataSetInstanceById.get(id);
+        const sessionData = this._getSessionData(session);
+
+        let dataSet = sessionData.dataSetInstanceById.get(id);
         let dataSetPromise:Promise<vuforia.DataSet>;
         if (!dataSet) {
             dataSetPromise = this._objectTrackerLoadDataSet(session, id).then(()=>{
-                return this._dataSetInstanceById.get(id)!;
+                return sessionData.dataSetInstanceById.get(id)!;
             })
         } else {
             dataSetPromise = Promise.resolve(dataSet);
@@ -457,24 +522,33 @@ export class NativescriptVuforiaServiceManager {
         return dataSetPromise.then((dataSet)=>{
             if (!objectTracker.activateDataSet(dataSet))
                 throw new Error(`Vuforia: Unable to activate dataSet ${id}`);
-            session.send('ar.vuforia.objectTrackerActivateDataSetEvent', { id });
+            sessionData.activatedDataSets.add(id);
+            if (session.version[0] > 0)
+                session.send('ar.vuforia.objectTrackerActivateDataSetEvent', { id });
         });
     }
 
     private _handleObjectTrackerActivateDataSet(session:Argon.SessionPort, id:string) : Promise<void> {
-        return this._ensureCommandQueueForSession(session).push(()=>{
+        return this._getCommandQueueForSession(session).push(()=>{
             return this._objectTrackerActivateDataSet(session, id);
         });
     }
     
-    private _objectTrackerDeactivateDataSet(session: Argon.SessionPort, id: string): boolean {        
+    private _objectTrackerDeactivateDataSet(session: Argon.SessionPort, id: string, permanent=true): boolean {        
         console.log(`Vuforia deactivating dataset (${id})`);
+        const sessionData = this._getSessionData(session);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
-            const dataSet = this._dataSetInstanceById.get(id);
+            const dataSet = sessionData.dataSetInstanceById.get(id);
             if (dataSet != null) {
                 const success = objectTracker.deactivateDataSet(dataSet);
-                if (success) session.send('ar.vuforia.objectTrackerDeactivateDataSetEvent', { id });
+                if (success) {
+                    if (permanent) {
+                        sessionData.activatedDataSets.delete(id);
+                    }
+                    if (session.version[0] > 0)
+                        session.send('ar.vuforia.objectTrackerDeactivateDataSetEvent', { id });
+                }
                 return success;
             }
         }
@@ -482,22 +556,30 @@ export class NativescriptVuforiaServiceManager {
     }
 
     private _handleObjectTrackerDeactivateDataSet(session:Argon.SessionPort, id:string) {
-        return this._ensureCommandQueueForSession(session).push(()=>{
+        return this._getCommandQueueForSession(session).push(()=>{
             if (!this._objectTrackerDeactivateDataSet(session, id))
                 throw new Error(`Vuforia: unable to activate dataset ${id}`);
         });
     }
     
-    private _objectTrackerUnloadDataSet(session:Argon.SessionPort, id: string): boolean {       
+    private _objectTrackerUnloadDataSet(session:Argon.SessionPort, id: string, permanent=true): boolean {       
         console.log(`Vuforia: unloading dataset (${id})...`);
+        const sessionData = this._getSessionData(session);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
-            const dataSet = this._dataSetInstanceById.get(id);
+            const dataSet = sessionData.dataSetInstanceById.get(id);
             if (dataSet != null) {
                 const deleted = objectTracker.destroyDataSet(dataSet);
                 if (deleted) {
-                    this._dataSetInstanceById.delete(id);
-                    session.send('ar.vuforia.objectTrackerDeactivateDataSetEvent', { id });
+                    if (permanent) {
+                        const uri = sessionData.dataSetUriById.get(id)!;
+                        sessionData.dataSetIdByUri.delete(uri);
+                        sessionData.loadedDataSets.delete(id);
+                        sessionData.dataSetUriById.delete(id);
+                        sessionData.dataSetInstanceById.delete(id);
+                    }
+                    if (session.version[0] > 0)
+                        session.send('ar.vuforia.objectTrackerUnloadDataSetEvent', { id });
                 }
                 return deleted;
             }
@@ -506,7 +588,7 @@ export class NativescriptVuforiaServiceManager {
     }
 
     private _handleObjectTrackerUnloadDataSet(session:Argon.SessionPort, id:string) {
-        return this._ensureCommandQueueForSession(session).push(()=>{
+        return this._getCommandQueueForSession(session).push(()=>{
             if (!this._objectTrackerUnloadDataSet(session, id))
                 throw new Error(`Vuforia: unable to unload dataset ${id}`);
         });
@@ -556,7 +638,7 @@ export class NativescriptVuforiaServiceManager {
         let videoWidth = videoMode.width;
         let videoHeight = videoMode.height;
         
-        const orientation = getDisplayOrientation();
+        const orientation = getScreenOrientation();
         if (orientation === 0 || orientation === 180) {
             videoWidth = videoMode.height;
             videoHeight = videoMode.width;
@@ -581,11 +663,11 @@ export class NativescriptVuforiaServiceManager {
         config.positionY = 0;
         config.reflection = vuforia.VideoBackgroundReflection.Default;
         
-        console.log(`Vuforia configuring video background...
-            contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
-            viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
-            config: ${JSON.stringify(config)}
-        `);
+        // console.log(`Vuforia configuring video background...
+        //     contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
+        //     viewWidth: ${viewWidth} viewHeight: ${viewHeight} videoWidth: ${videoWidth} videoHeight: ${videoHeight} 
+        //     config: ${JSON.stringify(config)}
+        // `);
 
         AbsoluteLayout.setLeft(videoView, viewport.x);
         AbsoluteLayout.setTop(videoView, viewport.y);

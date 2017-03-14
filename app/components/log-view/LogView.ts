@@ -12,11 +12,9 @@ let shadow:Label;
 export function onLayoutLoaded(args) {
     const layout = args.object;
     layout.backgroundColor = new Color('transparent');
-    layout.bindingContext = appViewModel;
 
     appViewModel['getRecentLogItems'] = function() {
-        const logs = appViewModel.layerDetails.log
-        updateLogListener(logs);
+        updateLogListener(appViewModel.layerDetails.log);
         return label.text;
     };
     
@@ -25,6 +23,8 @@ export function onLayoutLoaded(args) {
             updateLogListener(appViewModel.layerDetails.log);
         }
     })
+
+    layout.bindingContext = appViewModel;
 }
 
 export function onLoaded(args) {
@@ -41,7 +41,7 @@ export function onShadowLoaded(args) {
 
 let currentLog:ObservableArray<LogItem>|undefined;
 
-function updateLogListener(log?:ObservableArray<LogItem>) {
+function updateLogListener(log:ObservableArray<LogItem>) {
     if (log === currentLog && appViewModel.debugEnabled) return;
     if (currentLog) {
         currentLog.removeEventListener("change", updateLog);

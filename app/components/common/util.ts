@@ -8,7 +8,7 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
-export function getDisplayOrientation() : number {
+export function getScreenOrientation() : number {
     if (application.ios) {
         const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {

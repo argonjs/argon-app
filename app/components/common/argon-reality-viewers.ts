@@ -1,8 +1,9 @@
 import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
 import * as enums from 'ui/enums';
+
 import {ArgonWebView, SessionEventData} from 'argon-web-view';
-import {NativescriptVuforiaServiceManager} from './argon-vuforia-manager';
+import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 
 import {
   GestureTypes,
@@ -27,12 +28,7 @@ interface DOMTouchEvent {
     changedTouches:Array<DOMTouch>
 }
 
-@Argon.DI.inject(
-    Argon.SessionService, 
-    Argon.ViewService, 
-    Argon.DeviceService,
-    Argon.VuforiaServiceManager
-)
+@Argon.DI.autoinject
 export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
 
     public videoView = vuforia.videoView;
@@ -41,17 +37,13 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         sessionService: Argon.SessionService,
         viewService: Argon.ViewService,
         private _deviceService: Argon.DeviceService,
-        private _vuforiaDelegate: NativescriptVuforiaServiceManager,
+        private _vuforiaServiceProvider: Argon.VuforiaServiceProvider,
         uri:string) {
             super(sessionService, viewService, _deviceService, uri);
-
-            this.presentChangeEvent.addEventListener(()=>{
-                this.videoView.visibility = this.isPresenting ? enums.Visibility.visible : enums.Visibility.collapse;
-            });
     }
 
     private _zoomFactor = 1;
-    private _pinchStartZoomFactor?:number;
+    private _pinchStartZoomFactor:number;
     
     private _handlePinchGestureEventData(data: PinchGestureEventData) {
         switch (data.state) {
@@ -76,6 +68,8 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
     private _scratchTouchPos2 = new Argon.Cesium.Cartesian2;
 
     private _handleForwardedDOMTouchEventData(uievent: DOMTouchEvent) {
+        if (!uievent.touches) return;
+
         if (uievent.touches.length == 2) {
             this._scratchTouchPos1.x = uievent.touches[0].clientX;
             this._scratchTouchPos1.y = uievent.touches[0].clientY;
@@ -97,7 +91,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
                 });
             }
         } else {
-            if (this._startPinchDistance !== undefined) {
+            if (this._startPinchDistance !== undefined && this._currentPinchDistance !== undefined) {
                 this._handlePinchGestureEventData(<PinchGestureEventData>{
                     state: GestureStateTypes.ended,
                     scale: this._currentPinchDistance / this._startPinchDistance
@@ -124,45 +118,46 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
 
         const subviews:Argon.SerializedSubviewList = [];
 
-        const remove = this._vuforiaDelegate.stateUpdateEvent.addEventListener((time)=>{
-            if (this.isPresenting) {
-                const device = this._deviceService;
-                device.update();
+        const remove = this._deviceService.frameStateEvent.addEventListener((frameState)=>{
+            if (!this.isPresenting || !session.isConnected) return;
 
-                Argon.SerializedSubviewList.clone(device.subviews, subviews);
-                if (!subviews.length) return;
+            Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
-                if (!device.strictSubviews) {
-                    this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor;
-                    for (const s of subviews) {
-                        const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
-                        frustum.fov = 2 * Math.atan(Math.tan(frustum.fov * 0.5) / this._effectiveZoomFactor);
-                        Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
-                    }
-                } else {
-                    this._effectiveZoomFactor = 1;
+            if (!frameState.strict) {
+                this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor;
+                for (const s of subviews) {
+                    const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
+                    frustum.fov = 2 * Math.atan(Math.tan(frustum.fov * 0.5) / this._effectiveZoomFactor);
+                    Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
                 }
+            } else {
+                this._effectiveZoomFactor = 1;
+            }
 
-                // apply the projection scale
-                vuforia.api.setScaleFactor(this._effectiveZoomFactor);
+            // apply the projection scale
+            vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor);
 
-                // configure video
-                this._vuforiaDelegate.configureVuforiaVideoBackground(device.viewport, this.isPresenting);
-
-                const viewState:Argon.ViewState = {
-                    time,
+            // configure video
+            const viewport = frameState.viewport;
+            vuforia.api && (this._vuforiaServiceProvider as NativescriptVuforiaServiceProvider)
+                .configureVuforiaVideoBackground(viewport, this.isPresenting);
+            
+            try {
+                const contextFrameState = this._deviceService.createContextFrameState(
+                    frameState.time,
+                    frameState.viewport,
                     subviews,
-                    pose: Argon.getSerializedEntityPose(this._deviceService.eye, time),
-                    viewport: device.viewport,
-                    compassAccuracy: device.compassAccuracy,
-                    verticalAccuracy: device.verticalAccuracy,
-                    horizontalAccuracy: device.horizontalAccuracy
-                }
-                session.send('ar.reality.viewState', viewState);
+                    this._deviceService.user
+                );
+                session.send('ar.reality.frameState', contextFrameState);
+            } catch(e) {
+                console.error(e);
             }
         });
 
-        session.closeEvent.addEventListener(()=>remove());
+        session.closeEvent.addEventListener(()=>{
+            remove();
+        })
     }
 }
 

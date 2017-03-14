@@ -106,9 +106,9 @@ export class BrowserView extends GridLayout {
         }
 
         appViewModel.ready.then(()=>{
-            const manager = appViewModel.manager;
+            const manager = appViewModel.argon;
             
-            appViewModel.manager.reality.installedEvent.addEventListener(({viewer})=>{
+            appViewModel.argon.provider.reality.installedEvent.addEventListener(({viewer})=>{
                 if (viewer instanceof NativescriptHostedRealityViewer) {
                     const webView = viewer.webView;
                     webView.horizontalAlignment = 'stretch';
@@ -119,7 +119,7 @@ export class BrowserView extends GridLayout {
                 }
             });
 
-            appViewModel.manager.reality.uninstalledEvent.addEventListener(({viewer})=>{
+            appViewModel.argon.provider.reality.uninstalledEvent.addEventListener(({viewer})=>{
                 if (viewer instanceof NativescriptHostedRealityViewer) {
                     layer.contentView.removeChild(viewer.webView);
                     this.realityWebviews.delete(viewer.uri);
@@ -127,7 +127,7 @@ export class BrowserView extends GridLayout {
             });
 
             manager.reality.changeEvent.addEventListener(({current})=>{
-                const viewer = manager.reality.getViewerByURI(current!)!;
+                const viewer = manager.provider.reality.getViewerByURI(current!)!;
                 const details = layer.details;
                 details.set('uri', viewer.uri);
                 details.set('title', 'Reality: ' + getHost(viewer.uri));
@@ -198,7 +198,7 @@ export class BrowserView extends GridLayout {
             layer.session = session;
             session.connectEvent.addEventListener(()=>{
                 if (webView === this.focussedLayer.webView) {
-                    appViewModel.manager.focus.session = session;
+                    appViewModel.argon.provider.focus.session = session;
                 }
                 if (layer === this.realityLayer) {
                     if (session.info.role !== Argon.Role.REALITY_VIEW) {
@@ -532,7 +532,7 @@ export class BrowserView extends GridLayout {
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
 
-            appViewModel.manager.focus.session = layer.session;
+            appViewModel.argon.provider.focus.session = layer.session;
             appViewModel.setLayerDetails(layer.details);
             appViewModel.hideOverview();
             if (layer !== this.realityLayer) {

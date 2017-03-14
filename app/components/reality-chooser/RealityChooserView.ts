@@ -18,6 +18,6 @@ export function onLoaded(args) {
 
 export function onTap(args) {
     var item:BookmarkItem = (args.object as View).bindingContext;
-    appViewModel.manager.reality.request({uri: item.uri});
+    appViewModel.argon.reality.request(item.uri);
     appViewModel.hideRealityChooser();
 }

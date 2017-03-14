@@ -14,7 +14,9 @@ import {GestureTypes} from 'ui/gestures'
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
-import {getDisplayOrientation} from './components/common/util';
+import {getScreenOrientation} from './components/common/util';
+
+import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
@@ -250,14 +252,14 @@ export function pageLoaded(args) {
     
     appViewModel.showBookmarks();
     
-    appViewModel.manager.session.errorEvent.addEventListener((error)=>{
-        alert(error.message);
-        if (error.stack) console.log(error.stack);
+    appViewModel.argon.session.errorEvent.addEventListener((error)=>{
+        // alert(error.message + '\n' + error.stack);
+        if (error.stack) console.log(error.message + '\n' + error.stack);
     })
 
     application.on(application.orientationChangedEvent, ()=>{
         setTimeout(()=>{
-            const orientation = getDisplayOrientation();
+            const orientation = getScreenOrientation();
             if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
                 page.actionBarHidden = true;
             else 
@@ -378,7 +380,7 @@ export function onAddChannel(args) {
 
 export function onReload(args) {
     if (browserView.focussedLayer === browserView.realityLayer) {
-        appViewModel.manager.reality.request({uri: appViewModel.manager.reality.current});
+        appViewModel.argon.reality.request(appViewModel.argon.reality.current || RealityViewer.LIVE);
     } else {
         browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
     }
