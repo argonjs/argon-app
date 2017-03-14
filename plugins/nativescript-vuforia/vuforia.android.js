@@ -1,8 +1,9 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var common = require("./vuforia-common");
 // import def = require('nativescript-vuforia');
 // import application = require('application');
 global.moduleMerge(common, exports);
 exports.android = {};
 exports.api = undefined;
-//# sourceMappingURL=vuforia.android.js.map
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidnVmb3JpYS5hbmRyb2lkLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsidnVmb3JpYS5hbmRyb2lkLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7O0FBQUEseUNBQTRDO0FBQzVDLGdEQUFnRDtBQUNoRCwrQ0FBK0M7QUFFL0MsTUFBTSxDQUFDLFdBQVcsQ0FBQyxNQUFNLEVBQUUsT0FBTyxDQUFDLENBQUM7QUFFdkIsUUFBQSxPQUFPLEdBQUcsRUFBRSxDQUFDO0FBRWIsUUFBQSxHQUFHLEdBQUcsU0FBUyxDQUFDIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IGNvbW1vbiA9IHJlcXVpcmUoJy4vdnVmb3JpYS1jb21tb24nKTtcbi8vIGltcG9ydCBkZWYgPSByZXF1aXJlKCduYXRpdmVzY3JpcHQtdnVmb3JpYScpO1xuLy8gaW1wb3J0IGFwcGxpY2F0aW9uID0gcmVxdWlyZSgnYXBwbGljYXRpb24nKTtcblxuZ2xvYmFsLm1vZHVsZU1lcmdlKGNvbW1vbiwgZXhwb3J0cyk7XG5cbmV4cG9ydCBjb25zdCBhbmRyb2lkID0ge307XG5cbmV4cG9ydCBjb25zdCBhcGkgPSB1bmRlZmluZWQ7XG4iXX0=

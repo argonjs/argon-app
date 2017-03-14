@@ -1,6 +1,12 @@
 require('globals')
 import def = require('nativescript-vuforia');
-    
+
+export enum Hint {
+    MaxSimultaneousImageTargets = 0,
+    MaxSimultaneousObjectTargets = 1,
+    DelayedLoadingObjectDatasets = 2
+}
+
 export enum InitResult {
     SUCCESS = 100,
     ERROR = -1,
@@ -13,6 +19,96 @@ export enum InitResult {
     LICENSE_ERROR_CANCELED_KEY = -8,
     LICENSE_ERROR_PRODUCT_TYPE_MISMATCH = -9,
     EXTERNAL_DEVICE_NOT_DETECTED = -10
+}
+
+export enum StorageType {
+    App = 0,
+    AppResource = 1,
+    Absolute = 2
+}
+
+export enum FPSHint {
+    None = 0,
+    NoVideoBackground = 1,
+    PowerEfficiency = 2,
+    Fast = 4,
+    DefaultFlags = 0
+}
+    
+export enum VideoBackgroundReflection {
+    Default = 0,
+    On = 1,
+    Off = 2
+}
+
+export enum DeviceMode {
+    AR = 0,
+    VR = 1
+}
+
+export enum CoordinateSystemType {
+    Unknown = 0,
+    Camera = 1,
+    World = 2
+}
+
+export enum View {
+    Singular = 0,
+    LeftEye = 1,
+    RightEye = 2,
+    PostProcess = 3,
+    Count = 4
+}
+
+export enum ViewerParamtersButtonType {
+    None = 0,
+    Magnet = 1,
+    FingerTouch = 2,
+    ButtonTouch = 3
+}
+
+export enum ViewerParamtersTrayAlignment {
+    Bottom = 0,
+    Centre = 1,
+    Top = 2
+}
+
+export enum CameraDeviceMode {
+    Default = -1,
+    OptimizeSpeed = -2,
+    OpimizeQuality = -3
+}
+
+export enum CameraDeviceFocusMode {
+    Normal = 0,
+    TriggerAuto = 1,
+    ContinuousAuto = 2,
+    Infinite = 3,
+    Macro = 4
+}
+
+export enum CameraDeviceDirection {
+    Default = 0,
+    Back = 1,
+    Front = 2
+}
+
+export enum PixelFormat {
+    Unknown = 0,
+    RGB565 = 1,
+    RGB888 = 2,
+    GRAYSCALE = 4,
+    YUV = 8,
+    RGBA8888 = 16,
+    INDEXED = 32
+}
+
+export enum TrackableResultStatus {
+    Unknown = 0,
+    Undefined = 1,
+    Detected = 2,
+    Tracked = 3,
+    ExtendedTracked = 4
 }
 
 export abstract class APIBase implements def.API {
