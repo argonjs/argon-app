@@ -45,7 +45,7 @@ import * as Argon from '@argonjs/argon'
 import observableModule = require("data/observable");
 let androidLayoutObservable = new Observable();
 
-const TITLE_BAR_HEIGHT = 40;
+const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;
 const OVERVIEW_ANIMATION_DURATION = 250;
 const MIN_ANDROID_WEBVIEW_VERSION = 56;
@@ -270,9 +270,8 @@ export class BrowserView extends GridLayout {
         closeButton.verticalAlignment = VerticalAlignment.stretch;
         closeButton.text = 'close';
         closeButton.className = 'material-icon';
-        closeButton.style.fontSize = this.android ? 16 : 22;
+        closeButton.style.fontSize = application.android ? 16 : 22;
         closeButton.color = new Color('black');
-        closeButton.backgroundColor = this.android ? new Color('white') : new Color('black');
         GridLayout.setRow(closeButton, 0);
         GridLayout.setColumn(closeButton, 0);
         
@@ -282,7 +281,7 @@ export class BrowserView extends GridLayout {
         
         const titleLabel = new Label();
         titleLabel.horizontalAlignment = HorizontalAlignment.stretch;
-        titleLabel.verticalAlignment = this.android ? VerticalAlignment.center : VerticalAlignment.stretch;
+        titleLabel.verticalAlignment = application.android ? VerticalAlignment.center : VerticalAlignment.stretch;
         titleLabel.textAlignment = TextAlignment.center;
         titleLabel.color = new Color('black');
         titleLabel.fontSize = 14;
