@@ -46,21 +46,11 @@ export class ArgonWebView extends common.ArgonWebView  {
 
         const configuration = WKWebViewConfiguration.alloc().init();
 
-        // We want to replace the UIWebView created by superclass with WKWebView instance
-        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
-        delete this._delegate // remove reference to UIWebView delegate created by super class
-        this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
-        
-        this._ios.UIDelegate
-        
         configuration.allowsInlineMediaPlayback = true;
         configuration.allowsAirPlayForMediaPlayback = true;
         configuration.allowsPictureInPictureMediaPlayback = true;
         configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
         configuration.processPool = processPool;
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
         configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly(`(${
             function() {
                 var _originalLog = console.log;
@@ -116,6 +106,14 @@ export class ArgonWebView extends common.ArgonWebView  {
                 }
             }.toString()
         }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
+
+        // We want to replace the UIWebView created by superclass with WKWebView instance
+        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        delete this._delegate // remove reference to UIWebView delegate created by super class
+        const delegate = this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "argoncheck");
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "log");
 
 	    this._ios.allowsBackForwardNavigationGestures = true;
 		this._ios['customUserAgent'] = ARGON_USER_AGENT;
