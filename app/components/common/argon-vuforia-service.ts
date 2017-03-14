@@ -313,7 +313,7 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     }
     
     private idDataSetMap = new Map<string, vuforia.DataSet>();
-    private dataSetUrlMap = new WeakMap<vuforia.DataSet|undefined, string|undefined>();
+    private dataSetUrlMap = new WeakMap<vuforia.DataSet, string|undefined>();
     
     objectTrackerCreateDataSet(url?: string): string|undefined {        
         console.log("Vuforia creating dataset...");
@@ -371,6 +371,9 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     
     dataSetFetch(id: string): Promise<void> {
         const dataSet = this.idDataSetMap.get(id);
+        if (dataSet === undefined) {
+            return Promise.reject("Dataset does not exist: " + id);
+        }
         const url = this.dataSetUrlMap.get(dataSet);
         if (url) {
             console.log(`Vuforia fetching dataset (${id}) at ${url}`);
@@ -381,6 +384,9 @@ export class NativescriptVuforiaServiceDelegate extends Argon.VuforiaServiceDele
     
     dataSetLoad(id: string): Promise<Argon.VuforiaTrackables> {
         const dataSet = this.idDataSetMap.get(id);
+        if (dataSet === undefined) {
+            return Promise.reject("Dataset does not exist: " + id);
+        }
         const url = this.dataSetUrlMap.get(dataSet);
         if (dataSet && url) {
             console.log(`Vuforia loading dataset (${id}) at ${url}`);
