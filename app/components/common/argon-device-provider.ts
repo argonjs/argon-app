@@ -270,10 +270,10 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             // Update subview viewport
             const vuforiaSubviewViewport = renderingPrimitives.getViewport(view);
             const subviewViewport = subview.viewport = subview.viewport || <Argon.Viewport>{};
-            subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
-            subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
-            subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
-            subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
+            subviewViewport.x = vuforiaSubviewViewport.x;
+            subviewViewport.y = vuforiaSubviewViewport.y;
+            subviewViewport.width = vuforiaSubviewViewport.z;
+            subviewViewport.height = vuforiaSubviewViewport.w;
 
             // Start with the projection matrix for this subview
             // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.

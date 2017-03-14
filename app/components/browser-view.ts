@@ -129,8 +129,10 @@ export class BrowserView extends GridLayout {
             manager.reality.changeEvent.addEventListener(({current})=>{
                 const viewer = manager.provider.reality.getViewerByURI(current!)!;
                 const details = layer.details;
-                details.set('uri', viewer.uri);
-                details.set('title', 'Reality: ' + getHost(viewer.uri));
+                const uri = viewer.uri;
+                details.set('uri', uri);
+                details.set('title', 'Reality: ' + getHost(uri));
+                layer.webView = this.realityWebviews.get(uri);
 
                 var sessionPromise = new Promise<Argon.SessionPort>((resolve, reject) => {
                     if (viewer.session && !viewer.session.isClosed) {

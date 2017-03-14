@@ -16,7 +16,7 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 import {getScreenOrientation} from './components/common/util';
 
-import {RealityViewer} from '@argonjs/argon'
+// import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
@@ -379,11 +379,7 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    if (browserView.focussedLayer === browserView.realityLayer) {
-        appViewModel.argon.reality.request(appViewModel.argon.reality.current || RealityViewer.LIVE);
-    } else {
-        browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
-    }
+    browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
 }
 
 export function onFavoriteToggle(args) {
