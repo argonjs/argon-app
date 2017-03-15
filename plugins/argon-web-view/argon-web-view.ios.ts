@@ -3,12 +3,36 @@ import * as common from './argon-web-view-common';
 import {WebView} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
+import * as dialogs from 'ui/dialogs';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
 const processPool = WKProcessPool.new();
                         
 declare const window:any, webkit:any, document:any;
+
+/// In-memory certificate store.
+class CertStore {
+    private keys = new Set<string>();
+
+    public addCertificate(cert: any, origin:string) {
+        let data: NSData = SecCertificateCopyData(cert)
+        let key = this.keyForData(data, origin);
+        this.keys.add(key);
+    }
+
+    public containsCertificate(cert: any, origin:string) : boolean {
+        let data: NSData = SecCertificateCopyData(cert)
+        let key = this.keyForData(data, origin)
+        return this.keys.has(key);
+    }
+
+    private keyForData(data: NSData, origin:string) {
+        return `${origin}/${data.hash}`;
+    }
+}
+
+const _certStore = new CertStore();
 
 export class ArgonWebView extends common.ArgonWebView  {
 
@@ -22,15 +46,11 @@ export class ArgonWebView extends common.ArgonWebView  {
 
         const configuration = WKWebViewConfiguration.alloc().init();
 
-        // We want to replace the UIWebView created by superclass with WKWebView instance
-        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
-        delete this._delegate // remove reference to UIWebView delegate created by super class
-        this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
-        
+        configuration.allowsInlineMediaPlayback = true;
+        configuration.allowsAirPlayForMediaPlayback = true;
+        configuration.allowsPictureInPictureMediaPlayback = true;
+        configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
         configuration.processPool = processPool;
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argon");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "argoncheck");
-        configuration.userContentController.addScriptMessageHandlerName(this._argonDelegate, "log");
         configuration.userContentController.addUserScript(WKUserScript.alloc().initWithSourceInjectionTimeForMainFrameOnly(`(${
             function() {
                 var _originalLog = console.log;
@@ -87,6 +107,14 @@ export class ArgonWebView extends common.ArgonWebView  {
             }.toString()
         }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
 
+        // We want to replace the UIWebView created by superclass with WKWebView instance
+        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        delete this._delegate // remove reference to UIWebView delegate created by super class
+        const delegate = this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "argoncheck");
+        configuration.userContentController.addScriptMessageHandlerName(delegate, "log");
+
 	    this._ios.allowsBackForwardNavigationGestures = true;
 		this._ios['customUserAgent'] = ARGON_USER_AGENT;
 
@@ -118,6 +146,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         })
     }
 
+    public evaluateJavascriptWithoutPromise(script:string) : void {
+        this._ios.evaluateJavaScriptCompletionHandler(script, <any>null)
+    }
+
     public bringToFront() {
         this._ios.superview.bringSubviewToFront(this._ios);
     }
@@ -138,6 +170,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
         return this.url;
     }
+
+    reload() {
+        this._ios.reloadFromOrigin();
+    }
 }
 
 class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, WKNavigationDelegate {
@@ -147,7 +183,41 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     public static initWithOwner(owner:WeakRef<ArgonWebView>) {
         const delegate = <ArgonWebViewDelegate>ArgonWebViewDelegate.new()
         delegate._owner = owner;
+
+        const wkWebView = <WKWebView>owner.get().ios;
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "title", 0, <any>null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "URL", 0, <any>null);
+        wkWebView.addObserverForKeyPathOptionsContext(delegate, "estimatedProgress", 0, <any>null);
+
         return delegate;
+    }
+
+    observeValueForKeyPathOfObjectChangeContext(keyPath:string, object:any, change:any, context:any) {
+        const owner = this._owner.get();
+        if (!owner) return;        
+        
+        const wkWebView = <WKWebView>owner.ios;
+
+        switch (keyPath) {
+            case "title": 
+                owner.set(keyPath, wkWebView.title); 
+                break;
+            case "URL": 
+                this.updateURL();
+                break;
+            case "estimatedProgress":
+                owner.set('progress', wkWebView.estimatedProgress);
+                break;
+        }
+    }
+
+    private updateURL() {
+        const owner = this._owner.get();
+        if (!owner) return;     
+        const wkWebView = <WKWebView>owner.ios;
+        owner['_suspendLoading'] = true; 
+        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString); 
+        owner['_suspendLoading'] = false; 
     }
     
     // WKScriptMessageHandler
@@ -215,45 +285,83 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
     webViewDidStartProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
         this._provisionalURL = webView.URL.absoluteString;
-        const owner = this._owner.get();
-        if (!owner) return;
-        owner.set('progress', webView.estimatedProgress);
-    }
-
-    webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
-        const owner = this._owner.get();
-        if (!owner) return;
-        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
         if (!owner) return;
         owner._didCommitNavigation();
-        owner['_suspendLoading'] = true;
-        owner.url = webView.URL.absoluteString;
-        owner['_suspendLoading'] = false;
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
+    }
+
+    webViewDidFailProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
+        const owner = this._owner.get();
+        if (!owner) return;
+        owner['_onLoadFinished'](this._provisionalURL, "Provisional navigation failed");
+        this.updateURL();
     }
 
     webViewDidFinishNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
-        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString)
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString);
+        this.updateURL();
     }
 
     webViewDidFailNavigationWithError(webView: WKWebView, navigation: WKNavigation, error:NSError) {
         const owner = this._owner.get();
         if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
-        owner.set('title', webView.title);
-        owner.set('progress', webView.estimatedProgress);
+        this.updateURL();
+    }
+
+    private checkIfWebContentProcessHasCrashed(webView: WKWebView, error: NSError) : boolean {
+        if (error.code == WKErrorCode.WebContentProcessTerminated && error.domain == "WebKitErrorDomain") {
+            webView.reloadFromOrigin()
+            return true
+        }
+        return false
+    }
+
+    webViewDidFailProvisionalNavigationWithError(webView: WKWebView, navigation: WKNavigation, error: NSError) {
+        const owner = this._owner.get();
+        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        this.updateURL();
+
+        if (this.checkIfWebContentProcessHasCrashed(webView, error)) {
+            return;
+        }
+
+        const url = error.userInfo.objectForKey(NSURLErrorFailingURLErrorKey) as NSURL;
+        if (url && url.host && 
+            error.code === NSURLErrorServerCertificateUntrusted || 
+            error.code === NSURLErrorServerCertificateHasBadDate || 
+            error.code === NSURLErrorServerCertificateHasUnknownRoot || 
+            error.code === NSURLErrorServerCertificateNotYetValid) {
+                const certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
+                const cert = certChain && certChain[0];
+                dialogs.confirm(`${error.localizedDescription} Would you like to continue anyway?`).then(function (result) {
+                    if (result) {
+                        const origin = `${url.host}:${url.port||443}`;
+                        _certStore.addCertificate(cert, origin);
+                        webView.loadRequest(new NSURLRequest({URL:url}));
+                    }
+                }).catch(()=>{});
+        }
+    }
+
+
+	webViewDidReceiveAuthenticationChallengeCompletionHandler?(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
+        // If this is a certificate challenge, see if the certificate has previously been
+        // accepted by the user.
+        const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
+        const trust = challenge.protectionSpace.serverTrust;
+        const cert = SecTrustGetCertificateAtIndex(trust, 0);
+        if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
+            trust && cert && _certStore.containsCertificate(cert, origin)) {
+            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
+            return;
+        }
+
+        completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
     }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];

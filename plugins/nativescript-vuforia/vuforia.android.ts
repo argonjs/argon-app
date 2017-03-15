@@ -1,12 +1,8 @@
-import * as utils from 'utils/utils';
+//import * as utils from 'utils/utils';
 
 import common = require('./vuforia-common');
 import def = require('nativescript-vuforia');
 import application = require('application');
-import http = require('http');
-import file = require('file-system');
-import frames = require('ui/frame');
-import views = require('ui/core/view');
 import placeholder = require('ui/placeholder');
 import vuforia = com.vuforia;
 import plugin = io.argonjs.vuforia;
@@ -203,28 +199,6 @@ function createVec3(vec:vuforia.Vec3F) : def.Vec3 {
 function createVec4(vec:vuforia.Vec4F) : def.Vec4 {
     var data = vec.getData();
     return { x: data[0], y: data[1], z: data[2], w: data[3] };
-}
-
-function createMatrix44(mat:vuforia.Matrix44F) : def.Matrix44 {
-    var data = mat.getData();
-    return  [
-                data[0],
-                data[1],
-                data[2],
-                data[3],
-                data[4],
-                data[5],
-                data[6],
-                data[7],
-                data[8],
-                data[9],
-                data[10],
-                data[11],
-                data[12],
-                data[13],
-                data[14],
-                data[15]
-            ];
 }
 
 function convert2GLMatrix(mat:vuforia.Matrix34F) : def.Matrix44 {

@@ -1,7 +1,7 @@
 import * as application from 'application';
 import {Observable} from 'data/observable';
 import {View} from 'ui/core/view';
-import {ListView,ItemEventData} from 'ui/list-view';
+import {ListView} from 'ui/list-view';
 import {BookmarkItem, favoriteList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
@@ -9,7 +9,6 @@ import {
   GestureTypes,
   GestureStateTypes,
   PanGestureEventData,
-  GestureEventData,
 } from 'ui/gestures';
 
 import {AnimationCurve} from 'ui/enums'

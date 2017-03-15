@@ -1,21 +1,19 @@
 import * as common from "./argon-web-view-common";
-import * as page from "ui/page";
-import * as Argon from "@argonjs/argon";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
-import {Color} from "color";
+//import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
-
-declare const window : any;
 
 export class ArgonWebView extends common.ArgonWebView {
 
     private currentUrl: string = "";
 
+    /*
     private static layersById: {
         [id: string]: ArgonWebView,
     } = {};
+    */
 
     constructor() {
         super();
@@ -112,6 +110,10 @@ export class ArgonWebView extends common.ArgonWebView {
                 },
             }));
         });
+    }
+
+    evaluateJavascriptWithoutPromise(script:string) {
+        this.android.evaluateJavascript(script);
     }
 
     bringToFront() {

@@ -1,20 +1,8 @@
 import {Observable} from 'data/observable';
-import {ObservableArray} from 'data/observable-array';
 import {View} from 'ui/core/view';
-import {ListView,ItemEventData} from 'ui/list-view';
-import {RealityBookmarkItem, realityList} from '../common/bookmarks'
-import {manager, appViewModel} from '../common/AppViewModel'
-
-import {
-  GestureTypes,
-  GestureStateTypes,
-  PanGestureEventData,
-  GestureEventData,
-} from 'ui/gestures';
-
-import {AnimationCurve} from 'ui/enums'
-
-import * as Argon from '@argonjs/argon'
+import {ListView} from 'ui/list-view';
+import {realityList, BookmarkItem} from '../common/bookmarks'
+import {appViewModel} from '../common/AppViewModel'
 
 export class RealityChooserViewModel extends Observable {
     realityList = realityList;
@@ -22,7 +10,6 @@ export class RealityChooserViewModel extends Observable {
 export const viewModel = new RealityChooserViewModel();
 
 let listView:ListView;
-let editing = false;
 
 export function onLoaded(args) {
     listView = args.object;
@@ -30,8 +17,7 @@ export function onLoaded(args) {
 }
 
 export function onTap(args) {
-    if (editing) return
-    var item:RealityBookmarkItem = (args.object as View).bindingContext;
-    manager.reality.setDesired(item.reality);
+    var item:BookmarkItem = (args.object as View).bindingContext;
+    appViewModel.argon.reality.request(item.uri);
     appViewModel.hideRealityChooser();
 }

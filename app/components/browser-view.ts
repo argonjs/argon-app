@@ -1,11 +1,8 @@
+import * as URI from 'urijs';
 import {View} from 'ui/core/view';
 import {ScrollView} from 'ui/scroll-view'
-import {Page} from 'ui/page';
 import {Color} from 'color';
-import {Layout} from 'ui/layouts/layout';
-import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
-import {StackLayout} from 'ui/layouts/stack-layout';
 import {Label} from 'ui/label';
 import {Button} from 'ui/button';
 import {ArgonWebView} from 'argon-web-view';
@@ -14,30 +11,23 @@ import {
     AnimationCurve, 
     VerticalAlignment, 
     HorizontalAlignment, 
-    Orientation, 
     TextAlignment,
     Visibility
 } from 'ui/enums';
 import {
-  GestureTypes,
-  GestureStateTypes,
-  PanGestureEventData,
-  PinchGestureEventData,
-  GestureEventData,
+  GestureTypes
 } from 'ui/gestures';
-import {Util} from './common/util';
+import {bringToFront} from './common/util';
 import {PropertyChangeData} from 'data/observable'
-import {Placeholder, CreateViewEventData} from 'ui/placeholder'
 import {Observable} from 'data/observable';
 import dialogs = require("ui/dialogs");
 import applicationSettings = require('application-settings');
 import * as vuforia from 'nativescript-vuforia';
-import * as fs from 'file-system';
-import * as frames from 'ui/frame';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 
-import {manager, appViewModel, LayerDetails} from './common/AppViewModel'
+import {appViewModel, LayerDetails} from './common/AppViewModel'
+import {NativescriptHostedRealityViewer} from './common/argon-reality-viewers'
 import * as bookmarks from './common/bookmarks'
 
 import * as Argon from '@argonjs/argon'
@@ -52,8 +42,10 @@ const MIN_ANDROID_WEBVIEW_VERSION = 56;
 const IGNORE_WEBVIEW_UPGRADE_KEY = 'ignore_webview_upgrade';
 
 export interface Layer {
-    webView:ArgonWebView,
-    container:GridLayout,
+    session?:Argon.SessionPort,
+    containerView:GridLayout,
+    contentView:GridLayout,
+    webView?:ArgonWebView,
     touchOverlay:GridLayout,
     titleBar:GridLayout,
     closeButton:Button,
@@ -64,6 +56,7 @@ export interface Layer {
 
 export class BrowserView extends GridLayout {
     realityLayer:Layer;
+    realityWebviews = new Map<string, ArgonWebView>();
     
     videoView:View = vuforia.videoView;
     scrollView = new ScrollView;
@@ -72,8 +65,6 @@ export class BrowserView extends GridLayout {
         
     private _focussedLayer:Layer;
     private _overviewEnabled = false;
-    private _scrollOffset = 0;
-    private _panStartOffset = 0;
     
     private _intervalId?:number;
 
@@ -81,32 +72,6 @@ export class BrowserView extends GridLayout {
 
     constructor() {
         super();
-        this.realityLayer = this.addLayer();
-        if (vuforia.api) {
-            this.realityLayer.webView.style.visibility = 'collapsed';
-        }
-        this.realityLayer.titleBar.backgroundColor = new Color(0xFF222222);
-        this.realityLayer.titleLabel.color = new Color('white');
-        this.realityLayer.closeButton.visibility = 'collapsed';
-        
-        if (this.realityLayer.webView.ios) {
-            // disable user navigation of the reality view
-            (this.realityLayer.webView.ios as WKWebView).allowsBackForwardNavigationGestures = false;
-        }
-        
-        if (this.videoView) {
-            this.videoView.horizontalAlignment = 'stretch';
-            this.videoView.verticalAlignment = 'stretch';
-            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
-            const videoViewLayout = new AbsoluteLayout();
-            videoViewLayout.addChild(this.videoView);
-            this.realityLayer.container.addChild(videoViewLayout);
-        }
-
-        // do this in onLoaded instead
-        //Util.bringToFront(this.realityLayer.webView);
-        //Util.bringToFront(this.realityLayer.touchOverlay);
-        //Util.bringToFront(this.realityLayer.titleBar);
         
         this.layerContainer.horizontalAlignment = 'stretch';
         this.layerContainer.verticalAlignment = 'stretch';
@@ -129,41 +94,89 @@ export class BrowserView extends GridLayout {
         
         this.scrollView.on(ScrollView.scrollEvent, this._animate.bind(this));
         
-        // Make a new layer to be used with the url bar.
+        // Create the reality layer
+        this._createRealityLayer();
+
+        // Add a normal layer to be used with the url bar.
         this.addLayer();
         
         application.on(application.orientationChangedEvent, ()=>{
             this.requestLayout();
             this.scrollView.scrollToVerticalOffset(0, false);
         })
-        
-        manager.reality.changeEvent.addEventListener(({current})=>{
-            // const realityListItem = bookmarks.realityMap.get(current.uri);
-            const details = this.realityLayer.details;
-            details.set('title', 'Reality: ' + current.title);
-            details.set('uri', current.uri);
-            details.set('supportedInteractionModes', ['page','immersive']);
-            if (current === bookmarks.LIVE_VIDEO_REALITY) {
-                this.realityLayer.webView.visibility = 'collapse';
-            } else {
-                this.realityLayer.webView.visibility = 'visible';
-            }
-        })
-
-        // enable pinch-zoom
-        this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
     }
 
-    addLayer() {
-        let layer:Layer;
+    private _createRealityLayer() {
+        let layer:Layer = this._createLayer();
+        layer.titleBar.backgroundColor = new Color(0xFF222222);
+        layer.titleLabel.color = new Color('white');
+        layer.closeButton.visibility = 'collapsed';
         
-        const container = new GridLayout();
-        container.horizontalAlignment = 'left';
-        container.verticalAlignment = 'top';
+        if (this.videoView) {
+            this.videoView.horizontalAlignment = 'stretch';
+            this.videoView.verticalAlignment = 'stretch';
+            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
+            layer.contentView.addChild(this.videoView);
+        }
+
+        appViewModel.ready.then(()=>{
+            const manager = appViewModel.argon;
+            
+            appViewModel.argon.provider.reality.installedEvent.addEventListener(({viewer})=>{
+                if (viewer instanceof NativescriptHostedRealityViewer) {
+                    const webView = viewer.webView;
+                    webView.horizontalAlignment = 'stretch';
+                    webView.verticalAlignment = 'stretch';
+                    webView.visibility = 'collapse';
+                    layer.contentView.addChild(webView);
+                    this.realityWebviews.set(viewer.uri, webView);
+                }
+            });
+
+            appViewModel.argon.provider.reality.uninstalledEvent.addEventListener(({viewer})=>{
+                if (viewer instanceof NativescriptHostedRealityViewer) {
+                    layer.contentView.removeChild(viewer.webView);
+                    this.realityWebviews.delete(viewer.uri);
+                }
+            });
+
+            manager.reality.changeEvent.addEventListener(({current})=>{
+                const viewer = manager.provider.reality.getViewerByURI(current!)!;
+                const details = layer.details;
+                const uri = viewer.uri;
+                details.set('uri', uri);
+                details.set('title', 'Reality: ' + getHost(uri));
+                layer.webView = this.realityWebviews.get(uri);
+
+                var sessionPromise = new Promise<Argon.SessionPort>((resolve, reject) => {
+                    if (viewer.session && !viewer.session.isClosed) {
+                        resolve(viewer.session);
+                    } else {
+                        let remove = viewer.connectEvent.addEventListener((session)=>{
+                            resolve(session);
+                            remove();
+                        })
+                    }
+                });
+
+                sessionPromise.then((session)=>{
+                    if (current === manager.reality.current) {
+                        if (session.info.title) details.set('title', 'Reality: ' + session.info.title);
+                    }
+                });
+            });
+        });
+
+        this.realityLayer = layer;
+    }
+
+    addLayer() : Layer {
+        const layer:Layer = this._createLayer();
         
-        const webView = new ArgonWebView;
+        const webView = layer.webView = new ArgonWebView;
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
+        layer.contentView.addChild(webView);
 
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
             switch(eventData.propertyName) {
@@ -171,26 +184,19 @@ export class BrowserView extends GridLayout {
                     layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
-                    var historyBookmarkItem = bookmarks.historyMap.get(webView.url);
-                    if (historyBookmarkItem) {
-                        historyBookmarkItem.set('title', eventData.value);
-                    }
-                    if (layer !== this.realityLayer)
-                        layer.details.set('title', eventData.value);
+                    const title = webView.title || getHost(webView.url);
+                    bookmarks.updateTitle(webView.url, title);
+                    layer.details.set('title', title);
                     break;
                 case 'isArgonApp':
                     const isArgonApp = eventData.value;
-                    layer.details.set('supportedInteractionModes', isArgonApp ? 
-                        ['page', 'immersive'] :
-                        ['page']
-                    );
                     if (isArgonApp || layer === this.focussedLayer || this._overviewEnabled) {
-                        layer.container.animate({
+                        layer.containerView.animate({
                             opacity: 1,
                             duration: OVERVIEW_ANIMATION_DURATION
                         });
                     } else {
-                        layer.container.opacity = 1;
+                        layer.containerView.opacity = 1;
                     }
                     break;
                 default: break;
@@ -200,35 +206,16 @@ export class BrowserView extends GridLayout {
         webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
             this._checkWebViewVersion(webView);
             if (!eventData.error && webView !== this.realityLayer.webView) {
-                const historyBookmarkItem = bookmarks.historyMap.get(eventData.url);
-                if (historyBookmarkItem) {
-                    let i = bookmarks.historyList.indexOf(historyBookmarkItem);
-                    bookmarks.historyList.splice(i, 1);
-                    bookmarks.historyList.unshift(historyBookmarkItem);
-                } else {
-                    bookmarks.historyList.unshift(new bookmarks.BookmarkItem({
-                        uri: eventData.url,
-                        title: webView.title
-                    }))
-                }
-            }
-
-            if (this.focussedLayer.webView === webView) {
-                const session = webView.session;
-                const gestureObservers = this.layerContainer.getGestureObservers(GestureTypes.pinch);
-                if (!session || (session && session.info['app.disablePinchZoom'])) {
-                    this.layerContainer.off(GestureTypes.pinch);
-                } else if ( !gestureObservers || (gestureObservers && gestureObservers.length === 0)) {
-                    this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
-                }
+                bookmarks.pushToHistory(eventData.url, webView.title);
             }
         });
         
         webView.on('session', (e)=>{
             const session = e.session;
+            layer.session = session;
             session.connectEvent.addEventListener(()=>{
                 if (webView === this.focussedLayer.webView) {
-                    manager.focus.setSession(session);
+                    appViewModel.argon.provider.focus.session = session;
                 }
                 if (layer === this.realityLayer) {
                     if (session.info.role !== Argon.Role.REALITY_VIEW) {
@@ -242,8 +229,30 @@ export class BrowserView extends GridLayout {
                     }
                 }
             })
-        })
+            session.closeEvent.addEventListener(()=>{
+                layer.session = undefined;
+            })
+        });
+
+        layer.details.set('log', webView.log);
         
+        if (this.isLoaded)
+            this.setFocussedLayer(layer);
+        
+        if (this._overviewEnabled) this._showLayerInCarousel(layer);
+        
+        return layer;
+    }
+
+    private _createLayer() {
+        const contentView = new GridLayout();
+        contentView.horizontalAlignment = 'stretch';
+        contentView.verticalAlignment = 'stretch';
+
+        const containerView = new GridLayout();
+        containerView.horizontalAlignment = 'left';
+        containerView.verticalAlignment = 'top';
+
         // Cover the webview to detect gestures and disable interaction
         const touchOverlay = new GridLayout();
         touchOverlay.style.visibility = 'collapsed';
@@ -277,7 +286,7 @@ export class BrowserView extends GridLayout {
         
         closeButton.on('tap', ()=>{
             this.removeLayer(layer);
-        })
+        });
         
         const titleLabel = new Label();
         titleLabel.horizontalAlignment = HorizontalAlignment.stretch;
@@ -291,33 +300,30 @@ export class BrowserView extends GridLayout {
         titleBar.addChild(closeButton);
         titleBar.addChild(titleLabel);
         
-        container.addChild(webView);
-        container.addChild(touchOverlay);
-        container.addChild(titleBar);
-        this.layerContainer.addChild(container);
+        containerView.addChild(contentView);
+        containerView.addChild(touchOverlay);
+        containerView.addChild(titleBar);
+        this.layerContainer.addChild(containerView);
         
-        layer = {
-            container,
-            webView,
+        var layer = {
+            containerView,
+            webView: undefined,
+            contentView,
             touchOverlay,
             titleBar,
             closeButton,
             titleLabel,
             visualIndex: this.layers.length,
-            details: new LayerDetails(webView)
+            details: new LayerDetails()
         };
-        this.layers.push(layer);
         
-        if (this.isLoaded)
-            this.setFocussedLayer(layer);
+        this.layers.push(layer);
 
-        titleLabel.bind({
+        layer.titleLabel.bind({
             sourceProperty: 'title',
             targetProperty: 'text'
         }, layer.details);
-        
-        if (this._overviewEnabled) this._showLayerInCarousel(layer);
-        
+
         return layer;
     }
     
@@ -326,7 +332,7 @@ export class BrowserView extends GridLayout {
         if (typeof layer === 'undefined') 
             throw new Error('Expected layer at index ' + index);
         this.layers.splice(index, 1);
-        this.layerContainer.removeChild(layer.container); // for now
+        this.layerContainer.removeChild(layer.containerView); // for now
     }
     
     removeLayer(layer:Layer) {
@@ -351,9 +357,9 @@ export class BrowserView extends GridLayout {
             })
         }
 
-        Util.bringToFront(this.realityLayer.webView);
-        Util.bringToFront(this.realityLayer.touchOverlay);
-        Util.bringToFront(this.realityLayer.titleBar);
+        //Util.bringToFront(this.realityLayer.webView);
+        //Util.bringToFront(this.realityLayer.touchOverlay);
+        //Util.bringToFront(this.realityLayer.titleBar);
     }
     
     onMeasure(widthMeasureSpec, heightMeasureSpec) {
@@ -366,8 +372,8 @@ export class BrowserView extends GridLayout {
         }
         
         this.layers.forEach((layer)=>{
-            layer.container.width = width;
-            layer.container.height = height;
+            layer.containerView.width = width;
+            layer.containerView.height = height;
         });
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -383,8 +389,8 @@ export class BrowserView extends GridLayout {
         }
         
         this.layers.forEach((layer)=>{
-            layer.container.width = width;
-            layer.container.height = height;
+            layer.containerView.width = width;
+            layer.containerView.height = height;
         });
     }
 
@@ -462,10 +468,10 @@ export class BrowserView extends GridLayout {
         this.layers.forEach((layer, index) => {
             layer.visualIndex = this._lerp(layer.visualIndex, index, deltaT*4);
             const transform = this._calculateTargetTransform(layer.visualIndex);
-            layer.container.scaleX = transform.scale.x;
-            layer.container.scaleY = transform.scale.y;
-            layer.container.translateX = transform.translate.x;
-            layer.container.translateY = transform.translate.y;
+            layer.containerView.scaleX = transform.scale.x;
+            layer.containerView.scaleY = transform.scale.y;
+            layer.containerView.translateX = transform.translate.x;
+            layer.containerView.translateY = transform.translate.y;
         });
     }
     
@@ -475,41 +481,49 @@ export class BrowserView extends GridLayout {
     
     private _showLayerInCarousel(layer:Layer) {
         const idx = this.layers.indexOf(layer);
-        
-        if (layer.webView.ios) {
-            layer.webView.ios.layer.masksToBounds = true;
-        } else if (layer.webView.android) {
-            layer.webView.android.setClipChildren(true);
+
+        if (layer.containerView.ios) {
+            layer.containerView.ios.layer.masksToBounds = true;
+        } else if (layer.containerView.android) {
+            layer.containerView.android.setClipChildren(true);
         }
 
-        if (layer.container.ios) {
-            layer.container.ios.layer.masksToBounds = true;
-        } else if (layer.container.android) {
-            layer.container.android.setClipChildren(true);
+        if (layer.contentView.ios) {
+            layer.contentView.ios.layer.masksToBounds = true;
+        } else if (layer.contentView.android) {
+            layer.contentView.android.setClipChildren(true);
+        }
+
+        if (layer.webView && layer.webView.ios) {
+            layer.webView.ios.layer.masksToBounds = true;
+        } else if (layer.webView && layer.webView.android) {
+            layer.webView.android.setClipChildren(true);
         }
             
         layer.touchOverlay.style.visibility = 'visible';
 
         // For transparent webviews, add a little bit of opacity
-        layer.container.isUserInteractionEnabled = true;
-        layer.container.animate({
+        layer.containerView.isUserInteractionEnabled = true;
+        layer.containerView.animate({
             opacity: 1,
             backgroundColor: new Color(128, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });
-        layer.webView.animate({
+        layer.contentView.animate({
             translate: {x:0,y:TITLE_BAR_HEIGHT},
             duration: OVERVIEW_ANIMATION_DURATION
         })
+
         // Show titlebars
         layer.titleBar.visibility = Visibility.visible;
         layer.titleBar.animate({
             opacity: 1,
             duration: OVERVIEW_ANIMATION_DURATION
         })
+
         // Update for the first time & animate.
         const {translate, scale} = this._calculateTargetTransform(idx);
-        layer.container.animate({
+        layer.containerView.animate({
             translate,
             scale,
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -522,28 +536,40 @@ export class BrowserView extends GridLayout {
         
         layer.touchOverlay.style.visibility = 'collapsed';
 
-        // For transparent webviews, add a little bit of opacity
-        layer.container.isUserInteractionEnabled = this.focussedLayer === layer;
-        layer.container.animate({
-            opacity: this.realityLayer === layer || layer.webView.isArgonApp || this.focussedLayer === layer ? 1 : 0,
+        layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+        layer.containerView.animate({
+            opacity: 
+                (this.realityLayer === layer || 
+                (layer.webView && layer.webView.isArgonApp) || 
+                this.focussedLayer === layer) ? 
+                    1 : 0,
             backgroundColor: new Color(0, 255, 255, 255),
             duration: OVERVIEW_ANIMATION_DURATION,
         });
-        layer.webView.animate({
+
+        layer.contentView && layer.contentView.animate({
             translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
         }).then(()=>{
-            if (layer.webView.ios) {
-                layer.webView.ios.layer.masksToBounds = false;
-            } else if (layer.webView.android) {
-                layer.webView.android.setClipChildren(true);
+            if (layer.containerView.ios) {
+                layer.containerView.ios.layer.masksToBounds = false;
+            } else if (layer.containerView.android) {
+                layer.containerView.android.setClipChildren(false);
             }
-            if (layer.container.ios) {
-                layer.container.ios.layer.masksToBounds = false;
-            } else if (layer.container.android) {
-                layer.container.android.setClipChildren(true);
+
+            if (layer.contentView.ios) {
+                layer.contentView.ios.layer.masksToBounds = false;
+            } else if (layer.contentView.android) {
+                layer.contentView.android.setClipChildren(false);
+            }
+
+            if (layer.webView && layer.webView.ios) {
+                layer.webView.ios.layer.masksToBounds = false;
+            } else if (layer.webView && layer.webView.android) {
+                layer.webView.android.setClipChildren(false);
             }
         });
+
         // Hide titlebars
         layer.titleBar.animate({
             opacity: 0,
@@ -551,9 +577,10 @@ export class BrowserView extends GridLayout {
         }).then(()=>{
             layer.titleBar.visibility = Visibility.collapse;
         })
+
         // Update for the first time & animate.
         layer.visualIndex = idx;
-        return layer.container.animate({
+        return layer.containerView.animate({
             translate: { x: 0, y: 0 },
             scale: { x: 1, y: 1 },
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -572,9 +599,6 @@ export class BrowserView extends GridLayout {
         
         // animate the views
         this._intervalId = setInterval(this._animate.bind(this), 20);
-
-        // disable pinch-zoom
-        this.layerContainer.off(GestureTypes.pinch, this._handlePinch, this);
     }
 
     hideOverview() {
@@ -596,60 +620,25 @@ export class BrowserView extends GridLayout {
         // stop animating the views
         if (this._intervalId) clearInterval(this._intervalId);
         this._intervalId = undefined;
-
-        // enable pinch-zoom
-        this.layerContainer.on(GestureTypes.pinch, this._handlePinch, this);
-    }
-
-    private _pinchStartFov?:number;
-    
-    private _handlePinch(event: PinchGestureEventData) {
-        switch (event.state) {
-            case GestureStateTypes.began: 
-                const state = manager.context.serializedFrameState
-                if (state) {
-                    this._pinchStartFov = state.view.subviews[0].frustum.fov;
-                } else {
-                    this._pinchStartFov = undefined;
-                }
-                if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
-                    zoom: 1, 
-                    fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.START
-                })
-                break;
-            case GestureStateTypes.changed: 
-                if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
-                    zoom: event.scale, 
-                    fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.CHANGE
-                })
-                break;
-            default:
-                if (this._pinchStartFov === undefined) return;
-                manager.reality.zoom({
-                    zoom: event.scale, 
-                    fov: this._pinchStartFov,
-                    state: Argon.RealityZoomState.END
-                })
-                break;  
-        }
     }
 
     public loadUrl(url:string) {
         if (this.focussedLayer !== this.realityLayer) {
             this.focussedLayer.details.set('uri',url);
-            this.focussedLayer.details.set('title','');
+            this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite',false);
-            this.focussedLayer.details.set('supportedInteractionModes',['page', 'immersive']);
         }
+        /*
         //if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload(); // src isn't safe to use here, as it's the original url (not the current)
         if (this.focussedLayer.webView.getCurrentUrl() === url)
             this.focussedLayer.webView.reload();
         else
             this.focussedLayer.webView.src = url;
+        */
+        if (this.focussedLayer.webView) {
+            if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload();
+            else this.focussedLayer.webView.src = url;
+        }
     }
 
     public setFocussedLayer(layer:Layer) {
@@ -658,14 +647,13 @@ export class BrowserView extends GridLayout {
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
 
-            const session = layer.webView.session;
-            manager.focus.setSession(session);
-            appViewModel.setLayerDetails(this.focussedLayer.details);
+            appViewModel.argon.provider.focus.session = layer.session;
+            appViewModel.setLayerDetails(layer.details);
             appViewModel.hideOverview();
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
                 this.layers.push(layer);
-                Util.bringToFront(layer.container);
+                bringToFront(layer.containerView);
             }
         }
     }
@@ -673,4 +661,9 @@ export class BrowserView extends GridLayout {
     get focussedLayer() {
         return this._focussedLayer;
     }
+}
+
+
+function getHost(uri:string) {
+    return URI.parse(uri).hostname;
 }

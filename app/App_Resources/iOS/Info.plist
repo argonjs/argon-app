@@ -2,6 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>argon4</string>
+				<string>argon4s</string>
+				<string>argon</string>
+				<string>argons</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>edu.gatech.ael.argon</string>
+		</dict>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2016, Georgia Tech Research Corporation</string>
 	<key>CFBundleDevelopmentRegion</key>

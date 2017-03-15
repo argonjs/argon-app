@@ -152,9 +152,10 @@ namespace  {
 
 
 /// Executes AR-specific tasks upon the onSurfaceChanged render surface event
-+ (void) onSurfaceChanged:(VuforiaVec2I)size {
-    Vuforia::onSurfaceChanged(size.x, size.y);
++ (void) onSurfaceChangedWidth:(int)w height:(int)h {
+    Vuforia::onSurfaceChanged(w, h);
 }
+
 
 static float scaleFactorValue = 1;
 

@@ -2,12 +2,14 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es5",
-        //"sourceMap": true, // this is giving me trouble in visual studio code, disable for now
+        "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "noEmitHelpers": true,
         "noEmitOnError": true,
         "strictNullChecks": true,
         "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "noUnusedLocals": true,
         "lib": [
             "es2015"
         ]

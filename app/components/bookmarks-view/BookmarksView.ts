@@ -1,7 +1,6 @@
-import {Observable, PropertyChangeData} from 'data/observable';
+import {Observable} from 'data/observable';
 import {View} from 'ui/core/view'
 import {Layout} from 'ui/layouts/layout'
-import {AnimationCurve} from 'ui/enums'
 
 class BookmarksViewModel extends Observable {
     index = 0;

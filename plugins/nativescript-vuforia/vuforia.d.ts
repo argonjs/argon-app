@@ -7,13 +7,13 @@ declare module "nativescript-vuforia" {
     
     // api
     
-    export const enum Hint {
+    export enum Hint {
         MaxSimultaneousImageTargets = 0,
         MaxSimultaneousObjectTargets = 1,
         DelayedLoadingObjectDatasets = 2
     }
     
-    const enum InitResult {
+    export enum InitResult {
         SUCCESS = 100,
         ERROR = -1,
         DEVICE_NOT_SUPPORTED = -2,
@@ -25,6 +25,96 @@ declare module "nativescript-vuforia" {
         LICENSE_ERROR_CANCELED_KEY = -8,
         LICENSE_ERROR_PRODUCT_TYPE_MISMATCH = -9,
         EXTERNAL_DEVICE_NOT_DETECTED = -10
+    }
+    
+    export enum StorageType {
+        App = 0,
+        AppResource = 1,
+        Absolute = 2
+    }
+    
+    export enum FPSHint {
+        None = 0,
+        NoVideoBackground = 1,
+        PowerEfficiency = 2,
+        Fast = 4,
+        DefaultFlags = 0
+    }
+        
+    export enum VideoBackgroundReflection {
+        Default = 0,
+        On = 1,
+        Off = 2
+    }
+    
+    export enum DeviceMode {
+        AR = 0,
+        VR = 1
+    }
+    
+    export enum CoordinateSystemType {
+        Unknown = 0,
+        Camera = 1,
+        World = 2
+    }
+
+    export enum View {
+        Singular = 0,
+        LeftEye = 1,
+        RightEye = 2,
+        PostProcess = 3,
+        Count = 4
+    }
+    
+    export enum ViewerParamtersButtonType {
+        None = 0,
+        Magnet = 1,
+        FingerTouch = 2,
+        ButtonTouch = 3
+    }
+
+    export enum ViewerParamtersTrayAlignment {
+        Bottom = 0,
+        Centre = 1,
+        Top = 2
+    }
+
+	export enum CameraDeviceMode {
+		Default = -1,
+		OptimizeSpeed = -2,
+		OpimizeQuality = -3
+	}
+    
+    export enum CameraDeviceFocusMode {
+        Normal = 0,
+        TriggerAuto = 1,
+        ContinuousAuto = 2,
+        Infinite = 3,
+        Macro = 4
+    }
+    
+    export enum CameraDeviceDirection {
+        Default = 0,
+        Back = 1,
+        Front = 2
+    }
+    
+    export enum PixelFormat {
+        Unknown = 0,
+        RGB565 = 1,
+        RGB888 = 2,
+        GRAYSCALE = 4,
+        YUV = 8,
+        RGBA8888 = 16,
+        INDEXED = 32
+    }
+    
+    export enum TrackableResultStatus {
+        Unknown = 0,
+        Undefined = 1,
+        Detected = 2,
+        Tracked = 3,
+        ExtendedTracked = 4
     }
     
     export class API {
@@ -82,14 +172,6 @@ declare module "nativescript-vuforia" {
         '15': number;
     }
     
-    const enum TrackableResultStatus {
-        Unknown = 0,
-        Undefined = 1,
-        Detected = 2,
-        Tracked = 3,
-        ExtendedTracked = 4
-    }
-    
     export class Trackable {
         getId(): number;
         getName(): string;
@@ -144,16 +226,6 @@ declare module "nativescript-vuforia" {
         getTrackable(): CylinderTarget;
     }
     
-    export const enum PixelFormat {
-        Unknown = 0,
-        RGB565 = 1,
-        RGB888 = 2,
-        GRAYSCALE = 4,
-        YUV = 8,
-        RGBA8888 = 16,
-        INDEXED = 32
-    }
-    
     export class Image {
         getBufferHeight(): number;
         getBufferWidth(): number;
@@ -179,24 +251,10 @@ declare module "nativescript-vuforia" {
         getTrackableResult(idx: number): TrackableResult|undefined;
     }
     
-    export const enum CameraDeviceDirection {
-        Default = 0,
-        Back = 1,
-        Front = 2
-    }
-    
     export interface VideoMode {
         width: number;
         height: number;
         framerate: number;
-    }
-    
-    const enum CameraDeviceFocusMode {
-        Normal = 0,
-        TriggerAuto = 1,
-        ContinuousAuto = 2,
-        Infinite = 3,
-        Macro = 4
     }
     
     export class CameraCalibration {
@@ -206,12 +264,6 @@ declare module "nativescript-vuforia" {
         getPrincipalPoint(): Vec2;
         getSize(): Vec2;
     }
-
-	const enum CameraDeviceMode {
-		Default = -1,
-		OptimizeSpeed = -2,
-		OpimizeQuality = -3
-	}
     
     export class CameraDevice {
         init(camera: CameraDeviceDirection): boolean;
@@ -226,43 +278,11 @@ declare module "nativescript-vuforia" {
         start(): boolean;
         stop(): boolean;
     }
-    
-    export const enum DeviceMode {
-        AR = 0,
-        VR = 1
-    }
-    
-    const enum CoordinateSystemType {
-        Unknown = 0,
-        Camera = 1,
-        World = 2
-    }
-
-    export const enum View {
-        Singular = 0,
-        LeftEye = 1,
-        RightEye = 2,
-        PostProcess = 3,
-        Count = 4
-    }
 
     export class ViewList {
         contains(view: View): boolean;
         getNumViews(): number;
         getView(idx: number): View;
-    }
-    
-    export const enum ViewerParamtersButtonType {
-        None = 0,
-        Magnet = 1,
-        FingerTouch = 2,
-        ButtonTouch = 3
-    }
-
-    export const enum ViewerParamtersTrayAlignment {
-        Bottom = 0,
-        Centre = 1,
-        Top = 2
     }
 
     export class ViewerParameters {
@@ -296,20 +316,6 @@ declare module "nativescript-vuforia" {
         selectViewer(viewer:ViewerParameters);
         getSelectedViewer() : ViewerParameters|undefined;
         getRenderingPrimitives(): RenderingPrimitives;
-    }
-    
-    const enum FPSHint {
-        None = 0,
-        NoVideoBackground = 1,
-        PowerEfficiency = 2,
-        Fast = 4,
-        DefaultFlags = 0
-    }
-        
-    const enum VideoBackgroundReflection {
-        Default = 0,
-        On = 1,
-        Off = 2
     }
     
     export interface VideoBackgroundConfig {
@@ -357,12 +363,6 @@ declare module "nativescript-vuforia" {
     }
     
     export class Tracker {}
-    
-    export const enum StorageType {
-        App = 0,
-        AppResource = 1,
-        Absolute = 2
-    }
     
     export class DataSet {
         createMultiTarget(name: string): MultiTarget|undefined;

@@ -14,8 +14,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public title : string;
     public progress : number;
 
-    private _logs = new ObservableArray<def.Log>();
-    public get logs() {return this._logs};
+    private _log = new ObservableArray<def.LogItem>();
+    public get log() {return this._log};
 
     public session?:Argon.SessionPort;
     private _outputPort?:Argon.MessagePortLike;
@@ -26,7 +26,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
 
     public _didCommitNavigation() {
         if (this.session) this.session.close();
-        this.logs.length = 0;
+        this.log.length = 0;
         this.session = undefined;
         this._outputPort = undefined;
     }
@@ -46,8 +46,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             const port = messageChannel.port2;
             port.onmessage = (msg:Argon.MessageEventLike) => {
                 if (!this.session) return;
-                const injectedMessage = "__ARGON_PORT__.postMessage("+JSON.stringify(msg.data)+")";
-                this.evaluateJavascript(injectedMessage);
+                const injectedMessage = "__ARGON_PORT__.postMessage("+msg.data+")";
+                this.evaluateJavascriptWithoutPromise(injectedMessage);
             }
                  
             const args:def.SessionEventData = {
@@ -67,23 +67,14 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
     public _handleLogMessage(message:string) {
-        if (!message)
-            return;
-        const log:def.Log = JSON.parse(message);
-        if (!log.message)
-            return;
+        const log:def.LogItem = JSON.parse(message);
         log.lines = log.message.split(/\r\n|\r|\n/);
-        console.log(this.getCurrentUrl() + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
-        this.logs.push(log);
-        const args:def.LogEventData = {
-            eventName: ArgonWebView.logEvent,
-            object:this,
-            log: log
-        }
-        this.notify(args);
+        // console.log(this.url + ' (' + log.type + '): ' + log.lines.join('\n\t > ')); 
+        this.log.push(log);
     }
 
     public abstract evaluateJavascript(script:string) : Promise<any>;
+    public abstract evaluateJavascriptWithoutPromise(script:string) : void;
 
     public abstract bringToFront();
 
