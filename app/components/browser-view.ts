@@ -551,6 +551,6 @@ export class BrowserView extends GridLayout {
 }
 
 
-function getHost(uri:string) {
-    return URI.parse(uri).hostname;
+function getHost(uri?:string) {
+    return uri ? URI.parse(uri).hostname : '';
 }
