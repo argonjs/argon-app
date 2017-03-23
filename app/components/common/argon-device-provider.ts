@@ -216,6 +216,13 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             viewService,         
             contextServiceProvidere
         );
+
+        application.on(application.orientationChangedEvent, ()=>{
+            setTimeout(()=>{
+                this.publishDeviceState();
+            }, 500);
+            this.publishDeviceState();
+        });
     }
 
     private locationWatchId?:number;
@@ -225,7 +232,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
 
     protected onUpdateDeviceState(deviceState:Argon.DeviceState) {
 
-        if (!this.deviceService.isPresentingHMD || !vuforia.api) {
+        if (!deviceState.isPresentingHMD || !vuforia.api) {
             deviceState.viewport = undefined;
             deviceState.subviews = undefined;
             deviceState.strict = false;
