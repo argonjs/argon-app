@@ -336,6 +336,7 @@ export class BrowserView extends GridLayout {
         const layer = this.layers[index];
         if (typeof layer === 'undefined') 
             throw new Error('Expected layer at index ' + index);
+        layer.webView && layer.webView.session && layer.webView.session.close();
         this.layers.splice(index, 1);
         this.layerContainer.removeChild(layer.containerView); // for now
     }
