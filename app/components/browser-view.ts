@@ -20,6 +20,7 @@ import {
 import {bringToFront} from './common/util';
 import {PropertyChangeData} from 'data/observable'
 import {Observable} from 'data/observable';
+import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import dialogs = require("ui/dialogs");
 import applicationSettings = require('application-settings');
 import * as vuforia from 'nativescript-vuforia';
@@ -113,10 +114,14 @@ export class BrowserView extends GridLayout {
         layer.closeButton.visibility = 'collapsed';
         
         if (this.videoView) {
-            this.videoView.horizontalAlignment = 'stretch';
-            this.videoView.verticalAlignment = 'stretch';
-            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
-            layer.contentView.addChild(this.videoView);
+            // this.videoView.horizontalAlignment = 'stretch';
+            // this.videoView.verticalAlignment = 'stretch';
+            // if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
+            // layer.contentView.addChild(this.videoView);
+            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
+            const videoViewLayout = new AbsoluteLayout();
+            videoViewLayout.addChild(this.videoView);
+            layer.contentView.addChild(videoViewLayout);
         }
 
         appViewModel.ready.then(()=>{

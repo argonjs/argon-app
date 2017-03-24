@@ -14,7 +14,7 @@ import {GestureTypes} from 'ui/gestures'
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
-import {getScreenOrientation} from './components/common/util'; // todo: add updateDisplayOrientation here
+import {getScreenOrientation, updateScreenOrientation} from './components/common/util';
 
 // import {RealityViewer} from '@argonjs/argon'
 
@@ -262,8 +262,9 @@ export function navigatedTo(args) {
     })
 
     application.on(application.orientationChangedEvent, (args)=>{
+        updateScreenOrientation();
         setTimeout(()=>{
-            //updateDisplayOrientation(); todo: re-enable this
+            updateScreenOrientation();
             const orientation = getScreenOrientation();
             if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) {
                 page.actionBarHidden = true;
@@ -290,7 +291,7 @@ export function navigatedTo(args) {
         }, 500);
     });
 
-    //updateDisplayOrientation(); todo: re-enable this
+    updateScreenOrientation();
 
     if (application.android) {
         var activity = application.android.foregroundActivity;

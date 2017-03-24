@@ -38,7 +38,7 @@ public class VuforiaRenderer implements GLSurfaceView.Renderer {
 
     private static final String LOGTAG = "VuforiaRenderer";
 
-    private RenderingPrimitives renderingPrimitives;
+    private RenderingPrimitives renderingPrimitives = null;
 
     // Shader user to render the video background on AR mode
     private int vbShaderProgramID;
@@ -92,7 +92,7 @@ public class VuforiaRenderer implements GLSurfaceView.Renderer {
         Vuforia.onSurfaceChanged(width, height);
 
         // Update the rendering primitives used to draw on the display according to the new surface size
-        updateRenderingPrimitives();
+        //updateRenderingPrimitives();
     }
 
 
@@ -137,6 +137,10 @@ public class VuforiaRenderer implements GLSurfaceView.Renderer {
     // The render function.
     private synchronized void renderFrame()
     {
+        // Would be better to cache this, but we're getting a crash due to the order
+        // of initialization events. Possible optimization for later.
+        renderingPrimitives = Device.getInstance().getRenderingPrimitives();
+
         State state = TrackerManager.getInstance().getStateUpdater().updateState();
         mRenderer.begin(state);
 

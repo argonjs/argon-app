@@ -8,7 +8,26 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
+// Querying the screen orientation is expensive on Android
+// Set this flag to true to cache the orientation
+const cacheScreenOrientation: boolean = application.android ? true : false;
+var screenOrientation: number;
+
 export function getScreenOrientation() : number {
+    if (cacheScreenOrientation) {
+        return screenOrientation;
+    } else {
+        return queryScreenOrientation();
+    }
+}
+
+export function updateScreenOrientation() {
+    if (cacheScreenOrientation) {
+        screenOrientation = queryScreenOrientation();
+    }
+}
+
+export function queryScreenOrientation() : number {
     if (application.ios) {
         const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
@@ -26,8 +45,8 @@ export function getScreenOrientation() : number {
         switch (rotation) {
             case android.view.Surface.ROTATION_0: return 0;
             case android.view.Surface.ROTATION_180: return 180;
-            case android.view.Surface.ROTATION_90: return 90;
-            case android.view.Surface.ROTATION_270: return -90;
+            case android.view.Surface.ROTATION_90: return -90;
+            case android.view.Surface.ROTATION_270: return 90;
         }
     } 
     return 0;

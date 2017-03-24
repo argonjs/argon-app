@@ -32,6 +32,8 @@ declare module io {
 				onSurfaceChanged(gl: any, width: number, height: number);
 
 				onDrawFrame(gl: any);
+
+				updateRenderingPrimitives();
 			}
 
 			export class VuforiaSession {

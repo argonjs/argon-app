@@ -113,7 +113,7 @@ export class ArgonWebView extends common.ArgonWebView {
     }
 
     evaluateJavascriptWithoutPromise(script:string) {
-        this.android.evaluateJavascript(script);
+        this.android.evaluateJavascript(script, null);
     }
 
     bringToFront() {

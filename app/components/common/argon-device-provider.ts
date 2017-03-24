@@ -79,8 +79,8 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         const contentView = frames.topmost().currentPage.content;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = contentView.getMeasuredWidth();
-        viewport.height = contentView.getMeasuredHeight();
+        viewport.width = contentView.getActualSize().width; //getMeasuredWidth();
+        viewport.height = contentView.getActualSize().height; //getMeasuredHeight();
 
         super.onUpdateFrameState();
 
@@ -134,6 +134,39 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 deviceUser['meta'] = deviceUser['meta'] || {};
                 deviceUser['meta'].geoHeadingAccuracy = heading && heading.headingAccuracy;
             }
+
+        } else if (this._application.android) {
+            
+            const deviceOrientation = Quaternion.IDENTITY;
+
+            const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
+
+            const deviceUser = this.user;
+            const deviceLocalOrigin = this.localOrigin;
+
+            if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
+            if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
+
+            (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
+                Cartesian3.ZERO,
+                deviceLocalOrigin
+            );
+
+            const screenOrientation = 
+                Quaternion.fromAxisAngle(
+                    Cartesian3.UNIT_Z, 
+                    screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
+                    this._scratchDisplayOrientation
+                );
+
+            const screenBasedDeviceOrientation = 
+                Quaternion.multiply(
+                    deviceOrientation, 
+                    screenOrientation, 
+                    this._scratchDeviceOrientation
+                );
+            
+            (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
         }
     }
 
@@ -196,6 +229,34 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         }
         return this._locationManagerIOS;
     }
+
+    /*
+    private _motionManagerAndroid?:android.hardware.SensorEventListener;
+
+    private _getMotionManagerAndroid() : android.hardware.SensorEventListener|undefined {
+        if (this._motionManagerAndroid) return this._motionManagerAndroid;
+
+        var sensorManager = application.android.foregroundActivity.getSystemService(android.content.Context.SENSOR_SERVICE);
+        var rotationSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR);
+
+        sensorManager.registerListener(new android.hardware.SensorEventListener({
+            onAccuracyChanged: (sensor, accuracy) => {
+                //console.log("onAccuracyChanged: " + accuracy);
+            },
+            onSensorChanged: (event) => {
+                const time = JulianDate.now();
+                Quaternion.unpack(<number[]>event.values, 0, scratchMotionQuaternion);
+                const sampledOrientation = this.orientationEntity.orientation as Argon.Cesium.SampledProperty;
+                sampledOrientation.addSample(time, scratchMotionQuaternion);
+                if (!Argon.Cesium.defined(this.orientationEntity.position)) {
+                    this.orientationEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.geolocationEntity);
+                }
+            }
+        }), rotationSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME);
+        this._motionManagerAndroid = motionManager;
+        return motionManager;
+    }
+    */
 }
 
 @Argon.DI.autoinject
@@ -240,7 +301,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         const renderingViews = renderingPrimitives.getRenderingViews();
         const numViews = renderingViews.getNumViews();
 
-        const contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor;
+        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : 1;
 
         subviews.length = numViews;
 
@@ -287,9 +348,11 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // (not sure why this happens, but it only seems to happen after or between 
                 // vuforia initializations)
                 if (i === 0) {
+                    const width = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.width : vuforia.videoView.android.getWidth();
+                    const height = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.height : vuforia.videoView.android.getHeight();
                     vuforia.api.onSurfaceChanged(
-                        vuforia.videoView.ios.frame.size.width * contentScaleFactor,
-                        vuforia.videoView.ios.frame.size.height * contentScaleFactor
+                        width * contentScaleFactor,
+                        height * contentScaleFactor
                     );
                 }
 

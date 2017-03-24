@@ -12,12 +12,16 @@ global.moduleMerge(common, exports);
 const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
 
 const androidVideoView = <plugin.VuforiaGLView> (VUFORIA_AVAILABLE ? new plugin.VuforiaGLView(application.android.context) : undefined);
-
-var rendererInitialized = false;
+var vuforiaRenderer: plugin.VuforiaRenderer;
 
 export const videoView = new placeholder.Placeholder();
 videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
     evt.view = androidVideoView;
+
+    androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
+
+    vuforiaRenderer = new plugin.VuforiaRenderer();
+    androidVideoView.setRenderer(vuforiaRenderer);
 })
 
 videoView.onLoaded = function() {
@@ -58,6 +62,7 @@ function configureVuforiaSurface() {
         androidVideoView.getWidth() * contentScaleFactor,
         androidVideoView.getHeight() * contentScaleFactor
     );
+    console.log("configureVuforiaSurface: " + androidVideoView.getWidth() + ", " + androidVideoView.getHeight());
 }
 
 export class API extends common.APIBase {
@@ -85,21 +90,14 @@ export class API extends common.APIBase {
             plugin.VuforiaSession.init(new plugin.VuforiaControl({
                 onInitARDone(result: number): void {
                     if (result == vuforia.InitResult.SUCCESS) {
-
-                        if (!rendererInitialized) {
-                            androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
-
-                            var renderer = new plugin.VuforiaRenderer();
-                            androidVideoView.setRenderer(renderer);
-
-                            // todo: pause renderer as needed
-                            renderer.mIsActive = true;
-
-                            rendererInitialized = true;
+                        if (api) {
+                            api.getDevice().setMode(def.DeviceMode.AR)
                         }
+                        vuforiaRenderer.mIsActive = true;
 
-                        //vuforia.Vuforia.onSurfaceCreated();
+                        vuforia.Vuforia.onSurfaceCreated();
                         configureVuforiaSurface();
+                        setTimeout(configureVuforiaSurface, 3000); // this shouldn't be necessary, investigate
                         
                         vuforia.Vuforia.registerCallback(new vuforia.Vuforia.UpdateCallbackInterface({
                             Vuforia_onUpdate(state: vuforia.State) {

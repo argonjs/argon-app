@@ -9,7 +9,7 @@ import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
-const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = "Ad2I7G3/////AAAAGWkTV7F99EHcsn2Yrqdr8e2LLkPJ6H6x6ftJAZkrNMzlsVsQ1VmfNylH4U/onfPQ6Vn8a8FKuicKSx1pKZWA6ku4q+S2qsvzLPvebwyOPpox1LYgBfIwlSLqWbDRb4kDD/4ii8gNXPaZKsaPKiL9g4/Lh+dkCDiT4UmJkumTPN94wEdBnl7BkKEQQbA37lPcWblcxkcCl7fNNLTULLiPpNv7EbbnCHei0Vj3LwJFV1OlUw+4cTIfp+8a9dCiF/MMkfa2a5Lm9OTmYqeF/+GqZWWmGNxeJfMEVL/NjA8IS+1IC7yDEJOrqeyddrwA/f5C+09jWokkqyeiYbMopoxH+3nkSAR99yM+Gj2CFZ5aisA9"; // 'your_license_key';
+export const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = ""; // 'your_license_key';
 const DEBUG_DISABLE_ORIGIN_CHECK:boolean = false;
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
@@ -358,12 +358,12 @@ export class NativescriptVuforiaServiceProvider {
                     
                 if (!vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR))
                     throw new Error('Unable to set device mode');
-
+                
                 // this.configureVuforiaVideoBackground({
                 //     x:0,
                 //     y:0,
-                //     width:vuforia.videoView.getMeasuredWidth(), 
-                //     height:vuforia.videoView.getMeasuredHeight()
+                //     width:vuforia.videoView.getActualSize().width, //getMeasuredWidth(), 
+                //     height:vuforia.videoView.getActualSize().height //getMeasuredHeight()
                 // }, false);
                     
                 if (!vuforia.api.getCameraDevice().start()) 
@@ -652,13 +652,24 @@ export class NativescriptVuforiaServiceProvider {
         // const scale = Math.min(widthRatio, heightRatio);
 
         const videoView = vuforia.videoView;
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
+        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : platform.screen.mainScreen.scale;
         
+        const sizeX = videoWidth * scale * contentScaleFactor;
+        const sizeY = videoHeight * scale * contentScaleFactor;
+
+        // possible optimization, needs further testing
+        // if (this._config.enabled === enabled &&
+        //     this._config.sizeX === sizeX &&
+        //     this._config.sizeY === sizeY) {
+        //     // No changes, skip configuration
+        //     return;
+        // }
+
         // apply the video config
         const config = this._config; 
         config.enabled = enabled;
-        config.sizeX = videoWidth * scale * contentScaleFactor;
-        config.sizeY = videoHeight * scale * contentScaleFactor;
+        config.sizeX = sizeX;
+        config.sizeY = sizeY;
         config.positionX = 0;
         config.positionY = 0;
         config.reflection = vuforia.VideoBackgroundReflection.Default;
@@ -679,6 +690,7 @@ export class NativescriptVuforiaServiceProvider {
 
 // TODO: make this cross platform somehow
 function fetchDataSet(xmlUrlString:string) : Promise<string> {
+    /*
     const xmlUrl = NSURL.URLWithString(xmlUrlString);
     const datUrl = xmlUrl.URLByDeletingPathExtension.URLByAppendingPathExtension("dat");
     
@@ -691,6 +703,33 @@ function fetchDataSet(xmlUrlString:string) : Promise<string> {
     
     const xmlDestPath = directoryHashPath + file.path.separator + xmlUrl.lastPathComponent;
     const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
+    */
+
+    const directoryPath = xmlUrlString.substring(0, xmlUrlString.lastIndexOf("/"));
+    const filename = xmlUrlString.substring(xmlUrlString.lastIndexOf("/") + 1);
+    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf("."));
+
+    const datUrlString = directoryPath + file.path.separator + filenameWithoutExt + ".dat";
+
+    const directoryHash = hashCode(directoryPath);
+    const tmpPath = file.knownFolders.temp().path;
+    const directoryHashPath = tmpPath + file.path.separator + directoryHash;
+
+    file.Folder.fromPath(directoryHashPath);
+    
+    const xmlDestPath = directoryHashPath + file.path.separator + filename;
+    const datDestPath = directoryHashPath + file.path.separator + filenameWithoutExt + ".dat";
+
+    function hashCode(s:string) {
+        var hash = 0, i, chr, len;
+        if (s.length === 0) return hash;
+        for (i = 0, len = s.length; i < len; i++) {
+            chr   = s.charCodeAt(i);
+            hash  = ((hash << 5) - hash) + chr;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    }
     
     function downloadIfNeeded(url:string, destPath:string) {
         let lastModified:Date|undefined;
@@ -718,7 +757,7 @@ function fetchDataSet(xmlUrlString:string) : Promise<string> {
     }
     
     return Promise.all([
-        downloadIfNeeded(xmlUrl.absoluteString,xmlDestPath), 
-        downloadIfNeeded(datUrl.absoluteString,datDestPath)
+        downloadIfNeeded(xmlUrlString,xmlDestPath), 
+        downloadIfNeeded(datUrlString,datDestPath)
     ]).then(()=>xmlDestPath);
 } 
