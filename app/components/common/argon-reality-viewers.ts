@@ -102,7 +102,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         }
     }
 
-    private _scratchFrustum = new Argon.Cesium.PerspectiveFrustum;
+    // private _scratchFrustum = new Argon.Cesium.PerspectiveFrustum;
     private _effectiveZoomFactor:number;
 
     setupInternalSession(session:Argon.SessionPort) {
@@ -126,9 +126,17 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             if (!frameState.strict) {
                 this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor;
                 for (const s of subviews) {
-                    const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
-                    frustum.fov = 2 * Math.atan(Math.tan(frustum.fov * 0.5) / this._effectiveZoomFactor);
-                    Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
+                    // const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
+                    // frustum.fov = 2 * Math.atan(Math.tan(frustum.fov * 0.5) / this._effectiveZoomFactor);
+                    // Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
+                    s.projectionMatrix[0] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[1] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[2] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[3] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[4] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[5] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[6] *= this._effectiveZoomFactor;
+                    s.projectionMatrix[7] *= this._effectiveZoomFactor;
                 }
             } else {
                 this._effectiveZoomFactor = 1;

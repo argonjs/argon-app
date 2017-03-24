@@ -27,8 +27,7 @@ const Quaternion = Argon.Cesium.Quaternion;
 const JulianDate = Argon.Cesium.JulianDate;
 const CesiumMath = Argon.Cesium.CesiumMath;
 
-const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
-const y180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, CesiumMath.PI);
+const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
 
 class VuforiaSessionData {
     commandQueue = new Argon.CommandQueue;
@@ -47,8 +46,8 @@ export class NativescriptVuforiaServiceProvider {
     public stateUpdateEvent = new Argon.Event<Argon.Cesium.JulianDate>();
     
     public vuforiaTrackerEntity = new Argon.Cesium.Entity({
-        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.contextService.display),
-        orientation: new Argon.Cesium.ConstantProperty(Quaternion.multiply(z90,y180,<any>{}))
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.contextService.user),
+        orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
     });
 
     private _scratchCartesian = new Argon.Cesium.Cartesian3();
@@ -121,6 +120,8 @@ export class NativescriptVuforiaServiceProvider {
         //     );
         // });
         
+        const landscapeRightScreenOrientationRadians = -CesiumMath.PI_OVER_TWO;
+
         const stateUpdateCallback = (state:vuforia.State) => { 
             
             const time = JulianDate.now();
@@ -130,6 +131,16 @@ export class NativescriptVuforiaServiceProvider {
             // but in each app itself to we are as close as possible to the actual render time when
             // we start the render)
             JulianDate.addSeconds(time, VIDEO_DELAY, time);
+
+            // Rotate the tracker to a landscape-right frame, 
+            // where +X is right, +Y is down, and +Z is in the camera direction
+            // (vuforia reports poses in this frame on iOS devices, not sure about android)
+            const currentScreenOrientationRadians = getScreenOrientation() * CesiumMath.RADIANS_PER_DEGREE;
+            const trackerOrientation = Quaternion.multiply(
+                Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, landscapeRightScreenOrientationRadians - currentScreenOrientationRadians, this._scratchQuaternion),
+                x180,
+                this._scratchQuaternion);
+            (this.vuforiaTrackerEntity.orientation as Argon.Cesium.ConstantProperty).setValue(trackerOrientation);
             
             const vuforiaFrame = state.getFrame();
             const frameTimeStamp = vuforiaFrame.getTimeStamp();
@@ -173,9 +184,6 @@ export class NativescriptVuforiaServiceProvider {
                 const position = Matrix4.getTranslation(pose, this._scratchCartesian);
                 const rotationMatrix = Matrix4.getRotation(pose, this._scratchMatrix3);
                 const orientation = Quaternion.fromRotationMatrix(rotationMatrix, this._scratchQuaternion);
-
-                // const inverseVideoOrientation = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, getScreenOrientation() * CesiumMath.RADIANS_PER_DEGREE, this._scratchScreenOrientationQuaternion);
-                // Quaternion.multiply(orientation, inverseVideoOrientation, orientation);
                 
                 (entity.position as Argon.Cesium.SampledPositionProperty).addSample(trackableTime, position);
                 (entity.orientation as Argon.Cesium.SampledProperty).addSample(trackableTime, orientation);
