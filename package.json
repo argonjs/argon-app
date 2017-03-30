@@ -1,6 +1,6 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argon4-010617",
+    "id": "edu.gatech.ael.argon4",
     "tns-android": {
       "version": "2.3.0"
     },
@@ -9,8 +9,7 @@
     }
   },
   "dependencies": {
-    "@argonjs/argon": "argonjs/argon#develop",
-    "argon-private": "file:../argon-private",
+    "@argonjs/argon": "1.1.10",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",

@@ -10,7 +10,7 @@ import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
 const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
-const DEBUG_DISABLE_ORIGIN_CHECK:boolean = false;
+const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
@@ -267,6 +267,7 @@ export class NativescriptVuforiaServiceProvider {
             return this._resumeSession(session);
         }, true).catch(()=>{
             this._controllingSession = undefined;
+            this._setControllingSession(this.sessionService.manager);
         });
     }
 
@@ -320,7 +321,7 @@ export class NativescriptVuforiaServiceProvider {
 
         return this._init(session).then(()=>{
             commandQueue.execute();
-        });
+        })
     }
 
     private _init(session:Argon.SessionPort) : Promise<void> {
