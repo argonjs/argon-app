@@ -9,7 +9,7 @@ import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
-const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
+export const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
 const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
