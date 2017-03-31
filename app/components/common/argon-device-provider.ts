@@ -136,37 +136,40 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             }
 
         } else if (this._application.android) {
-            
-            const deviceOrientation = Quaternion.IDENTITY;
 
-            const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
+            const motionManager = this._getMotionManagerAndroid();
+            if (motionManager) {
+                const deviceOrientation = this._motionQuaternionAndroid;
 
-            const deviceUser = this.user;
-            const deviceLocalOrigin = this.localOrigin;
+                const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
 
-            if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
-            if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
+                const deviceUser = this.user;
+                const deviceLocalOrigin = this.localOrigin;
 
-            (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                Cartesian3.ZERO,
-                deviceLocalOrigin
-            );
+                if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
+                if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
-            const screenOrientation = 
-                Quaternion.fromAxisAngle(
-                    Cartesian3.UNIT_Z, 
-                    screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
-                    this._scratchDisplayOrientation
+                (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
+                    Cartesian3.ZERO,
+                    deviceLocalOrigin
                 );
 
-            const screenBasedDeviceOrientation = 
-                Quaternion.multiply(
-                    deviceOrientation, 
-                    screenOrientation, 
-                    this._scratchDeviceOrientation
-                );
-            
-            (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
+                const screenOrientation = 
+                    Quaternion.fromAxisAngle(
+                        Cartesian3.UNIT_Z, 
+                        screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
+                        this._scratchDisplayOrientation
+                    );
+
+                const screenBasedDeviceOrientation = 
+                    Quaternion.multiply(
+                        deviceOrientation, 
+                        screenOrientation, 
+                        this._scratchDeviceOrientation
+                    );
+                
+                (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
+            }
         }
     }
 
@@ -230,8 +233,8 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         return this._locationManagerIOS;
     }
 
-    /*
     private _motionManagerAndroid?:android.hardware.SensorEventListener;
+    private _motionQuaternionAndroid = new Quaternion;
 
     private _getMotionManagerAndroid() : android.hardware.SensorEventListener|undefined {
         if (this._motionManagerAndroid) return this._motionManagerAndroid;
@@ -239,24 +242,19 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         var sensorManager = application.android.foregroundActivity.getSystemService(android.content.Context.SENSOR_SERVICE);
         var rotationSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR);
 
-        sensorManager.registerListener(new android.hardware.SensorEventListener({
+        var sensorEventListener = new android.hardware.SensorEventListener({
             onAccuracyChanged: (sensor, accuracy) => {
                 //console.log("onAccuracyChanged: " + accuracy);
             },
             onSensorChanged: (event) => {
-                const time = JulianDate.now();
-                Quaternion.unpack(<number[]>event.values, 0, scratchMotionQuaternion);
-                const sampledOrientation = this.orientationEntity.orientation as Argon.Cesium.SampledProperty;
-                sampledOrientation.addSample(time, scratchMotionQuaternion);
-                if (!Argon.Cesium.defined(this.orientationEntity.position)) {
-                    this.orientationEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.geolocationEntity);
-                }
+                Quaternion.unpack(<number[]>event.values, 0, this._motionQuaternionAndroid);
             }
-        }), rotationSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME);
-        this._motionManagerAndroid = motionManager;
-        return motionManager;
+        });
+
+        sensorManager.registerListener(sensorEventListener, rotationSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME);
+        this._motionManagerAndroid = sensorEventListener;
+        return sensorEventListener;
     }
-    */
 }
 
 @Argon.DI.autoinject
