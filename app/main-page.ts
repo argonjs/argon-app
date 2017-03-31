@@ -226,6 +226,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 
 export function pageLoaded(args) {
 
+    /*
     page = args.object;
     page.bindingContext = appViewModel;
     appViewModel.setReady();
@@ -237,10 +238,23 @@ export function pageLoaded(args) {
     // Set the icon for the overview button
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
+    */
 }
 
 export function navigatedTo(args) {
     
+    page = args.object;
+    page.bindingContext = appViewModel;
+    appViewModel.setReady();
+
+    // Set the icon for the menu button
+    const menuButton = <Button> page.getViewById("menuButton");
+    menuButton.text = String.fromCharCode(0xe5d4);
+
+    // Set the icon for the overview button
+    const overviewButton = <Button> page.getViewById("overviewButton");
+    overviewButton.text = String.fromCharCode(0xe53b);
+
     // focus on the topmost layer
     browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 
