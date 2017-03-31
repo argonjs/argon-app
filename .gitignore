@@ -2,5 +2,6 @@
 /platforms
 /hooks
 /typings
+/docs/_site
 .DS_Store
 *.js.map
