@@ -144,14 +144,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
 
                 const deviceUser = this.user;
-                const deviceLocalOrigin = this.localOrigin;
+                const deviceStage = this.stage;
 
                 if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.ZERO,
-                    deviceLocalOrigin
+                    Cartesian3.fromElements(0,0,this.deviceState.suggestedUserHeight, this._scratchCartesian),
+                    deviceStage
                 );
 
                 const screenOrientation = 
@@ -167,7 +167,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                         screenOrientation, 
                         this._scratchDeviceOrientation
                     );
-                
+
                 (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
             }
         }
