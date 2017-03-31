@@ -9,8 +9,8 @@ import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
-export const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = ""; // 'your_license_key';
-const DEBUG_DISABLE_ORIGIN_CHECK:boolean = false;
+const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
+const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
@@ -267,6 +267,7 @@ export class NativescriptVuforiaServiceProvider {
             return this._resumeSession(session);
         }, true).catch(()=>{
             this._controllingSession = undefined;
+            this._setControllingSession(this.sessionService.manager);
         });
     }
 
@@ -320,7 +321,7 @@ export class NativescriptVuforiaServiceProvider {
 
         return this._init(session).then(()=>{
             commandQueue.execute();
-        });
+        })
     }
 
     private _init(session:Argon.SessionPort) : Promise<void> {
@@ -366,12 +367,12 @@ export class NativescriptVuforiaServiceProvider {
                     
                 if (!vuforia.api.getDevice().setMode(vuforia.DeviceMode.AR))
                     throw new Error('Unable to set device mode');
-                
+
                 // this.configureVuforiaVideoBackground({
                 //     x:0,
                 //     y:0,
-                //     width:vuforia.videoView.getActualSize().width, //getMeasuredWidth(), 
-                //     height:vuforia.videoView.getActualSize().height //getMeasuredHeight()
+                //     width:vuforia.videoView.getMeasuredWidth(), 
+                //     height:vuforia.videoView.getMeasuredHeight()
                 // }, false);
                     
                 if (!vuforia.api.getCameraDevice().start()) 
@@ -660,24 +661,13 @@ export class NativescriptVuforiaServiceProvider {
         // const scale = Math.min(widthRatio, heightRatio);
 
         const videoView = vuforia.videoView;
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : platform.screen.mainScreen.scale;
+        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : 1;
         
-        const sizeX = videoWidth * scale * contentScaleFactor;
-        const sizeY = videoHeight * scale * contentScaleFactor;
-
-        // possible optimization, needs further testing
-        // if (this._config.enabled === enabled &&
-        //     this._config.sizeX === sizeX &&
-        //     this._config.sizeY === sizeY) {
-        //     // No changes, skip configuration
-        //     return;
-        // }
-
         // apply the video config
         const config = this._config; 
         config.enabled = enabled;
-        config.sizeX = sizeX;
-        config.sizeY = sizeY;
+        config.sizeX = videoWidth * scale * contentScaleFactor;
+        config.sizeY = videoHeight * scale * contentScaleFactor;
         config.positionX = 0;
         config.positionY = 0;
         config.reflection = vuforia.VideoBackgroundReflection.Default;
@@ -698,7 +688,6 @@ export class NativescriptVuforiaServiceProvider {
 
 // TODO: make this cross platform somehow
 function fetchDataSet(xmlUrlString:string) : Promise<string> {
-    /*
     const xmlUrl = NSURL.URLWithString(xmlUrlString);
     const datUrl = xmlUrl.URLByDeletingPathExtension.URLByAppendingPathExtension("dat");
     
@@ -711,33 +700,6 @@ function fetchDataSet(xmlUrlString:string) : Promise<string> {
     
     const xmlDestPath = directoryHashPath + file.path.separator + xmlUrl.lastPathComponent;
     const datDestPath = directoryHashPath + file.path.separator + datUrl.lastPathComponent;
-    */
-
-    const directoryPath = xmlUrlString.substring(0, xmlUrlString.lastIndexOf("/"));
-    const filename = xmlUrlString.substring(xmlUrlString.lastIndexOf("/") + 1);
-    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf("."));
-
-    const datUrlString = directoryPath + file.path.separator + filenameWithoutExt + ".dat";
-
-    const directoryHash = hashCode(directoryPath);
-    const tmpPath = file.knownFolders.temp().path;
-    const directoryHashPath = tmpPath + file.path.separator + directoryHash;
-
-    file.Folder.fromPath(directoryHashPath);
-    
-    const xmlDestPath = directoryHashPath + file.path.separator + filename;
-    const datDestPath = directoryHashPath + file.path.separator + filenameWithoutExt + ".dat";
-
-    function hashCode(s:string) {
-        var hash = 0, i, chr, len;
-        if (s.length === 0) return hash;
-        for (i = 0, len = s.length; i < len; i++) {
-            chr   = s.charCodeAt(i);
-            hash  = ((hash << 5) - hash) + chr;
-            hash |= 0; // Convert to 32bit integer
-        }
-        return hash;
-    }
     
     function downloadIfNeeded(url:string, destPath:string) {
         let lastModified:Date|undefined;
@@ -765,7 +727,7 @@ function fetchDataSet(xmlUrlString:string) : Promise<string> {
     }
     
     return Promise.all([
-        downloadIfNeeded(xmlUrlString,xmlDestPath), 
-        downloadIfNeeded(datUrlString,datDestPath)
+        downloadIfNeeded(xmlUrl.absoluteString,xmlDestPath), 
+        downloadIfNeeded(datUrl.absoluteString,datDestPath)
     ]).then(()=>xmlDestPath);
 } 

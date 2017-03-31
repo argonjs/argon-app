@@ -103,14 +103,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
 
                 const deviceUser = this.user;
-                const deviceLocalOrigin = this.localOrigin;
+                const deviceStage = this.stage;
 
                 if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.ZERO,
-                    deviceLocalOrigin
+                    Cartesian3.fromElements(0,0,this.deviceState.suggestedUserHeight, this._scratchCartesian),
+                    deviceStage
                 );
 
                 const screenOrientation = 
@@ -299,7 +299,6 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         }
 
         const subviews = deviceState.subviews = deviceState.subviews || [];
-    
 
         const device = vuforia.api.getDevice();
         const renderingPrimitives = device.getRenderingPrimitives();
@@ -336,10 +335,10 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             // Update subview viewport
             const vuforiaSubviewViewport = renderingPrimitives.getViewport(view);
             const subviewViewport = subview.viewport = subview.viewport || <Argon.Viewport>{};
-            subviewViewport.x = vuforiaSubviewViewport.x;
-            subviewViewport.y = vuforiaSubviewViewport.y;
-            subviewViewport.width = vuforiaSubviewViewport.z;
-            subviewViewport.height = vuforiaSubviewViewport.w;
+            subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
+            subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
+            subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
+            subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
 
             // Start with the projection matrix for this subview
             // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
@@ -452,7 +451,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // according to the local gravitational field. 
                 // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
                 // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
-                this.configureLocalOrigin(
+                this.configureStage(
                     location.longitude, 
                     location.latitude, 
                     location.altitude, 

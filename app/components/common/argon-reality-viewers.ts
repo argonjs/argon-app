@@ -36,6 +36,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
     constructor(
         sessionService: Argon.SessionService,
         viewService: Argon.ViewService,
+        private _contextService: Argon.ContextService,
         private _deviceService: Argon.DeviceService,
         private _vuforiaServiceProvider: Argon.VuforiaServiceProvider,
         uri:string) {
@@ -104,7 +105,6 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
 
     // private _scratchFrustum = new Argon.Cesium.PerspectiveFrustum;
     private _effectiveZoomFactor:number;
-
     setupInternalSession(session:Argon.SessionPort) {
         super.setupInternalSession(session);
 
@@ -117,6 +117,10 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         };
 
         const subviews:Argon.SerializedSubviewList = [];
+
+        const frameStateOptions = {
+            overrideUser: true
+        }
 
         const remove = this._deviceService.frameStateEvent.addEventListener((frameState)=>{
             if (!this.isPresenting || !session.isConnected) return;
@@ -151,11 +155,16 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
                 .configureVuforiaVideoBackground(viewport, this.isPresenting);
             
             try {
+                const contextUser = this._contextService.user;
+                const deviceUser = this._deviceService.user;
+                (contextUser.position as Argon.Cesium.ConstantPositionProperty).setValue(Argon.Cesium.Cartesian3.ZERO, deviceUser);
+                (contextUser.orientation as Argon.Cesium.ConstantProperty).setValue(Argon.Cesium.Quaternion.IDENTITY);
+
                 const contextFrameState = this._deviceService.createContextFrameState(
                     frameState.time,
                     frameState.viewport,
                     subviews,
-                    this._deviceService.user
+                    frameStateOptions
                 );
                 session.send('ar.reality.frameState', contextFrameState);
             } catch(e) {
