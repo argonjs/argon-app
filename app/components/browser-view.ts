@@ -542,7 +542,7 @@ export class BrowserView extends GridLayout {
         
         layer.touchOverlay.style.visibility = 'collapsed';
 
-        layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+        //layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;  // todo: investigate this
         layer.containerView.animate({
             opacity: 
                 (this.realityLayer === layer || 
