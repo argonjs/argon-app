@@ -8,11 +8,12 @@ import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
+import * as application from 'application';
 
 export const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
 const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
+export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
     (<UIView>vuforia.videoView.ios).contentScaleFactor = 
         vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
