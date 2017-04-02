@@ -2,7 +2,7 @@
   "nativescript": {
     "id": "edu.gatech.ael.argon4",
     "tns-android": {
-      "version": "2.3.0"
+      "version": "2.5.0"
     },
     "tns-ios": {
       "version": "2.5.0"
