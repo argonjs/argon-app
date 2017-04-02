@@ -97,7 +97,8 @@ export class API extends common.APIBase {
 
                         vuforia.Vuforia.onSurfaceCreated();
                         configureVuforiaSurface();
-                        setTimeout(configureVuforiaSurface, 3000); // this shouldn't be necessary, investigate
+                        setTimeout(configureVuforiaSurface, 1000);
+                        setTimeout(configureVuforiaSurface, 5000); // this shouldn't be required, but sometimes the video feed doesn't appear after reinit
                         
                         vuforia.Vuforia.registerCallback(new vuforia.Vuforia.UpdateCallbackInterface({
                             Vuforia_onUpdate(state: vuforia.State) {

@@ -1,5 +1,6 @@
 //import * as utils from 'utils/utils';
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var common = require("./vuforia-common");
 var def = require("nativescript-vuforia");
 var application = require("application");
@@ -55,7 +56,7 @@ function configureVuforiaSurface() {
 var API = (function (_super) {
     __extends(API, _super);
     function API() {
-        var _this = _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.cameraDevice = new CameraDevice();
         _this.device = new Device();
         _this.renderer = new Renderer();
@@ -82,7 +83,8 @@ var API = (function (_super) {
                         vuforiaRenderer.mIsActive = true;
                         vuforia.Vuforia.onSurfaceCreated();
                         configureVuforiaSurface();
-                        setTimeout(configureVuforiaSurface, 3000); // this shouldn't be necessary, investigate
+                        setTimeout(configureVuforiaSurface, 1000);
+                        setTimeout(configureVuforiaSurface, 5000); // this shouldn't be required, but sometimes the video feed doesn't appear after reinit
                         vuforia.Vuforia.registerCallback(new vuforia.Vuforia.UpdateCallbackInterface({
                             Vuforia_onUpdate: function (state) {
                                 if (exports.api && exports.api.callback)
