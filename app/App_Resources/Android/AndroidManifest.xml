@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	package="__PACKAGE__"
 	android:versionCode="1"
-	android:versionName="1.0">
+	android:versionName="0.0.1">
 
 	<supports-screens
 		android:smallScreens="true"
@@ -11,12 +11,20 @@
 		android:xlargeScreens="true"/>
 
 	<uses-sdk
-		android:minSdkVersion="17"
+		android:minSdkVersion="23"
 		android:targetSdkVersion="__APILEVEL__"/>
 
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 	<uses-permission android:name="android.permission.INTERNET"/>
+
+	<uses-feature android:name="android.hardware.camera" android:required="true" />
+	<uses-feature android:name="android.hardware.sensor.gyroscope" android:required="true" />
+	<uses-feature android:name="android.hardware.sensor.compass" android:required="true" />
+	<uses-feature android:name="android.hardware.location" android:required="true" />
+	<uses-feature android:name="android.software.webview" android:required="true" />
+	<uses-feature android:glEsVersion="0x00020000" android:required="true" />
+				  
 
 	<application
 		android:name="com.tns.NativeScriptApplication"

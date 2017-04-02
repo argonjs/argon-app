@@ -1,0 +1,6 @@
+
+android {  
+  defaultConfig {  
+    minSdkVersion 23
+  }
+} 
