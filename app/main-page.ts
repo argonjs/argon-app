@@ -16,6 +16,18 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 import {getScreenOrientation} from './components/common/util';
 
+import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
+
+const matchArgonScheme = /^(argon|argon4)/;
+
+handleOpenURL((appURL: AppURL) => {
+    console.log('Received url request: ', appURL);
+    const layer = browserView.addLayer();
+    browserView.setFocussedLayer(layer);
+    const webView = layer.webView!;
+    webView.src = appURL.path.replace(matchArgonScheme, 'https');
+});
+
 // import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
