@@ -341,7 +341,7 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
                 //     }
                 // }).catch(()=>{});
 
-                dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing, please select cancel and use a site with a valid certificate.  We will fix this soon.");
+                dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing. Please use a site with a valid certificate.  We will fix this soon.");
         }
     }
 

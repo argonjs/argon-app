@@ -316,7 +316,7 @@ var ArgonWebViewDelegate = (function (_super) {
             //         webView.loadRequest(new NSURLRequest({URL:url}));
             //     }
             // }).catch(()=>{});
-            dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing, please select cancel and use a site with a valid certificate.  We will fix this soon.");
+            dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing. Please use a site with a valid certificate.  We will fix this soon.");
         }
     };
     return ArgonWebViewDelegate;
