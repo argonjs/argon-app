@@ -343,21 +343,21 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         }
     }
 
+    // comment out until https://github.com/NativeScript/ios-runtime/issues/742 is fixed
+	// webViewDidReceiveAuthenticationChallengeCompletionHandler(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
+    //     // If this is a certificate challenge, see if the certificate has previously been
+    //     // accepted by the user.
+    //     const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
+    //     const trust = challenge.protectionSpace.serverTrust;
+    //     const cert = SecTrustGetCertificateAtIndex(trust, 0);
+    //     if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
+    //         trust && cert && _certStore.containsCertificate(cert, origin)) {
+    //         completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
+    //         return;
+    //     }
 
-	webViewDidReceiveAuthenticationChallengeCompletionHandler?(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
-        // If this is a certificate challenge, see if the certificate has previously been
-        // accepted by the user.
-        const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
-        const trust = challenge.protectionSpace.serverTrust;
-        const cert = SecTrustGetCertificateAtIndex(trust, 0);
-        if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
-            trust && cert && _certStore.containsCertificate(cert, origin)) {
-            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
-            return;
-        }
-
-        completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
-    }
+    //     completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
+    // }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
 }
