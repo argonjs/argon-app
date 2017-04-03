@@ -9,26 +9,23 @@ var dialogs = require("ui/dialogs");
 var ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 var processPool = WKProcessPool.new();
 /// In-memory certificate store.
-var CertStore = (function () {
-    function CertStore() {
-        this.keys = new Set();
-    }
-    CertStore.prototype.addCertificate = function (cert, origin) {
-        var data = SecCertificateCopyData(cert);
-        var key = this.keyForData(data, origin);
-        this.keys.add(key);
-    };
-    CertStore.prototype.containsCertificate = function (cert, origin) {
-        var data = SecCertificateCopyData(cert);
-        var key = this.keyForData(data, origin);
-        return this.keys.has(key);
-    };
-    CertStore.prototype.keyForData = function (data, origin) {
-        return origin + "/" + data.hash;
-    };
-    return CertStore;
-}());
-var _certStore = new CertStore();
+// class CertStore {
+//     private keys = new Set<string>();
+//     public addCertificate(cert: any, origin:string) {
+//         let data: NSData = SecCertificateCopyData(cert)
+//         let key = this.keyForData(data, origin);
+//         this.keys.add(key);
+//     }
+//     public containsCertificate(cert: any, origin:string) : boolean {
+//         let data: NSData = SecCertificateCopyData(cert)
+//         let key = this.keyForData(data, origin)
+//         return this.keys.has(key);
+//     }
+//     private keyForData(data: NSData, origin:string) {
+//         return `${origin}/${data.hash}`;
+//     }
+// }
+// const _certStore = new CertStore();
 var ArgonWebView = (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
@@ -310,15 +307,16 @@ var ArgonWebViewDelegate = (function (_super) {
             error.code === NSURLErrorServerCertificateHasBadDate ||
             error.code === NSURLErrorServerCertificateHasUnknownRoot ||
             error.code === NSURLErrorServerCertificateNotYetValid) {
-            var certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
-            var cert_1 = certChain && certChain[0];
-            dialogs.confirm(error.localizedDescription + " Would you like to continue anyway?").then(function (result) {
-                if (result) {
-                    var origin = url.host + ":" + (url.port || 443);
-                    _certStore.addCertificate(cert_1, origin);
-                    webView.loadRequest(new NSURLRequest({ URL: url }));
-                }
-            }).catch(function () { });
+            // const certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
+            // const cert = certChain && certChain[0];
+            // dialogs.confirm(`${error.localizedDescription} Would you like to continue anyway?`).then(function (result) {
+            //     if (result) {
+            //         const origin = `${url.host}:${url.port||443}`;
+            //         _certStore.addCertificate(cert, origin);
+            //         webView.loadRequest(new NSURLRequest({URL:url}));
+            //     }
+            // }).catch(()=>{});
+            dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing, please select cancel and use a site with a valid certificate.  We will fix this soon.");
         }
     };
     return ArgonWebViewDelegate;
