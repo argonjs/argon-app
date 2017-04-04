@@ -10,7 +10,8 @@ import {LogItem} from 'argon-web-view';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
-    url: string
+    url: string,
+    newLayer: boolean,
 }
 
 export class LayerDetails extends Observable {
@@ -221,8 +222,20 @@ export class AppViewModel extends Observable {
         this.notify(<LoadUrlEventData>{
             eventName: AppViewModel.loadUrlEvent,
             object: this,
-            url
+            url,
+            newLayer: false
         })
+        this.layerDetails.set('uri', url);
+        this.set('bookmarksOpen', !url);
+    }
+
+    openUrl(url:string) {
+        this.notify(<LoadUrlEventData>{
+            eventName: AppViewModel.loadUrlEvent,
+            object: this,
+            url,
+            newLayer: true
+        });
         this.layerDetails.set('uri', url);
         this.set('bookmarksOpen', !url);
     }
