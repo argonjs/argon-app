@@ -16,18 +16,6 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 import {getScreenOrientation} from './components/common/util';
 
-import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
-
-const matchArgonScheme = /^(argon|argon4)/;
-
-handleOpenURL((appURL: AppURL) => {
-    console.log('Received url request: ', appURL);
-    const layer = browserView.addLayer();
-    browserView.setFocussedLayer(layer);
-    const webView = layer.webView!;
-    webView.src = appURL.path.replace(matchArgonScheme, 'https');
-});
-
 // import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
@@ -239,7 +227,6 @@ export function pageLoaded(args) {
     
     page = args.object;
     page.bindingContext = appViewModel;
-    appViewModel.setReady();
 
     // Set the icon for the menu button
     const menuButton = <Button> page.getViewById("menuButton");
@@ -248,9 +235,6 @@ export function pageLoaded(args) {
     // Set the icon for the overview button
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
-    
-    // focus on the topmost layer
-    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
@@ -261,13 +245,6 @@ export function pageLoaded(args) {
             page.requestLayout();
         });
     }
-    
-    appViewModel.showBookmarks();
-    
-    appViewModel.argon.session.errorEvent.addEventListener((error)=>{
-        // alert(error.message + '\n' + error.stack);
-        if (error.stack) console.log(error.message + '\n' + error.stack);
-    })
 
     application.on(application.orientationChangedEvent, ()=>{
         setTimeout(()=>{
@@ -278,6 +255,17 @@ export function pageLoaded(args) {
                 page.actionBarHidden = false;
         }, 500);
     });
+
+    appViewModel.setReady();
+    appViewModel.showBookmarks();
+    
+    appViewModel.argon.session.errorEvent.addEventListener((error)=>{
+        // alert(error.message + '\n' + error.stack);
+        if (error.stack) console.log(error.message + '\n' + error.stack);
+    });
+    
+    // focus on the topmost layer
+    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 }
 
 export function layoutLoaded(args) {
@@ -332,8 +320,20 @@ export function browserViewLoaded(args) {
     browserView = args.object;
     
     appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
-        browserView.loadUrl(data.url);
-    })
+        const url = data.url;
+
+        if (!data.newLayer || 
+            (browserView.focussedLayer !== browserView.realityLayer &&
+            !browserView.focussedLayer.details.uri)) {
+            browserView.loadUrl(url);
+            return;
+        }
+        
+        const layer = browserView.addLayer();
+        browserView.setFocussedLayer(layer);
+        browserView.loadUrl(url);
+        console.log('Loading url: ' + url);
+    });
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");

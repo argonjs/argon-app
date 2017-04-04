@@ -21,4 +21,20 @@ if (!global.performance.now) {
     }
 }
 
+import { appViewModel } from './components/common/AppViewModel';
+import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
+
+handleOpenURL((appURL: AppURL) => {
+    console.log('Received url request: ', appURL);
+    appViewModel.ready.then(()=>{
+        const urlParam = appURL.params.get('url');
+        if (urlParam) {
+            appViewModel.openUrl(urlParam);
+        } else {
+            const url = 'https://' + appURL.path;
+            appViewModel.openUrl(url);
+        }
+    });
+});
+
 application.start();
