@@ -279,7 +279,7 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     }
 
     webViewDidStartProvisionalNavigation(webView: WKWebView, navigation: WKNavigation) {
-        this._provisionalURL = webView.URL.absoluteString;
+        this._provisionalURL = webView.URL && webView.URL.absoluteString;
     }
 
     webViewDidCommitNavigation(webView: WKWebView, navigation: WKNavigation) {
@@ -298,13 +298,13 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
     webViewDidFinishNavigation(webView: WKWebView, navigation: WKNavigation) {
         const owner = this._owner.get();
-        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString);
+        if (owner) owner['_onLoadFinished'](webView.URL && webView.URL.absoluteString);
         this.updateURL();
     }
 
     webViewDidFailNavigationWithError(webView: WKWebView, navigation: WKNavigation, error:NSError) {
         const owner = this._owner.get();
-        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        if (owner) owner['_onLoadFinished'](webView.URL && webView.URL.absoluteString, error.localizedDescription);
         this.updateURL();
     }
 
@@ -318,7 +318,7 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
     webViewDidFailProvisionalNavigationWithError(webView: WKWebView, navigation: WKNavigation, error: NSError) {
         const owner = this._owner.get();
-        if (owner) owner['_onLoadFinished'](webView.URL.absoluteString, error.localizedDescription);
+        if (owner) owner['_onLoadFinished'](webView.URL && webView.URL.absoluteString, error.localizedDescription);
         this.updateURL();
 
         if (this.checkIfWebContentProcessHasCrashed(webView, error)) {
