@@ -12,27 +12,27 @@ const processPool = WKProcessPool.new();
 declare const window:any, webkit:any, document:any;
 
 /// In-memory certificate store.
-class CertStore {
-    private keys = new Set<string>();
+// class CertStore {
+//     private keys = new Set<string>();
 
-    public addCertificate(cert: any, origin:string) {
-        let data: NSData = SecCertificateCopyData(cert)
-        let key = this.keyForData(data, origin);
-        this.keys.add(key);
-    }
+//     public addCertificate(cert: any, origin:string) {
+//         let data: NSData = SecCertificateCopyData(cert)
+//         let key = this.keyForData(data, origin);
+//         this.keys.add(key);
+//     }
 
-    public containsCertificate(cert: any, origin:string) : boolean {
-        let data: NSData = SecCertificateCopyData(cert)
-        let key = this.keyForData(data, origin)
-        return this.keys.has(key);
-    }
+//     public containsCertificate(cert: any, origin:string) : boolean {
+//         let data: NSData = SecCertificateCopyData(cert)
+//         let key = this.keyForData(data, origin)
+//         return this.keys.has(key);
+//     }
 
-    private keyForData(data: NSData, origin:string) {
-        return `${origin}/${data.hash}`;
-    }
-}
+//     private keyForData(data: NSData, origin:string) {
+//         return `${origin}/${data.hash}`;
+//     }
+// }
 
-const _certStore = new CertStore();
+// const _certStore = new CertStore();
 
 export class ArgonWebView extends common.ArgonWebView  {
 
@@ -336,33 +336,35 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
             error.code === NSURLErrorServerCertificateHasBadDate || 
             error.code === NSURLErrorServerCertificateHasUnknownRoot || 
             error.code === NSURLErrorServerCertificateNotYetValid) {
-                const certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
-                const cert = certChain && certChain[0];
-                dialogs.confirm(`${error.localizedDescription} Would you like to continue anyway?`).then(function (result) {
-                    if (result) {
-                        const origin = `${url.host}:${url.port||443}`;
-                        _certStore.addCertificate(cert, origin);
-                        webView.loadRequest(new NSURLRequest({URL:url}));
-                    }
-                }).catch(()=>{});
+                // const certChain = error.userInfo.objectForKey('NSErrorPeerCertificateChainKey');
+                // const cert = certChain && certChain[0];
+                // dialogs.confirm(`${error.localizedDescription} Would you like to continue anyway?`).then(function (result) {
+                //     if (result) {
+                //         const origin = `${url.host}:${url.port||443}`;
+                //         _certStore.addCertificate(cert, origin);
+                //         webView.loadRequest(new NSURLRequest({URL:url}));
+                //     }
+                // }).catch(()=>{});
+
+                dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing. Please use a site with a valid certificate.  We will fix this soon.");
         }
     }
 
+    // comment out until https://github.com/NativeScript/ios-runtime/issues/742 is fixed
+	// webViewDidReceiveAuthenticationChallengeCompletionHandler(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
+    //     // If this is a certificate challenge, see if the certificate has previously been
+    //     // accepted by the user.
+    //     const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
+    //     const trust = challenge.protectionSpace.serverTrust;
+    //     const cert = SecTrustGetCertificateAtIndex(trust, 0);
+    //     if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
+    //         trust && cert && _certStore.containsCertificate(cert, origin)) {
+    //         completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
+    //         return;
+    //     }
 
-	webViewDidReceiveAuthenticationChallengeCompletionHandler?(webView: WKWebView, challenge: NSURLAuthenticationChallenge, completionHandler: (p1: NSURLSessionAuthChallengeDisposition, p2?: NSURLCredential) => void): void {
-        // If this is a certificate challenge, see if the certificate has previously been
-        // accepted by the user.
-        const origin = `${challenge.protectionSpace.host}:${challenge.protectionSpace.port}`;
-        const trust = challenge.protectionSpace.serverTrust;
-        const cert = SecTrustGetCertificateAtIndex(trust, 0);
-        if (challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust &&
-            trust && cert && _certStore.containsCertificate(cert, origin)) {
-            completionHandler(NSURLSessionAuthChallengeDisposition.UseCredential, new NSURLCredential(trust))
-            return;
-        }
-
-        completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
-    }
+    //     completionHandler(NSURLSessionAuthChallengeDisposition.PerformDefaultHandling, undefined);
+    // }
 
     public static ObjCProtocols = [WKScriptMessageHandler, WKNavigationDelegate];
 }

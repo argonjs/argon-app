@@ -14,6 +14,7 @@
     "minimatch": "^3.0.3",
     "nativescript-permissions": "^1.2.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
+    "nativescript-urlhandler": "^0.5.0",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
     "tns-core-modules": "^2.4.0-2016-10-05-4321",
