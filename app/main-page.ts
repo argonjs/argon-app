@@ -36,6 +36,7 @@ let iosSearchBarController:IOSSearchBarController;
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
         setSearchBarText(appViewModel.currentUri);
+        if (!appViewModel.currentUri) appViewModel.showBookmarks();
     }
     else if (evt.propertyName === 'viewerEnabled') {
         // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
@@ -85,7 +86,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
     else if (evt.propertyName === 'overviewOpen') {
         if (evt.value) {
-            browserView.showOverview();
             appViewModel.hideBookmarks();
             searchBar.animate({
                 translate: {x:-100, y:0},
@@ -103,7 +103,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity:1
             })
         } else {
-            browserView.hideOverview();
             if (!appViewModel.layerDetails.uri) appViewModel.showBookmarks();
             searchBar.visibility = 'visible';
             searchBar.animate({

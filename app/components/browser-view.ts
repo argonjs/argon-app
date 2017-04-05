@@ -105,6 +105,15 @@ export class BrowserView extends GridLayout {
             layer.contentView.addChild(this.videoView);
         }
 
+        appViewModel.on('propertyChange', (evt:PropertyChangeData) => {
+            switch (evt.propertyName) {
+                case 'overviewOpen': 
+                    if (appViewModel.overviewOpen) this._showOverview()
+                    else this._hideOverview()
+                    break;
+            }
+        });
+
         appViewModel.ready.then(()=>{
             const manager = appViewModel.argon;
             
@@ -435,6 +444,8 @@ export class BrowserView extends GridLayout {
             curve: AnimationCurve.easeInOut,
         });
     }
+
+    private _layerBackgroundColor = new Color(0, 255, 255, 255);
     
     private _showLayerInStack(layer:Layer) {
         const idx = this.layers.indexOf(layer);
@@ -448,7 +459,7 @@ export class BrowserView extends GridLayout {
                 (layer.webView && layer.webView.isArgonApp) || 
                 this.focussedLayer === layer) ? 
                     1 : 0,
-            backgroundColor: new Color(0, 255, 255, 255),
+            backgroundColor: this._layerBackgroundColor,
             duration: OVERVIEW_ANIMATION_DURATION,
         });
 
@@ -482,7 +493,7 @@ export class BrowserView extends GridLayout {
         })
     }
 
-    showOverview() {
+    private _showOverview() {
         if (this._overviewEnabled) return;
         this._overviewEnabled = true;
         this.layers.forEach((layer) => {
@@ -495,7 +506,7 @@ export class BrowserView extends GridLayout {
         this._intervalId = setInterval(this._animate.bind(this), 20);
     }
 
-    hideOverview() {
+    private _hideOverview() {
         if (!this._overviewEnabled) return;
         this._overviewEnabled = false;
         
@@ -530,6 +541,7 @@ export class BrowserView extends GridLayout {
 
     public setFocussedLayer(layer:Layer) {
         if (this._focussedLayer !== layer) {
+            const previousFocussedLayer = this._focussedLayer;
             this._focussedLayer = layer;
             this.notifyPropertyChange('focussedLayer', layer);
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
@@ -537,11 +549,14 @@ export class BrowserView extends GridLayout {
             appViewModel.argon.provider.focus.session = layer.session;
             appViewModel.setLayerDetails(layer.details);
             appViewModel.hideOverview();
+
             if (layer !== this.realityLayer) {
                 this.layers.splice(this.layers.indexOf(layer), 1);
                 this.layers.push(layer);
                 bringToFront(layer.containerView);
             }
+
+            if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
         }
     }
 
