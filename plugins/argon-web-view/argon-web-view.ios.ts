@@ -160,9 +160,7 @@ export class ArgonWebView extends common.ArgonWebView  {
     }
 
     public onUnloaded() {
-        // NOTE: removed when moving to iOS10 -- will not let me assign null to the 
-        // delegate.  Not sure if this will cause a problem.
-        // this._ios.navigationDelegate = null;
+        this._ios.navigationDelegate = <any>undefined;
         super.onUnloaded();
     }
 
@@ -178,13 +176,21 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     public static initWithOwner(owner:WeakRef<ArgonWebView>) {
         const delegate = <ArgonWebViewDelegate>ArgonWebViewDelegate.new()
         delegate._owner = owner;
-
-        const wkWebView = <WKWebView>owner.get().ios;
-        wkWebView.addObserverForKeyPathOptionsContext(delegate, "title", 0, <any>null);
-        wkWebView.addObserverForKeyPathOptionsContext(delegate, "URL", 0, <any>null);
-        wkWebView.addObserverForKeyPathOptionsContext(delegate, "estimatedProgress", 0, <any>null);
-
+        
+        const webview = <WKWebView>owner.get().ios;
+        webview.addObserverForKeyPathOptionsContext(delegate, "title", 0, <any>null);
+        webview.addObserverForKeyPathOptionsContext(delegate, "URL", 0, <any>null);
+        webview.addObserverForKeyPathOptionsContext(delegate, "estimatedProgress", 0, <any>null);
+        
         return delegate;
+    }
+
+    dealloc() {
+        const owner = this._owner.get();
+        const webview = <WKWebView> (owner && owner.ios);
+        webview.removeObserverForKeyPath(this, "title");
+        webview.removeObserverForKeyPath(this, "URL");
+        webview.removeObserverForKeyPath(this, "estimatedProgress");
     }
 
     observeValueForKeyPathOfObjectChangeContext(keyPath:string, object:any, change:any, context:any) {
