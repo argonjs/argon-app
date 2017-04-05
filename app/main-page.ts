@@ -47,7 +47,8 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             orientationModule.setCurrentOrientation("portrait");
             orientationModule.setCurrentOrientation("all");
         }
-
+        checkActionBar();
+        setTimeout(()=>{checkActionBar()}, 500);
     }
     else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {
@@ -222,6 +223,15 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
 })
 
+const checkActionBar = () => {
+    if (!page) return;
+    const orientation = getScreenOrientation();
+    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+        page.actionBarHidden = true;
+    else 
+        page.actionBarHidden = false;
+}
+
 export function pageLoaded(args) {
     
     page = args.object;
@@ -247,11 +257,7 @@ export function pageLoaded(args) {
 
     application.on(application.orientationChangedEvent, ()=>{
         setTimeout(()=>{
-            const orientation = getScreenOrientation();
-            if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
-                page.actionBarHidden = true;
-            else 
-                page.actionBarHidden = false;
+            checkActionBar();
         }, 500);
     });
 
