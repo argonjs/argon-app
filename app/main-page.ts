@@ -7,7 +7,7 @@ import {Button} from 'ui/button';
 import {View} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
-import {PropertyChangeData} from 'data/observable';
+import {PropertyChangeData, EventData} from 'data/observable';
 import {AnimationCurve} from 'ui/enums'
 import {GestureTypes} from 'ui/gestures'
 
@@ -27,6 +27,10 @@ handleOpenURL((appURL: AppURL) => {
     const webView = layer.webView!;
     webView.src = appURL.path.replace(matchArgonScheme, 'https');
 });
+
+//import trace = require("trace");
+//trace.setCategories(trace.categories.Debug);
+//trace.enable();
 
 // import {RealityViewer} from '@argonjs/argon'
 
@@ -390,7 +394,7 @@ function setSearchBarText(url:string) {
     if (iosSearchBarController) {
         iosSearchBarController.setText(url);
     } else {
-        searchBar.text = url;
+        androidSearchBarController.setText(url);
     }
 }
 
@@ -603,5 +607,30 @@ class AndroidSearchBarController {
         });
 
         this.searchView.setOnQueryTextFocusChangeListener(focusHandler);
+
+        // the nativescript implementation of OnQueryTextListener does not correctly handle the following case:
+        // 1) an external event updates the query text (e.g. the user clicked a link on a page)
+        // 2) the user attempts to navigate back to the previous page by updating the search bar text
+        // 3) nativescript sees this as submitting the same query and treats it as a no-op
+        // https://github.com/NativeScript/NativeScript/issues/3965
+        const searchHandler = new android.widget.SearchView.OnQueryTextListener({
+            onQueryTextChange(newText: String): boolean {
+                searchBar._onPropertyChangedFromNative(SearchBar.textProperty, newText);
+                return false;
+            },
+            onQueryTextSubmit(query: String): boolean {
+                searchBar.notify(<EventData>{
+                    eventName: SearchBar.submitEvent,
+                    object: this
+                });
+                return true;
+            }
+        });
+
+        this.searchView.setOnQueryTextListener(searchHandler);
+    }
+
+    public setText(url) {
+        this.searchView.setQuery(url, false);
     }
 }

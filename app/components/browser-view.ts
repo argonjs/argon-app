@@ -634,16 +634,20 @@ export class BrowserView extends GridLayout {
             this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite',false);
         }
-        /*
-        //if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload(); // src isn't safe to use here, as it's the original url (not the current)
-        if (this.focussedLayer.webView.getCurrentUrl() === url)
-            this.focussedLayer.webView.reload();
-        else
-            this.focussedLayer.webView.src = url;
-        */
+
         if (this.focussedLayer.webView) {
-            if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload();
-            else this.focussedLayer.webView.src = url;
+            if (this.focussedLayer.webView.getCurrentUrl() === url) {
+                this.focussedLayer.webView.reload();
+            } else {
+                if (this.focussedLayer.webView.src === url) {
+                    // webView.src does not update when the user clicks a link on a webpage
+                    // clear the src property to force a property update (note that notifyPropertyChange doesn't work here)
+                    this.focussedLayer.webView.src = "";
+                    this.focussedLayer.webView.src = url;
+                } else {
+                    this.focussedLayer.webView.src = url;
+                }
+            }
         }
     }
 
