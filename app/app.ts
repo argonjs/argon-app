@@ -24,4 +24,23 @@ if (!global.performance.now) {
     }
 }
 
+/* temporarily disable this on Android, causing a crash
+
+import { appViewModel } from './components/common/AppViewModel';
+import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
+
+handleOpenURL((appURL: AppURL) => {
+    console.log('Received url request: ', appURL);
+    appViewModel.ready.then(()=>{
+        const urlValue = appURL.params.get('url');
+        if (urlValue) {
+            appViewModel.openUrl(decodeURIComponent(urlValue));
+        } else {
+            const url = 'https://' + appURL.path;
+            appViewModel.openUrl(url);
+        }
+    });
+});
+*/
+
 application.start();

@@ -16,22 +16,6 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 import {getScreenOrientation, updateScreenOrientation} from './components/common/util';
 
-import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
-
-const matchArgonScheme = /^(argon|argon4)/;
-
-handleOpenURL((appURL: AppURL) => {
-    console.log('Received url request: ', appURL);
-    const layer = browserView.addLayer();
-    browserView.setFocussedLayer(layer);
-    const webView = layer.webView!;
-    webView.src = appURL.path.replace(matchArgonScheme, 'https');
-});
-
-//import trace = require("trace");
-//trace.setCategories(trace.categories.Debug);
-//trace.enable();
-
 // import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
@@ -53,6 +37,7 @@ let androidSearchBarController:AndroidSearchBarController;
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
         setSearchBarText(appViewModel.currentUri);
+        if (!appViewModel.currentUri) appViewModel.showBookmarks();
     }
     else if (evt.propertyName === 'viewerEnabled') {
         // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
@@ -63,7 +48,8 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             orientationModule.setCurrentOrientation("portrait");
             orientationModule.setCurrentOrientation("all");
         }
-
+        checkActionBar();
+        setTimeout(()=>{checkActionBar()}, 500);
     }
     else if (evt.propertyName === 'menuOpen') {
         if (evt.value) {
@@ -102,7 +88,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
     else if (evt.propertyName === 'overviewOpen') {
         if (evt.value) {
-            browserView.showOverview();
             appViewModel.hideBookmarks();
             searchBar.animate({
                 translate: {x:-100, y:0},
@@ -120,7 +105,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity:1
             })
         } else {
-            browserView.hideOverview();
             if (!appViewModel.layerDetails.uri) appViewModel.showBookmarks();
             searchBar.visibility = 'visible';
             searchBar.animate({
@@ -240,12 +224,45 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     }
 })
 
+const checkActionBar = () => {
+    if (!page) return;
+    const orientation = getScreenOrientation();
+    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+        page.actionBarHidden = true;
+    else 
+        page.actionBarHidden = false;
+}
+
+const updateSystemUI = () => {
+    if (!page) return;
+    const orientation = getScreenOrientation();
+    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) {
+        if (page.android) {
+            let window = application.android.foregroundActivity.getWindow();
+            let decorView = window.getDecorView();
+            let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_FULLSCREEN
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+    } else {
+        if (page.android) {
+            let window = application.android.foregroundActivity.getWindow();
+            let decorView = window.getDecorView();
+            let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_VISIBLE;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+    }
+}
+
 export function pageLoaded(args) {
 
     /*
     page = args.object;
     page.bindingContext = appViewModel;
-    appViewModel.setReady();
 
     // Set the icon for the menu button
     const menuButton = <Button> page.getViewById("menuButton");
@@ -261,7 +278,6 @@ export function navigatedTo(args) {
     
     page = args.object;
     page.bindingContext = appViewModel;
-    appViewModel.setReady();
 
     // Set the icon for the menu button
     const menuButton = <Button> page.getViewById("menuButton");
@@ -270,9 +286,6 @@ export function navigatedTo(args) {
     // Set the icon for the overview button
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
-
-    // focus on the topmost layer
-    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
@@ -283,45 +296,25 @@ export function navigatedTo(args) {
             page.requestLayout();
         });
     }
-    
+
+    application.on(application.orientationChangedEvent, ()=>{
+        updateScreenOrientation();
+        setTimeout(()=>{
+            updateScreenOrientation();
+            checkActionBar();
+            updateSystemUI();
+        }, 500);
+    });
+
+    updateScreenOrientation();
+
+    appViewModel.setReady();
     appViewModel.showBookmarks();
     
     appViewModel.argon.session.errorEvent.addEventListener((error)=>{
         // alert(error.message + '\n' + error.stack);
         if (error.stack) console.log(error.message + '\n' + error.stack);
     })
-
-    application.on(application.orientationChangedEvent, (args)=>{
-        updateScreenOrientation();
-        setTimeout(()=>{
-            updateScreenOrientation();
-            const orientation = getScreenOrientation();
-            if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) {
-                page.actionBarHidden = true;
-                if (page.android) {
-                    let window = application.android.foregroundActivity.getWindow();
-                    let decorView = window.getDecorView();
-                    let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | (<any>android.view.View).SYSTEM_UI_FLAG_FULLSCREEN
-                            | (<any>android.view.View).SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-                    decorView.setSystemUiVisibility(uiOptions);
-                }
-            } else {
-                page.actionBarHidden = false;
-                if (page.android) {
-                    let window = application.android.foregroundActivity.getWindow();
-                    let decorView = window.getDecorView();
-                    let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_VISIBLE;
-                    decorView.setSystemUiVisibility(uiOptions);
-                }
-            }
-        }, 500);
-    });
-
-    updateScreenOrientation();
 
     if (application.android) {
         var activity = application.android.foregroundActivity;
@@ -335,9 +328,23 @@ export function navigatedTo(args) {
     }
 
     appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
-        browserView.loadUrl(data.url);
-        blurSearchBar();
-    })
+        const url = data.url;
+
+        if (!data.newLayer || 
+            (browserView.focussedLayer !== browserView.realityLayer &&
+            !browserView.focussedLayer.details.uri)) {
+            browserView.loadUrl(url);
+            return;
+        }
+        
+        const layer = browserView.addLayer();
+        browserView.setFocussedLayer(layer);
+        browserView.loadUrl(url);
+        console.log('Loading url: ' + url);
+    });
+    
+    // focus on the topmost layer
+    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 }
 
 application.on(application.resumeEvent, ()=> {

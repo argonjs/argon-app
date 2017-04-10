@@ -125,6 +125,12 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         const remove = this._deviceService.frameStateEvent.addEventListener((frameState)=>{
             if (!this.isPresenting || !session.isConnected) return;
 
+            if (frameState.geolocationDesired) {
+                this._deviceService.subscribeGeolocation(frameState.geolocationOptions, session);
+            } else {
+                this._deviceService.unsubscribeGeolocation(session);
+            }
+
             Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
             if (!frameState.strict) {
