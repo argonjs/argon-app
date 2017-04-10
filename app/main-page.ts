@@ -261,16 +261,16 @@ export function pageLoaded(args) {
         }, 500);
     });
 
-    appViewModel.setReady();
-    appViewModel.showBookmarks();
+    appViewModel.ready.then(()=>{
+        
+        appViewModel.argon.session.errorEvent.addEventListener((error)=>{
+            // alert(error.message + '\n' + error.stack);
+            if (error.stack) console.log(error.message + '\n' + error.stack);
+        });
     
-    appViewModel.argon.session.errorEvent.addEventListener((error)=>{
-        // alert(error.message + '\n' + error.stack);
-        if (error.stack) console.log(error.message + '\n' + error.stack);
+        appViewModel.showBookmarks();
+        
     });
-    
-    // focus on the topmost layer
-    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
 }
 
 export function layoutLoaded(args) {
@@ -278,6 +278,7 @@ export function layoutLoaded(args) {
     if (layout.ios) {
         layout.ios.layer.masksToBounds = false;
     }
+    appViewModel.setReady();
 }
 
 export function headerLoaded(args) {
@@ -328,7 +329,8 @@ export function browserViewLoaded(args) {
         const url = data.url;
 
         if (!data.newLayer || 
-            (browserView.focussedLayer !== browserView.realityLayer &&
+            (browserView.focussedLayer &&
+            browserView.focussedLayer !== browserView.realityLayer &&
             !browserView.focussedLayer.details.uri)) {
             browserView.loadUrl(url);
             return;
@@ -396,7 +398,9 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
+    browserView.focussedLayer && 
+        browserView.focussedLayer.webView && 
+        browserView.focussedLayer.webView.reload();
 }
 
 export function onFavoriteToggle(args) {
