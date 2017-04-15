@@ -152,7 +152,7 @@ export function pushToHistory(url:string, title?:string) {
 
 export function updateTitle(url:string, title:string) {
     var historyBookmarkItem = historyMap.get(url);
-    if (historyBookmarkItem) {
+    if (historyBookmarkItem && !historyBookmarkItem.builtin) {
         historyBookmarkItem.set('title', title);
     }
 }
