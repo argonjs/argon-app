@@ -57,7 +57,7 @@ realityList.on('change', (data) => updateMap(data, realityMap));
 const builtinFavorites:Array<BookmarkItem> = [
     new BookmarkItem({
         title: 'Argon Help',
-        uri: 'http://argonjs.io/argon-app/'
+        uri: 'http://app.argonjs.io/'
     }),
     new BookmarkItem({
         title: 'Argon Samples',
