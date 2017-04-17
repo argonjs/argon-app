@@ -1,6 +1,7 @@
 import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
+import dialogs = require("ui/dialogs");
 //import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
@@ -82,6 +83,16 @@ export class ArgonWebView extends common.ArgonWebView {
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {
+            if (this.android.getUrl() != this.currentUrl) {
+                // the page did not successfully load
+                if (this.currentUrl.startsWith("https")) {
+                    // the certificate is likely invalid
+                    dialogs.alert("Argon cannot currently load https pages with invalid certificates.").then(()=> {
+                        // do nothing for now
+                    });
+                }
+                this.currentUrl = this.android.getUrl();
+            }
             this.set('title', this.android.getTitle());
             this.set('progress', this.android.getProgress());
         });
