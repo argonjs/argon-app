@@ -72,6 +72,9 @@ export class ArgonWebView extends common.ArgonWebView {
                     let data = JSON.stringify({type:level, message:consoleMessage.message()});
                     this._handleLogMessage(data);
                     return false;
+                },
+                onGeolocationPermissionsShowPrompt: (origin: string, callback: android.webkit.GeolocationPermissions.ICallback): void => {
+                    callback.invoke(origin, true, true); // grant geolocation permission
                 }
             })));
         });
