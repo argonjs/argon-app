@@ -245,6 +245,10 @@ export function pageLoaded(args) {
     const overviewButton = <Button> page.getViewById("overviewButton");
     overviewButton.text = String.fromCharCode(0xe53b);
 
+    // Set icon for location permission
+    const locationPermission = <Button> page.getViewById("locationPermission");
+    locationPermission.text = String.fromCharCode(0xe569);
+
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(()=>{
