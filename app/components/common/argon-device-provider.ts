@@ -182,8 +182,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         motionManager.showsDeviceMovementDisplay = true
         motionManager.deviceMotionUpdateInterval = 1.0 / 100.0;
         if (!motionManager.deviceMotionAvailable || !motionManager.magnetometerAvailable) {
-            console.log("NO Magnetometer and/or Gyro. " );
-            alert("Need a device with gyroscope and magnetometer to get 3D device orientation");
+            // console.log("NO Magnetometer and/or Gyro. " );
             return undefined;
         } else {
             let effectiveReferenceFrame:CMAttitudeReferenceFrame;
@@ -191,8 +190,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 effectiveReferenceFrame = CMAttitudeReferenceFrame.XTrueNorthZVertical;
                 motionManager.startDeviceMotionUpdatesUsingReferenceFrame(effectiveReferenceFrame);
             } else {
-                alert("Need a device with magnetometer to get full 3D device orientation");
-                console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
+                // console.log("NO  CMAttitudeReferenceFrameXTrueNorthZVertical" );
                 return undefined;
             }
         }

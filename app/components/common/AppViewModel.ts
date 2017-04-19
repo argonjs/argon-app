@@ -56,7 +56,7 @@ export class AppViewModel extends Observable {
     viewerEnabled = false;
     interactionMode:InteractionMode = 'immersive';
     interactionModeButtonEnabled = false;
-    layerDetails:LayerDetails = new LayerDetails(null)
+    layerDetails:LayerDetails;
     currentUri = '';
     isFavorite = false;
 
@@ -77,10 +77,12 @@ export class AppViewModel extends Observable {
 
         this.ready = new Promise<void>((resolve) => {
             this._resolveReady = resolve;
-        })
+        });
     }
 
     setReady() {
+        if (this.argon) return; // already initialized
+
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
         container.registerSingleton(Argon.VuforiaServiceProvider, NativescriptVuforiaServiceProvider);
@@ -124,81 +126,105 @@ export class AppViewModel extends Observable {
                 });
             }
         });
+
+        this.setLayerDetails(new LayerDetails(null));
         
         this._resolveReady();
     }
+
+    ensureReady() {
+        if (!this.argon) throw new Error('AppViewModel is not ready');
+    }
     
     toggleMenu() {
+        this.ensureReady();
         this.set('menuOpen', !this.menuOpen);
     }
     
     hideMenu() {
+        this.ensureReady();
         this.set('menuOpen', false);
     }
     
     toggleInteractionMode() {
+        this.ensureReady();
         this.set('interactionMode', this.interactionMode === 'page' ? 'immersive' : 'page')
     }
     
     setInteractionMode(mode:InteractionMode) {
+        this.ensureReady();
         this.set('interactionMode', mode);
     }
     
     showOverview() {
+        this.ensureReady();
         this.set('overviewOpen', true);
     }
     
     hideOverview() {
+        this.ensureReady();
         this.set('overviewOpen', false);
     }
     
     toggleOverview() {
+        this.ensureReady();
         this.set('overviewOpen', !this.overviewOpen);
     }
     
     showBookmarks() {
+        this.ensureReady();
         this.set('bookmarksOpen', true);
     }
     
     hideBookmarks() {
+        this.ensureReady();
         this.set('bookmarksOpen', false);
     }
     
     showRealityChooser() {
+        this.ensureReady();
         this.set('realityChooserOpen', true);
     }
     
     hideRealityChooser() {
+        this.ensureReady();
         this.set('realityChooserOpen', false);
     }
     
     showCancelButton() {
+        this.ensureReady();
         this.set('cancelButtonShown', true);
     }
     
     hideCancelButton() {
+        this.ensureReady();
         this.set('cancelButtonShown', false);
     }
     
     toggleDebug() {
+        this.ensureReady();
         this.set('debugEnabled', !this.debugEnabled);
     }
     
     setDebugEnabled(enabled:boolean) {
+        this.ensureReady();
         this.set('debugEnabled', enabled);
     }
     
     toggleViewer() {
+        this.ensureReady();
         this.setViewerEnabled(!this.viewerEnabled);
     }
     
     setViewerEnabled(enabled:boolean) {
+        this.ensureReady();
         this.set('viewerEnabled', enabled);
         if (enabled) this.argon.device.requestPresentHMD();
         else this.argon.device.exitPresentHMD();
     }
 
     _onLayerDetailsChange(data:PropertyChangeData) {
+        this.ensureReady();
         if (data.propertyName === 'uri') {
             this.set('currentUri', data.value);
             this.updateFavoriteStatus();
@@ -206,7 +232,8 @@ export class AppViewModel extends Observable {
     }
     
     setLayerDetails(details:LayerDetails) {
-        this.layerDetails.off('propertyChange', this._onLayerDetailsChange, this);
+        this.ensureReady();
+        this.layerDetails && this.layerDetails.off('propertyChange', this._onLayerDetailsChange, this);
         this.set('layerDetails', details);
         this.set('bookmarksOpen', !details.uri);
         this.set('currentUri', details.uri);
@@ -215,21 +242,24 @@ export class AppViewModel extends Observable {
     }
     
     updateFavoriteStatus() {
+        this.ensureReady();
         this.set('isFavorite', !!bookmarks.favoriteMap.get(this.currentUri));
     }
     
     loadUrl(url:string) {
+        this.ensureReady();
         this.notify(<LoadUrlEventData>{
             eventName: AppViewModel.loadUrlEvent,
             object: this,
             url,
             newLayer: false
-        })
+        });
         this.layerDetails.set('uri', url);
         this.set('bookmarksOpen', !url);
     }
 
     openUrl(url:string) {
+        this.ensureReady();
         this.notify(<LoadUrlEventData>{
             eventName: AppViewModel.loadUrlEvent,
             object: this,

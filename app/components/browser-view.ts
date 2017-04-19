@@ -64,7 +64,7 @@ export class BrowserView extends GridLayout {
     layerContainer = new GridLayout;
     layers:Layer[] = [];
         
-    private _focussedLayer:Layer;
+    private _focussedLayer?:Layer;
     private _overviewEnabled = false;
     
     private _intervalId?:number;
@@ -228,7 +228,7 @@ export class BrowserView extends GridLayout {
             const session = e.session;
             layer.session = session;
             session.connectEvent.addEventListener(()=>{
-                if (webView === this.focussedLayer.webView) {
+                if (this.focussedLayer && webView === this.focussedLayer.webView) {
                     appViewModel.argon.provider.focus.session = session;
                 }
                 if (layer === this.realityLayer) {
@@ -640,13 +640,14 @@ export class BrowserView extends GridLayout {
     }
 
     public loadUrl(url:string) {
-        if (this.focussedLayer !== this.realityLayer) {
+        if (!this.focussedLayer) this.setFocussedLayer(this.layers[this.layers.length-1]);
+        if (this.focussedLayer && this.focussedLayer !== this.realityLayer) {
             this.focussedLayer.details.set('uri',url);
             this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite',false);
         }
 
-        if (this.focussedLayer.webView) {
+        if (this.focussedLayer && this.focussedLayer.webView) {
             if (this.focussedLayer.webView.getCurrentUrl() === url) {
                 this.focussedLayer.webView.reload();
             } else {

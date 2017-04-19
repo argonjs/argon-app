@@ -27,11 +27,11 @@ if (!global.performance.now) {
 /* temporarily disable this on Android, causing a crash
 
 import { appViewModel } from './components/common/AppViewModel';
-import { handleOpenURL, AppURL } from 'nativescript-urlhandler';
+import { handleOpenURL, AppURL } from '@speigg/nativescript-urlhandler';
 
 handleOpenURL((appURL: AppURL) => {
-    console.log('Received url request: ', appURL);
     appViewModel.ready.then(()=>{
+        console.log('Received url request: ' + appURL);
         const urlValue = appURL.params.get('url');
         if (urlValue) {
             appViewModel.openUrl(decodeURIComponent(urlValue));

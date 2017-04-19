@@ -258,21 +258,7 @@ const updateSystemUI = () => {
     }
 }
 
-export function pageLoaded(args) {
-
-    /*
-    page = args.object;
-    page.bindingContext = appViewModel;
-
-    // Set the icon for the menu button
-    const menuButton = <Button> page.getViewById("menuButton");
-    menuButton.text = String.fromCharCode(0xe5d4);
-
-    // Set the icon for the overview button
-    const overviewButton = <Button> page.getViewById("overviewButton");
-    overviewButton.text = String.fromCharCode(0xe53b);
-    */
-}
+export function pageLoaded(args) {}
 
 export function navigatedTo(args) {
     
@@ -308,30 +294,22 @@ export function navigatedTo(args) {
 
     updateScreenOrientation();
 
-    appViewModel.setReady();
-    appViewModel.showBookmarks();
+    appViewModel.ready.then(()=>{
+        
+        appViewModel.argon.session.errorEvent.addEventListener((error)=>{
+            // alert(error.message + '\n' + error.stack);
+            if (error.stack) console.log(error.message + '\n' + error.stack);
+        });
     
-    appViewModel.argon.session.errorEvent.addEventListener((error)=>{
-        // alert(error.message + '\n' + error.stack);
-        if (error.stack) console.log(error.message + '\n' + error.stack);
-    })
-
-    if (application.android) {
-        var activity = application.android.foregroundActivity;
-        activity.onBackPressed = () => {
-            if (browserView.focussedLayer != browserView.realityLayer) {
-                if (browserView.focussedLayer.webView && browserView.focussedLayer.webView.android.canGoBack()) {
-                    browserView.focussedLayer.webView.android.goBack();
-                }
-            }
-        }
-    }
+        appViewModel.showBookmarks();
+    });
 
     appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
         const url = data.url;
 
         if (!data.newLayer || 
-            (browserView.focussedLayer !== browserView.realityLayer &&
+            (browserView.focussedLayer &&
+            browserView.focussedLayer !== browserView.realityLayer &&
             !browserView.focussedLayer.details.uri)) {
             browserView.loadUrl(url);
             return;
@@ -342,9 +320,17 @@ export function navigatedTo(args) {
         browserView.loadUrl(url);
         console.log('Loading url: ' + url);
     });
-    
-    // focus on the topmost layer
-    browserView.setFocussedLayer(browserView.layers[browserView.layers.length-1]);
+
+    if (application.android) {
+        var activity = application.android.foregroundActivity;
+        activity.onBackPressed = () => {
+            if (browserView.focussedLayer != browserView.realityLayer) {
+                if (browserView.focussedLayer && browserView.focussedLayer.webView && browserView.focussedLayer.webView.android.canGoBack()) {
+                    browserView.focussedLayer.webView.android.goBack();
+                }
+            }
+        }
+    }
 }
 
 application.on(application.resumeEvent, ()=> {
@@ -363,6 +349,7 @@ export function layoutLoaded(args) {
     if (layout.ios) {
         layout.ios.layer.masksToBounds = false;
     }
+    appViewModel.setReady();
 }
 
 export function headerLoaded(args) {
@@ -471,7 +458,9 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    browserView.focussedLayer.webView && browserView.focussedLayer.webView.reload();
+    browserView.focussedLayer && 
+        browserView.focussedLayer.webView && 
+        browserView.focussedLayer.webView.reload();
 }
 
 export function onFavoriteToggle(args) {
