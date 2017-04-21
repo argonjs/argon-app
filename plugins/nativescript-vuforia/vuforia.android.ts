@@ -11,11 +11,12 @@ global.moduleMerge(common, exports);
 
 const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
 
-const androidVideoView = <plugin.VuforiaGLView> (VUFORIA_AVAILABLE ? new plugin.VuforiaGLView(application.android.context) : undefined);
+var androidVideoView: plugin.VuforiaGLView|undefined = undefined;
 var vuforiaRenderer: plugin.VuforiaRenderer;
 
 export const videoView = new placeholder.Placeholder();
 videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
+    androidVideoView = <plugin.VuforiaGLView> (VUFORIA_AVAILABLE ? new plugin.VuforiaGLView(application.android.context) : undefined);
     evt.view = androidVideoView;
 
     androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
@@ -56,6 +57,7 @@ application.on(application.resumeEvent, ()=> {
 
 function configureVuforiaSurface() {
     if (!api) throw new Error();
+    if (androidVideoView === undefined) return;
     //const contentScaleFactor = androidVideoView.contentScaleFactor;
     const contentScaleFactor = 1.0; // todo: fix this
     api.onSurfaceChanged(
