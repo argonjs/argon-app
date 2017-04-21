@@ -9,18 +9,19 @@ export enum PERMISSION_STATES {
 
 class PermissionManager {
 
-    private locationPermission: PERMISSION_STATES;
+    private locationPermission: PERMISSION_STATES;  //for testing. save state per host name ex) "app.argonjs.io"" ->should be moved to local cache
     
     constructor() {
-        this.locationPermission = PERMISSION_STATES.Prompt;
+        this.locationPermission = PERMISSION_STATES.Prompt; //for testing. temp starting permission
     }
 
-    requestPermission(request: {type:string, force?:boolean}) {
+    requestPermission(request: {type:string, force?:boolean}) { //should somehow recieve host name, also
         console.log("Permission requested: By " + "someone" + ", type: " + request.type);
 
-        var currentState: PERMISSION_STATES = this.locationPermission;
-        
-        if (currentState === PERMISSION_STATES.Prompt || request.force) {
+        var currentState: PERMISSION_STATES = this.loadPermission();    //load using hostname & permission type
+        if (request.force) currentState = PERMISSION_STATES.Prompt;
+
+        if (currentState === PERMISSION_STATES.Prompt) {
             dialogs.confirm({
                 title: request.type + " Permission",
                 message: "This app requires " + request.type + " permission.",
@@ -38,9 +39,18 @@ class PermissionManager {
             });
         }
 
-        this.locationPermission = currentState;
+        
         console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState])
+        this.savePermission(currentState);  //save using hostname & permission type
         return currentState;        
+    }
+
+    savePermission(newState: PERMISSION_STATES) {
+        this.locationPermission = newState;
+    }
+
+    loadPermission() { //should get from cache based on host name
+        return this.locationPermission;
     }
 }
 
