@@ -1,4 +1,5 @@
 import application = require("application");
+import {getConfigFile} from './components/common/util';
 
 application.mainModule = "main-page"
 application.cssFile = "./app.css";
@@ -20,6 +21,8 @@ if (!global.performance.now) {
         };
     }
 }
+
+export const config: Configurations = getConfigFile();
 
 import { appViewModel } from './components/common/AppViewModel';
 import { handleOpenURL, AppURL } from '@speigg/nativescript-urlhandler';
