@@ -8,9 +8,7 @@ import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import {decrypt, getScreenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
-
-const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
-const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
+import {config} from '../../app'
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
@@ -411,7 +409,7 @@ export class NativescriptVuforiaServiceProvider {
         if (this._sessionData.has(session))
             throw new Error('Already initialized');
 
-        if (DEBUG_DEVELOPMENT_LICENSE_KEY) options.key = DEBUG_DEVELOPMENT_LICENSE_KEY;
+        if (config.DEBUG_DEVELOPMENT_LICENSE_KEY != "") options.key = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
 
         const keyPromise = options.key ? 
             Promise.resolve(options.key) : 
@@ -628,7 +626,7 @@ export class NativescriptVuforiaServiceProvider {
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             })
 
-            if (!match && !DEBUG_DISABLE_ORIGIN_CHECK) {
+            if (!match && !config.DEBUG_DISABLE_ORIGIN_CHECK) {
                 throw new Error('Invalid origin');
             }
 

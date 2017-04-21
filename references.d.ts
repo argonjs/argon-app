@@ -27,3 +27,10 @@ namespace openpgp {
     function decryptKey(o:DecryptKeyOptions) : Promise<{key: openpgp.key.Key}>;
     function initWorker(options:any);
 }
+
+interface Configurations {
+    DEBUG_DEVELOPMENT_LICENSE_KEY: string;
+    DEBUG_DISABLE_ORIGIN_CHECK: boolean;
+    ENABLE_PERMISSION_BAR: boolean;
+    ENABLE_PERMISSION_CHECK: boolean;
+}

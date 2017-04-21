@@ -3,6 +3,7 @@ import * as platform from "platform";
 import {Color} from "color";
 import * as application from "application";
 import * as utils from 'utils/utils';
+import * as file from 'file-system';
 
 try {
   var ArgonPrivate = require('argon-private');
@@ -144,3 +145,8 @@ export function getIPAddressOfInterface($interface) {
     return address;
 }
 
+export function getConfigFile() {
+	const documents = file.knownFolders.currentApp();
+	var jsonFile = documents.getFile("./config.json");
+	return JSON.parse(jsonFile.readTextSync());
+}
