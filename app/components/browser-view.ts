@@ -371,10 +371,6 @@ export class BrowserView extends GridLayout {
                 this.androidOnLayout();
             })
         }
-
-        //Util.bringToFront(this.realityLayer.webView);
-        //Util.bringToFront(this.realityLayer.touchOverlay);
-        //Util.bringToFront(this.realityLayer.titleBar);
     }
     
     onMeasure(widthMeasureSpec, heightMeasureSpec) {
