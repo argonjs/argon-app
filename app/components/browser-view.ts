@@ -549,7 +549,10 @@ export class BrowserView extends GridLayout {
         
         layer.touchOverlay.style.visibility = 'collapsed';
 
-        //layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;  // todo: investigate this
+        if (application.ios) {
+            // todo: this is causing issues on android, investigate further
+            layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+        }
         layer.containerView.animate({
             opacity: 
                 (this.realityLayer === layer || 
