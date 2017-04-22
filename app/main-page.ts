@@ -34,6 +34,8 @@ let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
 let androidSearchBarController:AndroidSearchBarController;
 
+var isFirstLoad = true;
+
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
         setSearchBarText(appViewModel.currentUri);
@@ -258,10 +260,13 @@ const updateSystemUI = () => {
     }
 }
 
-export function pageLoaded(args) {}
-
-export function navigatedTo(args) {
+export function pageLoaded(args) {
     
+    if (!isFirstLoad) {
+        // on android pageLoaded is called each time the app is resumed
+        return;
+    }
+
     page = args.object;
     page.bindingContext = appViewModel;
 
@@ -304,23 +309,6 @@ export function navigatedTo(args) {
         appViewModel.showBookmarks();
     });
 
-    appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
-        const url = data.url;
-
-        if (!data.newLayer || 
-            (browserView.focussedLayer &&
-            browserView.focussedLayer !== browserView.realityLayer &&
-            !browserView.focussedLayer.details.uri)) {
-            browserView.loadUrl(url);
-            return;
-        }
-        
-        const layer = browserView.addLayer();
-        browserView.setFocussedLayer(layer);
-        browserView.loadUrl(url);
-        console.log('Loading url: ' + url);
-    });
-
     if (application.android) {
         var activity = application.android.foregroundActivity;
         activity.onBackPressed = () => {
@@ -332,6 +320,10 @@ export function navigatedTo(args) {
         }
     }
 }
+
+application.on(application.suspendEvent, ()=> {
+    isFirstLoad = false;
+});
 
 application.on(application.resumeEvent, ()=> {
     if (application.android) {
@@ -359,21 +351,23 @@ export function headerLoaded(args) {
 export function searchBarLoaded(args) {
     searchBar = args.object;
 
-    searchBar.on(SearchBar.submitEvent, () => {
-        let urlString = searchBar.text;
-        if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
-        
-        const url = URI(urlString);
-        if (url.protocol() !== "http" && url.protocol() !== "https") {
-            url.protocol("http");
-        }
-        setSearchBarText(url.toString());
-        appViewModel.loadUrl(url.toString());
-        appViewModel.hideBookmarks();
-        appViewModel.hideRealityChooser();
-        appViewModel.hideCancelButton();
-        blurSearchBar();
-    });
+    if (isFirstLoad) {
+        searchBar.on(SearchBar.submitEvent, () => {
+            let urlString = searchBar.text;
+            if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
+            
+            const url = URI(urlString);
+            if (url.protocol() !== "http" && url.protocol() !== "https") {
+                url.protocol("http");
+            }
+            setSearchBarText(url.toString());
+            appViewModel.loadUrl(url.toString());
+            appViewModel.hideBookmarks();
+            appViewModel.hideRealityChooser();
+            appViewModel.hideCancelButton();
+            blurSearchBar();
+        });
+    }
 
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
@@ -401,6 +395,25 @@ function blurSearchBar() {
 
 export function browserViewLoaded(args) {
     browserView = args.object;
+
+    if (isFirstLoad) {
+        appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
+            const url = data.url;
+
+            if (!data.newLayer || 
+                (browserView.focussedLayer &&
+                browserView.focussedLayer !== browserView.realityLayer &&
+                !browserView.focussedLayer.details.uri)) {
+                browserView.loadUrl(url);
+                return;
+            }
+            
+            const layer = browserView.addLayer();
+            browserView.setFocussedLayer(layer);
+            browserView.loadUrl(url);
+            console.log('Loading url: ' + url);
+        });
+    }
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
