@@ -5,7 +5,7 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
-import {decrypt, getScreenOrientation} from './util'
+import {decrypt, screenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 
@@ -135,7 +135,7 @@ export class NativescriptVuforiaServiceProvider {
             // Rotate the tracker to a landscape-right frame, 
             // where +X is right, +Y is down, and +Z is in the camera direction
             // (vuforia reports poses in this frame on iOS devices, not sure about android)
-            const currentScreenOrientationRadians = getScreenOrientation() * CesiumMath.RADIANS_PER_DEGREE;
+            const currentScreenOrientationRadians = screenOrientation * CesiumMath.RADIANS_PER_DEGREE;
             const trackerOrientation = Quaternion.multiply(
                 Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, landscapeRightScreenOrientationRadians - currentScreenOrientationRadians, this._scratchQuaternion),
                 x180,
@@ -647,8 +647,7 @@ export class NativescriptVuforiaServiceProvider {
         let videoWidth = videoMode.width;
         let videoHeight = videoMode.height;
         
-        const orientation = getScreenOrientation();
-        if (orientation === 0 || orientation === 180) {
+        if (screenOrientation === 0 || screenOrientation === 180) {
             videoWidth = videoMode.height;
             videoHeight = videoMode.width;
         }

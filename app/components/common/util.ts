@@ -8,9 +8,17 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
-export function getScreenOrientation() : number {
+application.on(application.orientationChangedEvent, ()=>{
+  updateScreenOrientation();
+  setTimeout(updateScreenOrientation, 100);
+});
+
+let iosSharedApplication:UIApplication;
+
+function getNativeScreenOrientation() {
     if (application.ios) {
-        const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
+        iosSharedApplication = iosSharedApplication || utils.ios.getter(UIApplication, UIApplication.sharedApplication);
+        const orientation = iosSharedApplication.statusBarOrientation;
         switch (orientation) {
             case UIInterfaceOrientation.Unknown:
             case UIInterfaceOrientation.Portrait: return 0;
@@ -31,6 +39,12 @@ export function getScreenOrientation() : number {
         }
     } 
     return 0;
+}
+
+export let screenOrientation:number = 0;
+
+function updateScreenOrientation() {
+  screenOrientation = getNativeScreenOrientation();
 }
 
 export function canDecrypt() : boolean { 

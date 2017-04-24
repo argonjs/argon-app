@@ -14,7 +14,7 @@ import {GestureTypes} from 'ui/gestures'
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
-import {getScreenOrientation} from './components/common/util';
+import {screenOrientation} from './components/common/util';
 
 // import {RealityViewer} from '@argonjs/argon'
 
@@ -225,8 +225,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 
 const checkActionBar = () => {
     if (!page) return;
-    const orientation = getScreenOrientation();
-    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) 
         page.actionBarHidden = true;
     else 
         page.actionBarHidden = false;

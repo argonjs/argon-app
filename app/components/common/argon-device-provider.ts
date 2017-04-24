@@ -9,7 +9,7 @@ import * as frames from 'ui/frame';
 import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider'
 import * as Argon from "@argonjs/argon";
 
-import {getScreenOrientation} from './util'
+import {screenOrientation} from './util'
 
 const Cartesian3 = Argon.Cesium.Cartesian3;
 const Quaternion = Argon.Cesium.Quaternion;
@@ -30,20 +30,19 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         super(sessionService, contextService, viewService);
 
         const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
-        let now:number;
-
-        const executeCallback = (cb, id) => {
-            cb(now);
-        };
 
         vsp.stateUpdateEvent.addEventListener(()=>{
-            now = global.performance.now();
+            const now = global.performance.now();
             // swap callback maps
             const callbacks = this._callbacks;
             this._callbacks = this._callbacks2;
             this._callbacks2 = callbacks;
-            callbacks.forEach(executeCallback);
-            callbacks.clear();
+            for (let i in callbacks) {
+                this._executeCallback(callbacks[i], now);
+            }
+            for (let i in callbacks) {
+                delete callbacks[i];
+            }
         });
 
         if (!vuforia.api) {
@@ -51,26 +50,30 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         }
     }
 
+    private _executeCallback = (cb:Function, now:number) => {
+        cb(now);
+    };
+
     private _application = application;
     private _scratchDisplayOrientation = new Quaternion;
     private _scratchDeviceOrientation = new Quaternion;
 
     private _id = 0;
-    private _callbacks = new Map<number, Function>();
-    private _callbacks2 = new Map<number, Function>();
+    private _callbacks:{[id:number]:Function} = {};
+    private _callbacks2:{[id:number]:Function} = {};
 
     requestAnimationFrame = (cb:(timestamp:number)=>void) => {
         this._id++;
-        this._callbacks.set(this._id, cb);
+        this._callbacks[this._id] = cb;
         return this._id;
     }
 
     cancelAnimationFrame = (id:number) => {
-        this._callbacks.delete(id);
+        delete this._callbacks[id];
     }
     
     getScreenOrientationDegrees() {
-        return getScreenOrientation();
+        return screenOrientation;
     }
     
     onUpdateFrameState() {
@@ -315,7 +318,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // TODO: calculate this matrix only when we have to (when the interface orientation changes)
                 const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
                     Cartesian3.ZERO,
-                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - getScreenOrientation() * Math.PI / 180), this._scratchVideoQuaternion),
+                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
                     ONE,
                     this._scratchMatrix4
                 );
