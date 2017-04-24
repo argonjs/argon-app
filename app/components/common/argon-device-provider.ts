@@ -26,8 +26,9 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         sessionService:Argon.SessionService, 
         contextService:Argon.ContextService, 
         viewService:Argon.ViewService,
+        visibilityService:Argon.VisibilityService,
         vuforiaServiceProvider:Argon.VuforiaServiceProvider) {
-        super(sessionService, contextService, viewService);
+        super(sessionService, contextService, viewService, visibilityService);
 
         const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
 
@@ -78,7 +79,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     
     onUpdateFrameState() {
 
-        const viewport = this.deviceState.viewport = this.deviceState.viewport || <Argon.Viewport>{};
+        const viewport = this.deviceState.viewport = this.deviceState.viewport || <Argon.CanvasViewport>{};
         const contentView = frames.topmost().currentPage.content;
         viewport.x = 0;
         viewport.y = 0;
