@@ -27,6 +27,7 @@ export function onLoaded(args) {
 }
 
 export function onTap(args) {
+    clearTimeout(tapTimerId);
     if (editing) return
     closeAllCells();
     var item:BookmarkItem = (args.object as View).bindingContext;
@@ -49,35 +50,47 @@ interface CellViews {
 
 let openCells:Array<CellViews> = []
 
+const tapTimeout = 150;
+var tapTimerId = -1;
+
 export function onItemLoaded(args) {
     var itemView:View = args.object;
     var contentView = itemView.getViewById('content');
     var deleteView = itemView.getViewById('delete');
     var cell = {contentView, deleteView};
-    
+
     var panStart=0;
-    // todo: fix for Android
-    if (application.ios) {
-        contentView.on(GestureTypes.pan, (data:PanGestureEventData)=>{
-            
-            if (data.state === GestureStateTypes.began) {
+    contentView.on(GestureTypes.pan, (data:PanGestureEventData)=>{
+        
+        if (data.state === GestureStateTypes.began) {
+            if (application.android) {
+                closeAllCells(cell);
+                tapTimerId = setTimeout(()=>{
+                    panStart = contentView.translateX + data.deltaX;
+                    editing = true;
+                }, tapTimeout);
+            } else {
                 panStart = contentView.translateX;
                 closeAllCells(cell);
                 editing = true;
             }
-            
-            contentView.translateX = Math.min(Math.max(panStart + data.deltaX, -1000), 0);
-            
-            if (data.state === GestureStateTypes.ended) {
-                editing = false;
-                var open = contentView.translateX < swipeLimit*0.75;
-                toggleCellSwipeState(cell, open);
-            } else {
-                deleteView.visibility = 'visible';
-            }
-            
-        })
-    }
+        } else {
+            // wait for tap timeout before handling this gesture (only on android)
+            if (!editing) return;
+        }
+        
+        contentView.translateX = Math.min(Math.max(panStart + data.deltaX, -1000), 0);
+        
+        if (data.state === GestureStateTypes.ended) {
+            clearTimeout(tapTimerId);
+            editing = false;
+            var open = contentView.translateX < swipeLimit*0.75;
+            toggleCellSwipeState(cell, open);
+        } else {
+            deleteView.visibility = 'visible';
+        }
+        
+    })
 }
 
 function closeAllCells(exceptCell?:CellViews) {
