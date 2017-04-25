@@ -1,0 +1,7 @@
+<Page
+    xmlns="http://schemas.nativescript.org/tns.xsd"
+    loaded="pageLoaded"
+    actionBarHidden="true"
+    backgroundColor="#F9D75A">
+    <Image src="res://logo" stretch="none" horizontalAlignment="center" verticalAlignment="center" /> 
+</Page>

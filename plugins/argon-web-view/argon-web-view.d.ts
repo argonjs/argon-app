@@ -31,6 +31,11 @@ declare module "argon-web-view" {
         on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
 
         on(event: string, callback: (args: EventData) => void, thisArg?: any);
+
+        /**
+         * Safe way to query the current url on both platforms.
+         */
+        getCurrentUrl();
     }
 
     export interface SessionEventData extends EventData {

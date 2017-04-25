@@ -2,7 +2,8 @@
     <ListView
         items="{{ historyList }}"
         loaded="onLoaded"
-        rowHeight="40">
+        rowHeight="40"
+        backgroundColor="#FFFFFF">
         <ListView.itemTemplate>
             <GridLayout backgroundColor="#FFFFFF" height="40" loaded="onItemLoaded">
                 <GridLayout id="delete" backgroundColor="#EEEEEE">
