@@ -210,8 +210,7 @@ public class VuforiaRenderer implements GLSurfaceView.Renderer {
         // and the calibration ensures that the augmentation matches the real world
         if (Device.getInstance().isViewerActive())
         {
-            float sceneScaleFactor = getSceneScaleFactor(viewId);
-            Matrix.scaleM(vbProjectionMatrix, 0, sceneScaleFactor, sceneScaleFactor, 1.0f);
+            Matrix.scaleM(vbProjectionMatrix, 0, VuforiaSession.scaleFactor(), VuforiaSession.scaleFactor(), 1.0f);
 
             // Apply a scissor around the video background, so that the augmentation doesn't 'bleed' outside it
             int [] scissorRect = getScissorRect(vbProjectionMatrix, viewport);
@@ -253,33 +252,6 @@ public class VuforiaRenderer implements GLSurfaceView.Renderer {
 
         checkGLError("Rendering of the video background failed");
     }
-
-    float getSceneScaleFactor(int viewId)
-    {
-        // Get the y-dimension of the physical camera field of view
-        Vec2F fovVector = CameraDevice.getInstance().getCameraCalibration().getFieldOfViewRads();
-        float cameraFovYRads = fovVector.getData()[1];
-
-        // Get the y-dimension of the virtual camera field of view
-        Vec4F virtualFovVector = renderingPrimitives.getEffectiveFov(viewId); // {left, right, bottom, top}
-        float virtualFovYRads = virtualFovVector.getData()[2] + virtualFovVector.getData()[3];
-
-
-        // The scene-scale factor represents the proportion of the viewport that is filled by
-        // the video background when projected onto the same plane.
-        // In order to calculate this, let 'd' be the distance between the cameras and the plane.
-        // The height of the projected image 'h' on this plane can then be calculated:
-        //   tan(fov/2) = h/2d
-        // which rearranges to:
-        //   2d = h/tan(fov/2)
-        // Since 'd' is the same for both cameras, we can combine the equations for the two cameras:
-        //   hPhysical/tan(fovPhysical/2) = hVirtual/tan(fovVirtual/2)
-        // Which rearranges to:
-        //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
-        // ... which is the scene-scale factor
-        return (float) (Math.tan(cameraFovYRads / 2) / Math.tan(virtualFovYRads / 2));
-    }
-
 
     // Shaders
 

@@ -51,6 +51,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             orientationModule.setCurrentOrientation("all");
         }
         checkActionBar();
+        updateSystemUI();
         setTimeout(()=>{checkActionBar()}, 500);
     }
     else if (evt.propertyName === 'menuOpen') {

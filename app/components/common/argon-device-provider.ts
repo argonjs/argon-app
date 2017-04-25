@@ -3,6 +3,7 @@ import * as utils from 'utils/utils';
 import * as geolocation from 'speigg-nativescript-geolocation';
 import * as dialogs from 'ui/dialogs';
 import * as enums from 'ui/enums';
+import * as platform from 'platform';
 
 import * as vuforia from 'nativescript-vuforia';
 import * as frames from 'ui/frame';
@@ -307,7 +308,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         const renderingViews = renderingPrimitives.getRenderingViews();
         const numViews = renderingViews.getNumViews();
 
-        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : 1;
+        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : platform.screen.mainScreen.scale;
 
         subviews.length = numViews;
 
