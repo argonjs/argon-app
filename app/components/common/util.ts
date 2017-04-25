@@ -8,28 +8,17 @@ try {
   var ArgonPrivate = require('argon-private');
 } catch (e) {}
 
-// Querying the screen orientation is expensive on Android
-// Set this flag to true to cache the orientation
-const cacheScreenOrientation: boolean = application.android ? true : false;
-var screenOrientation: number;
+application.on(application.orientationChangedEvent, ()=>{
+  updateScreenOrientation();
+  setTimeout(updateScreenOrientation, 100);
+});
 
-export function getScreenOrientation() : number {
-    if (cacheScreenOrientation) {
-        return screenOrientation;
-    } else {
-        return queryScreenOrientation();
-    }
-}
+let iosSharedApplication:UIApplication;
 
-export function updateScreenOrientation() {
-    if (cacheScreenOrientation) {
-        screenOrientation = queryScreenOrientation();
-    }
-}
-
-export function queryScreenOrientation() : number {
+function getNativeScreenOrientation() {
     if (application.ios) {
-        const orientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
+        iosSharedApplication = iosSharedApplication || utils.ios.getter(UIApplication, UIApplication.sharedApplication);
+        const orientation = iosSharedApplication.statusBarOrientation;
         switch (orientation) {
             case UIInterfaceOrientation.Unknown:
             case UIInterfaceOrientation.Portrait: return 0;
@@ -50,6 +39,12 @@ export function queryScreenOrientation() : number {
         }
     } 
     return 0;
+}
+
+export let screenOrientation:number = 0;
+
+function updateScreenOrientation() {
+  screenOrientation = getNativeScreenOrientation();
 }
 
 export function canDecrypt() : boolean { 

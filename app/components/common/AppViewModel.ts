@@ -2,11 +2,12 @@ import {Observable, PropertyChangeData, EventData} from 'data/observable'
 import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from '@argonjs/argon';
-import {NativescriptVuforiaServiceProvider, DEBUG_DEVELOPMENT_LICENSE_KEY} from './argon-vuforia-provider';
+import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
+import {config} from '../../config';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
@@ -116,7 +117,9 @@ export class AppViewModel extends Observable {
 
         argon.vuforia.isAvailable().then((available)=>{
             if (available) {
-                const primaryVuforiaLicenseKey = getInternalVuforiaKey() || DEBUG_DEVELOPMENT_LICENSE_KEY;
+                let primaryVuforiaLicenseKey = getInternalVuforiaKey();
+                if (config.DEBUG_DEVELOPMENT_LICENSE_KEY != "") primaryVuforiaLicenseKey = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
+
                 if (!primaryVuforiaLicenseKey) {
                     alert("Unable to locate internal Vuforia License Key");
                     return;

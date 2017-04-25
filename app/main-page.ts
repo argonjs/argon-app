@@ -14,7 +14,7 @@ import {GestureTypes} from 'ui/gestures'
 import {BrowserView} from './components/browser-view';
 import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
-import {getScreenOrientation, updateScreenOrientation} from './components/common/util';
+import {screenOrientation} from './components/common/util';
 
 // import {RealityViewer} from '@argonjs/argon'
 
@@ -228,8 +228,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 
 const checkActionBar = () => {
     if (!page) return;
-    const orientation = getScreenOrientation();
-    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) 
+    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) 
         page.actionBarHidden = true;
     else 
         page.actionBarHidden = false;
@@ -237,8 +236,7 @@ const checkActionBar = () => {
 
 const updateSystemUI = () => {
     if (!page) return;
-    const orientation = getScreenOrientation();
-    if (orientation === 90 || orientation === -90 || appViewModel.viewerEnabled) {
+    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) {
         if (page.android) {
             let window = application.android.foregroundActivity.getWindow();
             let decorView = window.getDecorView();
@@ -289,15 +287,11 @@ export function pageLoaded(args) {
     }
 
     application.on(application.orientationChangedEvent, ()=>{
-        updateScreenOrientation();
         setTimeout(()=>{
-            updateScreenOrientation();
             checkActionBar();
             updateSystemUI();
         }, 500);
     });
-
-    updateScreenOrientation();
 
     appViewModel.ready.then(()=>{
         

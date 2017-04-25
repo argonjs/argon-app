@@ -5,13 +5,11 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
-import {decrypt, getScreenOrientation} from './util'
+import {decrypt, screenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 import * as application from 'application';
-
-export const DEBUG_DEVELOPMENT_LICENSE_KEY:string|undefined = undefined; // 'your_license_key';
-const DEBUG_DISABLE_ORIGIN_CHECK:boolean = true;
+import {config} from '../../config';
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
@@ -136,7 +134,7 @@ export class NativescriptVuforiaServiceProvider {
             // Rotate the tracker to a landscape-right frame, 
             // where +X is right, +Y is down, and +Z is in the camera direction
             // (vuforia reports poses in this frame on iOS devices, not sure about android)
-            const currentScreenOrientationRadians = getScreenOrientation() * CesiumMath.RADIANS_PER_DEGREE;
+            const currentScreenOrientationRadians = screenOrientation * CesiumMath.RADIANS_PER_DEGREE;
             const trackerOrientation = Quaternion.multiply(
                 Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, landscapeRightScreenOrientationRadians - currentScreenOrientationRadians, this._scratchQuaternion),
                 x180,
@@ -412,7 +410,7 @@ export class NativescriptVuforiaServiceProvider {
         if (this._sessionData.has(session))
             throw new Error('Already initialized');
 
-        if (DEBUG_DEVELOPMENT_LICENSE_KEY) options.key = DEBUG_DEVELOPMENT_LICENSE_KEY;
+        if (config.DEBUG_DEVELOPMENT_LICENSE_KEY != "") options.key = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
 
         const keyPromise = options.key ? 
             Promise.resolve(options.key) : 
@@ -629,7 +627,7 @@ export class NativescriptVuforiaServiceProvider {
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             })
 
-            if (!match && !DEBUG_DISABLE_ORIGIN_CHECK) {
+            if (!match && !config.DEBUG_DISABLE_ORIGIN_CHECK) {
                 throw new Error('Invalid origin');
             }
 
@@ -648,8 +646,7 @@ export class NativescriptVuforiaServiceProvider {
         let videoWidth = videoMode.width;
         let videoHeight = videoMode.height;
         
-        const orientation = getScreenOrientation();
-        if (orientation === 0 || orientation === 180) {
+        if (screenOrientation === 0 || screenOrientation === 180) {
             videoWidth = videoMode.height;
             videoHeight = videoMode.width;
         }
