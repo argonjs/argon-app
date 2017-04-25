@@ -19,6 +19,8 @@ Cocoapods is required).
 
 2. Execute `tns install` in the `argon-app` directory
 
+iOS
+
 3. Execute `tns run ios`, or execute `tns prepare ios` and open argonapp.xcworkspace (located at /argon-app/platforms/ios) in XCode
 
     *Note: If you have trouble deploying on the device, 
@@ -28,3 +30,9 @@ Cocoapods is required).
     the xcode project.* 
 
 4. Debug with javascript inspector using `tns debug ios`
+
+Android
+
+3. Execute `tns run android`
+
+4. Debug with javascript inspector using `tns debug android`
