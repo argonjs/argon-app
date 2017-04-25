@@ -43,6 +43,7 @@ application.on(application.suspendEvent, ()=> {
 application.on(application.orientationChangedEvent, () => {
     if (VUFORIA_AVAILABLE) {
         Promise.resolve().then(configureVuforiaSurface); // delay until the interface orientation actually changes
+        setTimeout(configureVuforiaSurface, 500);
     }
 });
 

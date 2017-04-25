@@ -282,7 +282,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         application.on(application.orientationChangedEvent, ()=>{
             setTimeout(()=>{
                 this.publishDeviceState();
-            }, 500);
+            }, 600);
             this.publishDeviceState();
         });
     }
