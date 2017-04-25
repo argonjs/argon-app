@@ -39,3 +39,23 @@
 .delete-btn {
     color: white;
 }
+
+.search-bar {
+    
+}
+
+#overviewButton {
+    width: 30;
+}
+
+#menuButton {
+    width: 30;
+}
+
+#addButton {
+    width: 30;
+}
+
+#menuButtons {
+    height: 44;
+}

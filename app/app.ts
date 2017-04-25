@@ -1,6 +1,9 @@
 import application = require("application");
-
-application.mainModule = "main-page"
+if (application.android) {
+    application.mainModule = "entry-page"
+} else {
+    application.mainModule = "main-page"
+}
 application.cssFile = "./app.css";
 
 /***
@@ -23,8 +26,8 @@ if (!global.performance.now) {
 
 import { appViewModel } from './components/common/AppViewModel';
 import { handleOpenURL, AppURL } from '@speigg/nativescript-urlhandler';
-
 handleOpenURL((appURL: AppURL) => {
+    if (!appURL) return;
     appViewModel.ready.then(()=>{
         console.log('Received url request: ' + appURL);
         const urlValue = appURL.params.get('url');

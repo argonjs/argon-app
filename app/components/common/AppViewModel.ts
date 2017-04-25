@@ -82,6 +82,8 @@ export class AppViewModel extends Observable {
     }
 
     setReady() {
+        if (this.argon) return; // already initialized
+
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
         container.registerSingleton(Argon.VuforiaServiceProvider, NativescriptVuforiaServiceProvider);

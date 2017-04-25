@@ -19,6 +19,10 @@ import {
 } from 'ui/gestures';
 import {bringToFront} from './common/util';
 import {PropertyChangeData} from 'data/observable'
+import {Observable} from 'data/observable';
+import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
+import dialogs = require("ui/dialogs");
+import applicationSettings = require('application-settings');
 import * as vuforia from 'nativescript-vuforia';
 import * as application from 'application';
 import * as utils from 'utils/utils';
@@ -29,9 +33,14 @@ import * as bookmarks from './common/bookmarks'
 
 import * as Argon from '@argonjs/argon'
 
+import observableModule = require("data/observable");
+let androidLayoutObservable = new Observable();
+
 const TITLE_BAR_HEIGHT = 30;
 const OVERVIEW_VERTICAL_PADDING = 150;
 const OVERVIEW_ANIMATION_DURATION = 250;
+const MIN_ANDROID_WEBVIEW_VERSION = 56;
+const IGNORE_WEBVIEW_UPGRADE_KEY = 'ignore_webview_upgrade';
 
 export interface Layer {
     session?:Argon.SessionPort,
@@ -60,6 +69,8 @@ export class BrowserView extends GridLayout {
     
     private _intervalId?:number;
 
+    private _checkedVersion = false;
+
     constructor() {
         super();
         
@@ -67,6 +78,8 @@ export class BrowserView extends GridLayout {
         this.layerContainer.verticalAlignment = 'stretch';
         if (this.layerContainer.ios) {
             this.layerContainer.ios.layer.masksToBounds = false;
+        } else if (this.layerContainer.android) {
+            this.layerContainer.android.setClipChildren(false);
         }
         
         this.scrollView.horizontalAlignment = 'stretch';
@@ -74,6 +87,8 @@ export class BrowserView extends GridLayout {
         this.scrollView.content = this.layerContainer;
         if (this.scrollView.ios) {
             this.scrollView.ios.layer.masksToBounds = false;
+        } else if (this.scrollView.android) {
+            this.scrollView.android.setClipChildren(false);
         }
         this.addChild(this.scrollView);
         this.backgroundColor = new Color("#555");
@@ -99,10 +114,14 @@ export class BrowserView extends GridLayout {
         layer.closeButton.visibility = 'collapsed';
         
         if (this.videoView) {
-            this.videoView.horizontalAlignment = 'stretch';
-            this.videoView.verticalAlignment = 'stretch';
-            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
-            layer.contentView.addChild(this.videoView);
+            // this.videoView.horizontalAlignment = 'stretch';
+            // this.videoView.verticalAlignment = 'stretch';
+            // if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
+            // layer.contentView.addChild(this.videoView);
+            if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
+            const videoViewLayout = new AbsoluteLayout();
+            videoViewLayout.addChild(this.videoView);
+            layer.contentView.addChild(videoViewLayout);
         }
 
         appViewModel.on('propertyChange', (evt:PropertyChangeData) => {
@@ -199,6 +218,7 @@ export class BrowserView extends GridLayout {
         });
         
         webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
+            this._checkWebViewVersion(webView);
             if (!eventData.error && webView !== this.realityLayer.webView) {
                 bookmarks.pushToHistory(eventData.url, webView.title);
             }
@@ -273,7 +293,7 @@ export class BrowserView extends GridLayout {
         closeButton.verticalAlignment = VerticalAlignment.stretch;
         closeButton.text = 'close';
         closeButton.className = 'material-icon';
-        closeButton.style.fontSize = 22;
+        closeButton.style.fontSize = application.android ? 16 : 22;
         closeButton.color = new Color('black');
         GridLayout.setRow(closeButton, 0);
         GridLayout.setColumn(closeButton, 0);
@@ -284,7 +304,7 @@ export class BrowserView extends GridLayout {
         
         const titleLabel = new Label();
         titleLabel.horizontalAlignment = HorizontalAlignment.stretch;
-        titleLabel.verticalAlignment = VerticalAlignment.stretch;
+        titleLabel.verticalAlignment = application.android ? VerticalAlignment.center : VerticalAlignment.stretch;
         titleLabel.textAlignment = TextAlignment.center;
         titleLabel.color = new Color('black');
         titleLabel.fontSize = 14;
@@ -325,6 +345,7 @@ export class BrowserView extends GridLayout {
         const layer = this.layers[index];
         if (typeof layer === 'undefined') 
             throw new Error('Expected layer at index ' + index);
+        layer.webView && layer.webView.session && layer.webView.session.close();
         this.layers.splice(index, 1);
         this.layerContainer.removeChild(layer.containerView); // for now
     }
@@ -336,6 +357,20 @@ export class BrowserView extends GridLayout {
     
     onLoaded() {
         super.onLoaded();
+        if (this.android) {
+            this.android.addOnLayoutChangeListener(new android.view.View.OnLayoutChangeListener({
+                onLayoutChange(v: android.view.View, left: number, top: number, right: number, bottom: number, oldLeft: number, oldTop: number, oldRight: number, oldBottom: number): void {
+                    var eventData: observableModule.EventData = {
+                        eventName: "customLayoutChange",
+                        object: androidLayoutObservable
+                    }
+                    androidLayoutObservable.notify(eventData);
+                }
+            }));
+            androidLayoutObservable.on("customLayoutChange", ()=>{
+                this.androidOnLayout();
+            })
+        }
     }
     
     onMeasure(widthMeasureSpec, heightMeasureSpec) {
@@ -351,8 +386,59 @@ export class BrowserView extends GridLayout {
             layer.containerView.width = width;
             layer.containerView.height = height;
         });
-        
+
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
+    androidOnLayout() {
+        const width = this.getActualSize().width;
+        const height = this.getActualSize().height;
+
+        if (!this._overviewEnabled) {
+            this.layerContainer.width = width;
+            this.layerContainer.height = height;
+        }
+        
+        this.layers.forEach((layer)=>{
+            layer.containerView.width = width;
+            layer.containerView.height = height;
+        });
+    }
+
+    private _checkWebViewVersion(webView:ArgonWebView) {
+        if (this._checkedVersion) {
+            return;
+        }
+        if (applicationSettings.hasKey(IGNORE_WEBVIEW_UPGRADE_KEY)) {
+            this._checkedVersion = true;
+            return;
+        }
+        if (webView.android) {
+            const version = (<any>webView).getWebViewVersion();
+            console.log("android webview version: " + version);
+            if (version < MIN_ANDROID_WEBVIEW_VERSION) {
+                dialogs.confirm({
+                    title: "Upgrade WebView",
+                    message: "Your Android System WebView is out of date. We suggest at least version " + MIN_ANDROID_WEBVIEW_VERSION + ", your device currently has version " + version + ". This may result in rendering issues. Please update via the Google Play Store.",
+                    okButtonText: "Upgrade",
+                    cancelButtonText: "Later",
+                    neutralButtonText: "Ignore"
+                }).then(function (result) {
+                    if (result) {
+                        console.log("upgrading webview");
+                        const intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                        intent.setData(android.net.Uri.parse("market://details?id=com.google.android.webview"));
+                        application.android.startActivity.startActivity(intent);
+                    } else if (result === undefined) {
+                        console.log("upgrade never");
+                        applicationSettings.setBoolean(IGNORE_WEBVIEW_UPGRADE_KEY, true);
+                    } else if (result === false) {
+                        console.log("upgrade later");
+                    }
+                });
+            }
+            this._checkedVersion = true;
+        }
     }
     
     private _calculateTargetTransform(index:number) {
@@ -381,8 +467,10 @@ export class BrowserView extends GridLayout {
         const deltaT = Math.min(now - this._lastTime, 30) / 1000;
         this._lastTime = now;
         
-        const width = this.getMeasuredWidth();
-        const height = this.getMeasuredHeight();
+        //const width = this.getMeasuredWidth();
+        //const height = this.getMeasuredHeight();
+        const width = this.getActualSize().width;
+        const height = this.getActualSize().height;
         
         const containerHeight = height + OVERVIEW_VERTICAL_PADDING * (this.layers.length-1);
         this.layerContainer.width = width;
@@ -405,14 +493,23 @@ export class BrowserView extends GridLayout {
     private _showLayerInCarousel(layer:Layer) {
         const idx = this.layers.indexOf(layer);
 
-        if (layer.containerView.ios)
+        if (layer.containerView.ios) {
             layer.containerView.ios.layer.masksToBounds = true;
+        } else if (layer.containerView.android) {
+            layer.containerView.android.setClipChildren(true);
+        }
 
-        if (layer.contentView.ios)
+        if (layer.contentView.ios) {
             layer.contentView.ios.layer.masksToBounds = true;
-        
-        if (layer.webView && layer.webView.ios)
+        } else if (layer.contentView.android) {
+            layer.contentView.android.setClipChildren(true);
+        }
+
+        if (layer.webView && layer.webView.ios) {
             layer.webView.ios.layer.masksToBounds = true;
+        } else if (layer.webView && layer.webView.android) {
+            layer.webView.android.setClipChildren(true);
+        }
             
         layer.touchOverlay.style.visibility = 'visible';
 
@@ -452,7 +549,10 @@ export class BrowserView extends GridLayout {
         
         layer.touchOverlay.style.visibility = 'collapsed';
 
-        layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+        if (application.ios) {
+            // todo: this is causing issues on android, investigate further
+            layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+        }
         layer.containerView.animate({
             opacity: 
                 (this.realityLayer === layer || 
@@ -467,12 +567,23 @@ export class BrowserView extends GridLayout {
             translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
         }).then(()=>{
-            if (layer.containerView.ios)
+            if (layer.containerView.ios) {
                 layer.containerView.ios.layer.masksToBounds = false;
-            if (layer.contentView.ios)
+            } else if (layer.containerView.android) {
+                layer.containerView.android.setClipChildren(false);
+            }
+
+            if (layer.contentView.ios) {
                 layer.contentView.ios.layer.masksToBounds = false;
-            if (layer.webView && layer.webView.ios)
+            } else if (layer.contentView.android) {
+                layer.contentView.android.setClipChildren(false);
+            }
+
+            if (layer.webView && layer.webView.ios) {
                 layer.webView.ios.layer.masksToBounds = false;
+            } else if (layer.webView && layer.webView.android) {
+                layer.webView.android.setClipChildren(false);
+            }
         });
 
         // Hide titlebars
@@ -534,9 +645,20 @@ export class BrowserView extends GridLayout {
             this.focussedLayer.details.set('title', getHost(url));
             this.focussedLayer.details.set('isFavorite',false);
         }
+
         if (this.focussedLayer && this.focussedLayer.webView) {
-            if (this.focussedLayer.webView.src === url) this.focussedLayer.webView.reload();
-            else this.focussedLayer.webView.src = url;
+            if (this.focussedLayer.webView.getCurrentUrl() === url) {
+                this.focussedLayer.webView.reload();
+            } else {
+                if (this.focussedLayer.webView.src === url) {
+                    // webView.src does not update when the user clicks a link on a webpage
+                    // clear the src property to force a property update (note that notifyPropertyChange doesn't work here)
+                    this.focussedLayer.webView.src = "";
+                    this.focussedLayer.webView.src = url;
+                } else {
+                    this.focussedLayer.webView.src = url;
+                }
+            }
         }
     }
 

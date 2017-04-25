@@ -1,0 +1,12 @@
+
+android {  
+  defaultConfig {  
+    minSdkVersion 23
+  }
+  buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFile 'src/main/res/proguard-rules.pro'
+        }
+    }
+} 
