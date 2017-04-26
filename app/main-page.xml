@@ -9,7 +9,7 @@
         <ActionBar>
             <ActionBar.titleView margin="0px" padding="0px" >
             <GridLayout columns="auto, auto, auto, *, auto, auto, auto, auto" rows="auto" horizontalAlignment="stretch" loaded="headerLoaded">
-                <SearchBar col="3" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
+                <SearchBar col="3" class="search-bar" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
                 <Label col="4" width="10" />
                 <Label col="7" width="5%" />
                 <Button id="overviewButton" col="5" width="30" class="material-icon action-btn" tap="onOverview" />
