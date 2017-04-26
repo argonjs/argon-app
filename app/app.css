@@ -23,6 +23,10 @@
     color: #545454;
 }
 
+.permission-btn-granted {
+    color: #FF0000;
+}
+
 .material-icon {
     font-family: "MaterialIcons-Regular";
     font-size: 22px;
