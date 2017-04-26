@@ -8,7 +8,7 @@ http://docs.nativescript.org/start/ns-setup-os-x (Mac, supports iOS and Android)
 or
 http://docs.nativescript.org/start/ns-setup-win (Windows, supports Android only)
 
-Note that node.js is required, and Cocoapods is required for iOS development.
+   *Note that node.js is required, and Cocoapods is required for iOS development.*
 
 2. Execute `tns install` in the `argon-app` directory
 
