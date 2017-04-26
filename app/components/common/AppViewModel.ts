@@ -46,7 +46,7 @@ export abstract class NativescriptRealityViewerFactory {
 
 export type InteractionMode = 'immersive'|'page';
 
-export class AppViewModel extends Observable {
+export class AppViewModel extends Observable {  //observable creates data binding between this code and xml UI
     menuOpen = false;
     cancelButtonShown = false;
     realityChooserOpen = false;
@@ -60,6 +60,8 @@ export class AppViewModel extends Observable {
     currentUri = '';
     isFavorite = false;
     launchedFromUrl = false;
+    enablePermissionIcon = config.ENABLE_PERMISSION_ICON;
+    permissions = {location: PERMISSION_STATES.Prompt, camera: PERMISSION_STATES.Denied};
 
     public argon:Argon.ArgonSystem;
 
@@ -239,7 +241,17 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         this.ensureReady();
         this.setViewerEnabled(!this.viewerEnabled);
     }
+
+    showPermissionIcons() {
+        this.ensureReady();
+        this.set('enablePermissionIcon', config.ENABLE_PERMISSION_ICON);
+    }
     
+    hidePermissionIcons() {
+        this.ensureReady();
+        this.set('enablePermissionIcon', false);
+    }
+
     setViewerEnabled(enabled:boolean) {
         this.ensureReady();
         this.set('viewerEnabled', enabled);
@@ -292,6 +304,10 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         });
         this.layerDetails.set('uri', url);
         this.set('bookmarksOpen', !url);
+    }
+
+    setPermission(permission: {type: string, state: PERMISSION_STATES}) {
+        this.permissions[permission.type] = permission.state;
     }
 }
 

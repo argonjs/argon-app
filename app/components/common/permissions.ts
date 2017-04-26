@@ -2,9 +2,9 @@ import * as dialogs from 'ui/dialogs';
 
 export enum PERMISSION_STATES {
     Prompt = 0, //show the user a prompt to decide whether to succeed 
-    Granted,    //succeed without prompting the user     
-    Denied,     //fail without prompting the user
-    NotRequired //not being used by app
+    Granted = 1,    //succeed without prompting the user     
+    Denied = 2,     //fail without prompting the user
+    NotRequired = 3 //not being used by app
 }
 
 class PermissionManager {

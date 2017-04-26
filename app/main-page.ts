@@ -92,6 +92,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     else if (evt.propertyName === 'overviewOpen') {
         if (evt.value) {
             appViewModel.hideBookmarks();
+            appViewModel.hidePermissionIcons();
             searchBar.animate({
                 translate: {x:-100, y:0},
                 opacity: 0,
@@ -108,7 +109,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity:1
             })
         } else {
-            if (!appViewModel.layerDetails.uri) appViewModel.showBookmarks();
+            if (!appViewModel.layerDetails.uri) appViewModel.showBookmarks();            
             searchBar.visibility = 'visible';
             searchBar.animate({
                 translate: {x:0, y:0},
@@ -121,6 +122,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity:0
             }).then(()=>{
                 addButton.visibility = 'collapse';
+                appViewModel.showPermissionIcons();
             })
         }
     }
@@ -281,6 +283,10 @@ export function pageLoaded(args) {
     const locationPermission = <Button> page.getViewById("locationPermission");
     locationPermission.text = String.fromCharCode(0xe569);
 
+    // Set icon for camera permission
+    const cameraPermission = <Button> page.getViewById("cameraPermission");
+    cameraPermission.text = String.fromCharCode(0xe3b0);
+    
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
     if (page.ios) {
         setTimeout(()=>{
