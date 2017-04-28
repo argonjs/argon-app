@@ -56,7 +56,7 @@ application.on(application.resumeEvent, ()=> {
     }
 })
 
-function configureVuforiaSurface() {
+export function configureVuforiaSurface() {
     if (!api) throw new Error();
     if (androidVideoView === undefined) return;
     //const contentScaleFactor = androidVideoView.contentScaleFactor;

@@ -162,6 +162,10 @@ export class BrowserView extends GridLayout {
                 details.set('title', 'Reality: ' + getHost(uri));
                 layer.webView = this.realityWebviews.get(uri);
 
+                if (current === Argon.RealityViewer.LIVE) {
+                    vuforia.configureVuforiaSurface();
+                }
+
                 var sessionPromise = new Promise<Argon.SessionPort>((resolve, reject) => {
                     if (viewer.session && !viewer.session.isClosed) {
                         resolve(viewer.session);

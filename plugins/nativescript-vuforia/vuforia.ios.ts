@@ -49,7 +49,7 @@ application.on(application.resumeEvent, ()=> {
     }
 })
 
-function configureVuforiaSurface() {
+export function configureVuforiaSurface() {
     if (!api) throw new Error();
     const contentScaleFactor = iosVideoView.contentScaleFactor;
     api.onSurfaceChanged(

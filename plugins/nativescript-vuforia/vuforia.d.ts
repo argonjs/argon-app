@@ -4,6 +4,7 @@ declare module "nativescript-vuforia" {
 
     export const api:API;
     export const videoView:views.View;
+    export function configureVuforiaSurface();
     
     // api
     
