@@ -80,7 +80,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     
     onUpdateFrameState() {
 
-        const viewport = this.deviceState.viewport = this.deviceState.viewport || <Argon.CanvasViewport>{};
+        const viewport = this._stableState.viewport = this._stableState.viewport || <Argon.CanvasViewport>{};
         const contentView = frames.topmost().currentPage.content;
         viewport.x = 0;
         viewport.y = 0;
@@ -114,7 +114,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this.deviceState.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -155,7 +155,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this.deviceState.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -281,9 +281,9 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
 
         application.on(application.orientationChangedEvent, ()=>{
             setTimeout(()=>{
-                this.publishDeviceState();
+                this.publishStableState();
             }, 600);
-            this.publishDeviceState();
+            this.publishStableState();
         });
     }
 
@@ -292,7 +292,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     // private _scratchCartesian = new Argon.Cesium.Cartesian3;
     private _scratchPerspectiveFrustum = new Argon.Cesium.PerspectiveFrustum;
 
-    protected onUpdateDeviceState(deviceState:Argon.DeviceState) {
+    protected onUpdateStableState(deviceState:Argon.DeviceStableState) {
 
         if (!deviceState.isPresentingHMD || !vuforia.api) {
             deviceState.viewport = undefined;
