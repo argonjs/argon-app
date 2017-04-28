@@ -84,6 +84,7 @@ export class ArgonWebView extends common.ArgonWebView  {
                 function inspect(o, depth) : string {
                     if (o === null) return "null";
                     if (o === undefined) return "undefined";
+                    if (o instanceof Error) return o.message + '\n' + o.stack;
                     if (typeof o === 'number' || o instanceof Number) return (o).toString();
                     if (typeof o === 'string' || o instanceof String) return <string> o;
                     if (Array.isArray(o)) return "Array["+ o.length +"]";
