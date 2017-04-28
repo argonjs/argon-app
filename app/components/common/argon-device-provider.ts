@@ -3,6 +3,7 @@ import * as utils from 'utils/utils';
 import * as geolocation from 'speigg-nativescript-geolocation';
 import * as dialogs from 'ui/dialogs';
 import * as enums from 'ui/enums';
+import * as platform from 'platform';
 
 import * as vuforia from 'nativescript-vuforia';
 import * as frames from 'ui/frame';
@@ -79,12 +80,12 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     
     onUpdateFrameState() {
 
-        const viewport = this.deviceState.viewport = this.deviceState.viewport || <Argon.CanvasViewport>{};
+        const viewport = this._stableState.viewport = this._stableState.viewport || <Argon.CanvasViewport>{};
         const contentView = frames.topmost().currentPage.content;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = contentView.getMeasuredWidth();
-        viewport.height = contentView.getMeasuredHeight();
+        viewport.width = contentView.getActualSize().width; //getMeasuredWidth();
+        viewport.height = contentView.getActualSize().height; //getMeasuredHeight();
 
         super.onUpdateFrameState();
 
@@ -113,7 +114,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this.deviceState.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -137,6 +138,42 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 const heading = locationManager.heading;
                 deviceUser['meta'] = deviceUser['meta'] || {};
                 deviceUser['meta'].geoHeadingAccuracy = heading && heading.headingAccuracy;
+            }
+
+        } else if (this._application.android) {
+
+            const motionManager = this._getMotionManagerAndroid();
+            if (motionManager) {
+                const deviceOrientation = this._motionQuaternionAndroid;
+
+                const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
+
+                const deviceUser = this.user;
+                const deviceStage = this.stage;
+
+                if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
+                if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
+
+                (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
+                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
+                    deviceStage
+                );
+
+                const screenOrientation = 
+                    Quaternion.fromAxisAngle(
+                        Cartesian3.UNIT_Z, 
+                        screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
+                        this._scratchDisplayOrientation
+                    );
+
+                const screenBasedDeviceOrientation = 
+                    Quaternion.multiply(
+                        deviceOrientation, 
+                        screenOrientation, 
+                        this._scratchDeviceOrientation
+                    );
+
+                (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
             }
         }
     }
@@ -198,6 +235,29 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         }
         return this._locationManagerIOS;
     }
+
+    private _motionManagerAndroid?:android.hardware.SensorEventListener;
+    private _motionQuaternionAndroid = new Quaternion;
+
+    private _getMotionManagerAndroid() : android.hardware.SensorEventListener|undefined {
+        if (this._motionManagerAndroid) return this._motionManagerAndroid;
+
+        var sensorManager = application.android.foregroundActivity.getSystemService(android.content.Context.SENSOR_SERVICE);
+        var rotationSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR);
+
+        var sensorEventListener = new android.hardware.SensorEventListener({
+            onAccuracyChanged: (sensor, accuracy) => {
+                //console.log("onAccuracyChanged: " + accuracy);
+            },
+            onSensorChanged: (event) => {
+                Quaternion.unpack(<number[]>event.values, 0, this._motionQuaternionAndroid);
+            }
+        });
+
+        sensorManager.registerListener(sensorEventListener, rotationSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME);
+        this._motionManagerAndroid = sensorEventListener;
+        return sensorEventListener;
+    }
 }
 
 @Argon.DI.autoinject
@@ -221,9 +281,9 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
 
         application.on(application.orientationChangedEvent, ()=>{
             setTimeout(()=>{
-                this.publishDeviceState();
-            }, 500);
-            this.publishDeviceState();
+                this.publishStableState();
+            }, 600);
+            this.publishStableState();
         });
     }
 
@@ -232,7 +292,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     // private _scratchCartesian = new Argon.Cesium.Cartesian3;
     private _scratchPerspectiveFrustum = new Argon.Cesium.PerspectiveFrustum;
 
-    protected onUpdateDeviceState(deviceState:Argon.DeviceState) {
+    protected onUpdateStableState(deviceState:Argon.DeviceStableState) {
 
         if (!deviceState.isPresentingHMD || !vuforia.api) {
             deviceState.viewport = undefined;
@@ -248,7 +308,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         const renderingViews = renderingPrimitives.getRenderingViews();
         const numViews = renderingViews.getNumViews();
 
-        const contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor;
+        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : platform.screen.mainScreen.scale;
 
         subviews.length = numViews;
 
@@ -295,9 +355,11 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // (not sure why this happens, but it only seems to happen after or between 
                 // vuforia initializations)
                 if (i === 0) {
+                    const width = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.width : vuforia.videoView.android.getWidth();
+                    const height = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.height : vuforia.videoView.android.getHeight();
                     vuforia.api.onSurfaceChanged(
-                        vuforia.videoView.ios.frame.size.width * contentScaleFactor,
-                        vuforia.videoView.ios.frame.size.height * contentScaleFactor
+                        width * contentScaleFactor,
+                        height * contentScaleFactor
                     );
                 }
 
@@ -410,7 +472,9 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                     application.ios ? 
                         kCLLocationAccuracyKilometer :
                         enums.Accuracy.any,
-                updateDistance: application.ios ? kCLDistanceFilterNone : 0
+                updateDistance: application.ios ? kCLDistanceFilterNone : 0,
+                minimumUpdateTime : options && options.enableHighAccuracy ?
+                    0 : 5000 // required on Android, ignored on iOS
             });
             
             console.log("Creating location watcher. " + this.locationWatchId);

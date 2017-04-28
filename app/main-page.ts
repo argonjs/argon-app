@@ -7,7 +7,7 @@ import {Button} from 'ui/button';
 import {View} from 'ui/core/view';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
-import {PropertyChangeData} from 'data/observable';
+import {PropertyChangeData, EventData} from 'data/observable';
 import {AnimationCurve} from 'ui/enums'
 import {GestureTypes} from 'ui/gestures'
 
@@ -32,6 +32,9 @@ export let realityChooserView:View;
 
 let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
+let androidSearchBarController:AndroidSearchBarController;
+
+var isFirstLoad = true;
 
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
@@ -48,6 +51,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             orientationModule.setCurrentOrientation("all");
         }
         checkActionBar();
+        updateSystemUI();
         setTimeout(()=>{checkActionBar()}, 500);
     }
     else if (evt.propertyName === 'menuOpen') {
@@ -231,8 +235,37 @@ const checkActionBar = () => {
         page.actionBarHidden = false;
 }
 
+const updateSystemUI = () => {
+    if (!page) return;
+    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) {
+        if (page.android) {
+            let window = application.android.foregroundActivity.getWindow();
+            let decorView = window.getDecorView();
+            let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_FULLSCREEN
+                    | (<any>android.view.View).SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+    } else {
+        if (page.android) {
+            let window = application.android.foregroundActivity.getWindow();
+            let decorView = window.getDecorView();
+            let uiOptions = (<any>android.view.View).SYSTEM_UI_FLAG_VISIBLE;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+    }
+}
+
 export function pageLoaded(args) {
     
+    if (!isFirstLoad) {
+        // on android pageLoaded is called each time the app is resumed
+        return;
+    }
+
     page = args.object;
     page.bindingContext = appViewModel;
 
@@ -257,6 +290,7 @@ export function pageLoaded(args) {
     application.on(application.orientationChangedEvent, ()=>{
         setTimeout(()=>{
             checkActionBar();
+            updateSystemUI();
         }, 500);
     });
 
@@ -268,9 +302,34 @@ export function pageLoaded(args) {
         });
     
         appViewModel.showBookmarks();
-        
     });
+
+    if (application.android) {
+        var activity = application.android.foregroundActivity;
+        activity.onBackPressed = () => {
+            if (browserView.focussedLayer != browserView.realityLayer) {
+                if (browserView.focussedLayer && browserView.focussedLayer.webView && browserView.focussedLayer.webView.android.canGoBack()) {
+                    browserView.focussedLayer.webView.android.goBack();
+                }
+            }
+        }
+    }
 }
+
+application.on(application.suspendEvent, ()=> {
+    isFirstLoad = false;
+});
+
+application.on(application.resumeEvent, ()=> {
+    if (application.android) {
+        // on android the page is unloaded/reloaded after a suspend
+        // open back to bookmarks if necessary
+        if (appViewModel.bookmarksOpen) {
+            // force a property change event
+            appViewModel.notifyPropertyChange('bookmarksOpen', true);
+        }
+    }
+});
 
 export function layoutLoaded(args) {
     layout = args.object
@@ -287,23 +346,30 @@ export function headerLoaded(args) {
 export function searchBarLoaded(args) {
     searchBar = args.object;
 
-    searchBar.on(SearchBar.submitEvent, () => {
-        let urlString = searchBar.text;
-        if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
-        
-        const url = URI(urlString);
-        if (url.protocol() !== "http" && url.protocol() !== "https") {
-            url.protocol("http");
-        }
-        setSearchBarText(url.toString());
-        appViewModel.loadUrl(url.toString());
-        appViewModel.hideBookmarks();
-        appViewModel.hideRealityChooser();
-        appViewModel.hideCancelButton();
-    });
+    if (isFirstLoad) {
+        searchBar.on(SearchBar.submitEvent, () => {
+            let urlString = searchBar.text;
+            if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
+            
+            const url = URI(urlString);
+            if (url.protocol() !== "http" && url.protocol() !== "https") {
+                url.protocol("http");
+            }
+            setSearchBarText(url.toString());
+            appViewModel.loadUrl(url.toString());
+            appViewModel.hideBookmarks();
+            appViewModel.hideRealityChooser();
+            appViewModel.hideCancelButton();
+            blurSearchBar();
+        });
+    }
 
     if (application.ios) {
         iosSearchBarController = new IOSSearchBarController(searchBar);
+    }
+
+    if (application.android) {
+        androidSearchBarController = new AndroidSearchBarController(searchBar);
     }
 }
 
@@ -311,35 +377,38 @@ function setSearchBarText(url:string) {
     if (iosSearchBarController) {
         iosSearchBarController.setText(url);
     } else {
-        searchBar.text = url;
+        androidSearchBarController.setText(url);
     }
 }
 
 function blurSearchBar() {
-    if (searchBar.ios) {
-        (searchBar.ios as UISearchBar).resignFirstResponder();
+    searchBar.dismissSoftInput();
+    if (searchBar.android) {
+        searchBar.android.clearFocus();
     }
 }
 
 export function browserViewLoaded(args) {
     browserView = args.object;
-    
-    appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
-        const url = data.url;
 
-        if (!data.newLayer || 
-            (browserView.focussedLayer &&
-            browserView.focussedLayer !== browserView.realityLayer &&
-            !browserView.focussedLayer.details.uri)) {
+    if (isFirstLoad) {
+        appViewModel.on(AppViewModel.loadUrlEvent, (data:LoadUrlEventData)=>{
+            const url = data.url;
+
+            if (!data.newLayer || 
+                (browserView.focussedLayer &&
+                browserView.focussedLayer !== browserView.realityLayer &&
+                !browserView.focussedLayer.details.uri)) {
+                browserView.loadUrl(url);
+                return;
+            }
+            
+            const layer = browserView.addLayer();
+            browserView.setFocussedLayer(layer);
             browserView.loadUrl(url);
-            return;
-        }
-        
-        const layer = browserView.addLayer();
-        browserView.setFocussedLayer(layer);
-        browserView.loadUrl(url);
-        console.log('Loading url: ' + url);
-    });
+            console.log('Loading url: ' + url);
+        });
+    }
 
     // Setup the debug view
     let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
@@ -514,5 +583,58 @@ class IOSSearchBarController {
         if (!utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
             this.setPlaceholderText(url);
         }
+    }
+}
+
+class AndroidSearchBarController {
+
+    private searchView:android.widget.SearchView;
+
+    constructor(public searchBar:SearchBar) {
+        this.searchView = searchBar.android;
+
+        this.searchView.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        this.searchView.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_GO);
+        this.searchView.clearFocus();
+
+        const focusHandler = new android.view.View.OnFocusChangeListener({
+            onFocusChange(v: android.view.View, hasFocus: boolean) {
+                if (hasFocus) {
+                    if (browserView.focussedLayer === browserView.realityLayer) {
+                        appViewModel.showRealityChooser();
+                    } else {
+                        appViewModel.showBookmarks();
+                    }
+                    appViewModel.showCancelButton();
+                }
+            }
+        });
+
+        this.searchView.setOnQueryTextFocusChangeListener(focusHandler);
+
+        // the nativescript implementation of OnQueryTextListener does not correctly handle the following case:
+        // 1) an external event updates the query text (e.g. the user clicked a link on a page)
+        // 2) the user attempts to navigate back to the previous page by updating the search bar text
+        // 3) nativescript sees this as submitting the same query and treats it as a no-op
+        // https://github.com/NativeScript/NativeScript/issues/3965
+        const searchHandler = new android.widget.SearchView.OnQueryTextListener({
+            onQueryTextChange(newText: String): boolean {
+                searchBar._onPropertyChangedFromNative(SearchBar.textProperty, newText);
+                return false;
+            },
+            onQueryTextSubmit(query: String): boolean {
+                searchBar.notify(<EventData>{
+                    eventName: SearchBar.submitEvent,
+                    object: this
+                });
+                return true;
+            }
+        });
+
+        this.searchView.setOnQueryTextListener(searchHandler);
+    }
+
+    public setText(url) {
+        this.searchView.setQuery(url, false);
     }
 }

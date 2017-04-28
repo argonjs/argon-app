@@ -4,6 +4,7 @@ declare module "nativescript-vuforia" {
 
     export const api:API;
     export const videoView:views.View;
+    export function configureVuforiaSurface();
     
     // api
     
@@ -231,7 +232,7 @@ declare module "nativescript-vuforia" {
         getBufferWidth(): number;
         getFormat(): PixelFormat;
         getHeight(): number;
-        getPixels(): interop.Pointer;
+        getPixels(): interop.Pointer|undefined;
         getStride(): number;
         getWidth(): number;
     }
@@ -335,15 +336,15 @@ declare module "nativescript-vuforia" {
     }
     
     export class Mesh {
-        getNormalCoordinates(): interop.Reference<number>;
-        getNormals(): interop.Reference<Vec3>;
+        getNormalCoordinates(): interop.Reference<number>|undefined;
+        getNormals(): interop.Reference<Vec3>|undefined;
         getNumTriangles(): number;
         getNumVertices(): number;
-        getPositionCoordinates(): interop.Reference<number>;
-        getPositions(): interop.Reference<Vec3>;
-        getTriangles(): interop.Reference<number>;
-        getUVCoordinates(): interop.Reference<number>;
-        getUVs(): interop.Reference<Vec2>;
+        getPositionCoordinates(): interop.Reference<number>|undefined;
+        getPositions(): interop.Reference<Vec3>|undefined;
+        getTriangles(): interop.Reference<number>|undefined;
+        getUVCoordinates(): interop.Reference<number>|undefined;
+        getUVs(): interop.Reference<Vec2>|undefined;
         hasNormals(): boolean;
         hasPositions(): boolean;
         hasUVs(): boolean;

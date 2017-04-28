@@ -7,6 +7,7 @@ import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './ar
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
+import {config} from '../../config';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
@@ -81,6 +82,8 @@ export class AppViewModel extends Observable {
     }
 
     setReady() {
+        if (this.argon) return; // already initialized
+
         const container = new Argon.DI.Container;
         container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
         container.registerSingleton(Argon.VuforiaServiceProvider, NativescriptVuforiaServiceProvider);
@@ -114,7 +117,9 @@ export class AppViewModel extends Observable {
 
         argon.vuforia.isAvailable().then((available)=>{
             if (available) {
-                const primaryVuforiaLicenseKey = getInternalVuforiaKey();
+                let primaryVuforiaLicenseKey = getInternalVuforiaKey();
+                if (config.DEBUG_DEVELOPMENT_LICENSE_KEY != "") primaryVuforiaLicenseKey = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
+
                 if (!primaryVuforiaLicenseKey) {
                     alert("Unable to locate internal Vuforia License Key");
                     return;

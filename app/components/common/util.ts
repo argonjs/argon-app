@@ -34,8 +34,8 @@ function getNativeScreenOrientation() {
         switch (rotation) {
             case android.view.Surface.ROTATION_0: return 0;
             case android.view.Surface.ROTATION_180: return 180;
-            case android.view.Surface.ROTATION_90: return 90;
-            case android.view.Surface.ROTATION_270: return -90;
+            case android.view.Surface.ROTATION_90: return -90;
+            case android.view.Surface.ROTATION_270: return 90;
         }
     } 
     return 0;

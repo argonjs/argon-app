@@ -165,6 +165,11 @@ export class ArgonWebView extends common.ArgonWebView  {
         super.onUnloaded();
     }
 
+    public getCurrentUrl() : string {
+        // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
+        return this.url;
+    }
+
     reload() {
         this._ios.reloadFromOrigin();
     }

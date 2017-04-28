@@ -164,6 +164,6 @@ export abstract class APIBase implements def.API {
         // Which rearranges to:
         //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
         // ... which is the scene-scale factor
-        return tan(cameraFovYRad / 2) / tan(virtualFovYRad / 2);
+        return Math.tan(cameraFovYRad / 2) / Math.tan(virtualFovYRad / 2);
     }
 }
