@@ -46,7 +46,7 @@ export interface Layer {
     session?:Argon.SessionPort,
     containerView:GridLayout,
     contentView:GridLayout,
-    webView?:ArgonWebView,
+    webView:ArgonWebView,
     touchOverlay:GridLayout,
     titleBar:GridLayout,
     closeButton:Button,
@@ -160,7 +160,7 @@ export class BrowserView extends GridLayout {
                 const uri = viewer.uri;
                 details.set('uri', uri);
                 details.set('title', 'Reality: ' + getHost(uri));
-                layer.webView = this.realityWebviews.get(uri);
+                layer.webView = this.realityWebviews.get(uri)!;
 
                 if (current === Argon.RealityViewer.LIVE) {
                     vuforia.configureVuforiaSurface();
@@ -180,6 +180,7 @@ export class BrowserView extends GridLayout {
                 sessionPromise.then((session)=>{
                     if (current === manager.reality.current) {
                         if (session.info.title) details.set('title', 'Reality: ' + session.info.title);
+                        layer.session = session;
                     }
                 });
             });
@@ -191,10 +192,7 @@ export class BrowserView extends GridLayout {
     addLayer() : Layer {
         const layer:Layer = this._createLayer();
         
-        const webView = layer.webView = new ArgonWebView;
-        webView.horizontalAlignment = 'stretch';
-        webView.verticalAlignment = 'stretch';
-        layer.contentView.addChild(webView);
+        const webView = layer.webView;
 
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
             switch(eventData.propertyName) {
@@ -322,10 +320,15 @@ export class BrowserView extends GridLayout {
         containerView.addChild(touchOverlay);
         containerView.addChild(titleBar);
         this.layerContainer.addChild(containerView);
+
+        const webView = new ArgonWebView;
+        webView.horizontalAlignment = 'stretch';
+        webView.verticalAlignment = 'stretch';
+        contentView.addChild(webView);
         
         var layer = {
             containerView,
-            webView: undefined,
+            webView,
             contentView,
             touchOverlay,
             titleBar,
@@ -517,6 +520,10 @@ export class BrowserView extends GridLayout {
             
         layer.touchOverlay.style.visibility = 'visible';
 
+        if (layer.session) {
+            appViewModel.argon.provider.visibility.set(layer.session, true);
+        }
+
         // For transparent webviews, add a little bit of opacity
         layer.containerView.isUserInteractionEnabled = true;
         layer.containerView.animate({
@@ -557,12 +564,17 @@ export class BrowserView extends GridLayout {
             // todo: this is causing issues on android, investigate further
             layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
         }
+
+        const visible  = this.realityLayer === layer || 
+            (layer.webView && layer.webView.isArgonApp) || 
+            this.focussedLayer === layer;
+
+        if (layer.session) {
+            appViewModel.argon.provider.visibility.set(layer.session, visible);
+        }
+
         layer.containerView.animate({
-            opacity: 
-                (this.realityLayer === layer || 
-                (layer.webView && layer.webView.isArgonApp) || 
-                this.focussedLayer === layer) ? 
-                    1 : 0,
+            opacity: visible ? 1 : 0,
             backgroundColor: this._layerBackgroundColor,
             duration: OVERVIEW_ANIMATION_DURATION,
         });
@@ -674,6 +686,8 @@ export class BrowserView extends GridLayout {
             console.log("Set focussed layer: " + layer.details.uri || "New Channel");
 
             appViewModel.argon.provider.focus.session = layer.session;
+            if (layer.session) appViewModel.argon.provider.visibility.set(layer.session, true);
+            
             appViewModel.setLayerDetails(layer.details);
             appViewModel.hideOverview();
 
