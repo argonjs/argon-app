@@ -74,7 +74,17 @@ export class ArgonWebView extends common.ArgonWebView {
                     return false;
                 },
                 onGeolocationPermissionsShowPrompt: (origin: string, callback: android.webkit.GeolocationPermissions.ICallback): void => {
-                    callback.invoke(origin, true, true); // grant geolocation permission
+                    dialogs.confirm({
+                        message: origin + " wants to use your device's location.",
+                        okButtonText: "OK",
+                        cancelButtonText: "Don't Allow"
+                    }).then(function(result) {
+                        if (result) {
+                            callback.invoke(origin, true, false); // grant geolocation permission
+                        } else {
+                            callback.invoke(origin, false, false); // deny geolocation permission
+                        }
+                    });
                 }
             })));
         });
