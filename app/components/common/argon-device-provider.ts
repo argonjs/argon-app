@@ -455,9 +455,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
                 // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
                 this.configureStage(
-                    location.longitude, 
-                    location.latitude, 
-                    location.altitude, 
+                    new Argon.Cesium.Cartographic(location.longitude, location.latitude, location.altitude),
                     location.horizontalAccuracy, 
                     location.verticalAccuracy
                 );
