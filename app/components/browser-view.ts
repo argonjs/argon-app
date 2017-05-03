@@ -159,7 +159,7 @@ export class BrowserView extends GridLayout {
                 const details = layer.details;
                 const uri = viewer.uri;
                 details.set('uri', uri);
-                details.set('title', 'Reality: ' + getHost(uri));
+                details.set('title', 'Reality: ' + (viewer.session && viewer.session.info.title) || getHost(uri));
                 layer.webView = this.realityWebviews.get(uri)!;
 
                 if (current === Argon.RealityViewer.LIVE) {
