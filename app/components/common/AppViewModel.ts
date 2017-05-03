@@ -99,7 +99,16 @@ export class AppViewModel extends Observable {
 
         argon.provider.reality.installedEvent.addEventListener(({viewer})=>{
             if (!bookmarks.realityMap.get(viewer.uri)) {
-                bookmarks.realityList.push(new bookmarks.BookmarkItem({uri: viewer.uri}));
+                const bookmark = new bookmarks.BookmarkItem({uri: viewer.uri});
+                bookmarks.realityList.push(bookmark);
+                if (viewer.session) {
+                    bookmark.title = viewer.session.info.title;
+                } else {
+                    let remove = viewer.connectEvent.addEventListener((session)=>{
+                        remove();
+                        bookmark.title = session.info.title;
+                    });
+                }
             }
         });
 
