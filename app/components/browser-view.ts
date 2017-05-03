@@ -232,6 +232,7 @@ export class BrowserView extends GridLayout {
             session.connectEvent.addEventListener(()=>{
                 if (this.focussedLayer && webView === this.focussedLayer.webView) {
                     appViewModel.argon.provider.focus.session = session;
+                    appViewModel.argon.provider.visibility.set(session, true);
                 }
                 if (layer === this.realityLayer) {
                     if (session.info.role !== Argon.Role.REALITY_VIEW) {
