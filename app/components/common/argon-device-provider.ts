@@ -74,20 +74,170 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         delete this._callbacks[id];
     }
     
-    getScreenOrientationDegrees() {
+    get screenOrientationDegrees() {
         return screenOrientation;
     }
-    
+
+    onRequestPresentHMD() {
+        const device = vuforia.api && vuforia.api.getDevice();
+        device && device.setViewerActive(true);
+        return Promise.resolve();
+    }
+
+    onExitPresentHMD() {
+        const device = vuforia.api && vuforia.api.getDevice();
+        device && device.setViewerActive(false);
+        return Promise.resolve();
+    }
+
+    private _scratchPerspectiveFrustum = new Argon.Cesium.PerspectiveFrustum;
+    private _scratchVideoMatrix4 = new Argon.Cesium.Matrix4;
+    private _scratchVideoQuaternion = new Argon.Cesium.Quaternion;
+
     onUpdateFrameState() {
 
-        const viewport = this._stableState.viewport = this._stableState.viewport || <Argon.CanvasViewport>{};
+        const viewport = this.frameState.viewport;
         const contentView = frames.topmost().currentPage.content;
+        const contentSize = contentView.getActualSize();
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = contentView.getActualSize().width; //getMeasuredWidth();
-        viewport.height = contentView.getActualSize().height; //getMeasuredHeight();
+        viewport.width = contentSize.width;
+        viewport.height = contentSize.height;
 
-        super.onUpdateFrameState();
+        const subviews = this.frameState.subviews;
+        const device = vuforia.api.getDevice();
+        const renderingPrimitives = device.getRenderingPrimitives();
+        const renderingViews = renderingPrimitives.getRenderingViews();
+        const numViews = renderingViews.getNumViews();
+
+        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : platform.screen.mainScreen.scale;
+
+        subviews.length = numViews;subviews.length = numViews;
+
+        for (let i = 0; i < numViews; i++) {
+            const view = renderingViews.getView(i);
+
+            // TODO: support PostProcess rendering subview
+            if (view === vuforia.View.PostProcess) {
+                subviews.length--;
+                continue;
+            }
+
+            const subview = subviews[i] = subviews[i] || <Argon.SerializedSubview>{};
+
+            // Set subview type
+            switch (view) {
+                case vuforia.View.LeftEye:
+                    subview.type = Argon.SubviewType.LEFTEYE; break;
+                case vuforia.View.RightEye:
+                    subview.type = Argon.SubviewType.RIGHTEYE; break;
+                case vuforia.View.Singular:
+                    subview.type = Argon.SubviewType.SINGULAR; break;
+                default:
+                    subview.type = Argon.SubviewType.OTHER; break;
+            }
+
+            // Update subview viewport
+            const vuforiaSubviewViewport = renderingPrimitives.getViewport(view);
+            const subviewViewport = subview.viewport = subview.viewport || <Argon.Viewport>{};
+            subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
+            subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
+            subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
+            subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
+
+            // Start with the projection matrix for this subview
+            // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
+            // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
+            let projectionMatrix = <any>renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
+            
+            if (!isFinite(projectionMatrix[0])) {
+
+                // if our projection matrix is giving null values then the
+                // surface is not properly configured for some reason, so reset it
+                // (not sure why this happens, but it only seems to happen after or between 
+                // vuforia initializations)
+                if (i === 0) {
+                    vuforia.api.onSurfaceChanged(
+                        viewport.width * contentScaleFactor,
+                        viewport.height * contentScaleFactor
+                    );
+                }
+
+                const frustum = this._scratchPerspectiveFrustum;
+                frustum.fov = Math.PI/2;
+                frustum.near = 0.01;
+                frustum.far = 10000;
+                frustum.aspectRatio = subviewViewport.width / subviewViewport.height;
+                if (!isFinite(frustum.aspectRatio) || frustum.aspectRatio === 0) frustum.aspectRatio = 1;
+                subview.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, subview.projectionMatrix);
+
+            } else {
+
+                // Undo the video rotation since we already encode the interface orientation in our view pose
+                // Note: the "base" rotation for vuforia's video (at least on iOS) is the landscape right orientation,
+                // which is the orientation where the device is held in landscape with the home button on the right. 
+                // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
+                // So, we want to undo this rotation which vuforia applies for us.  
+                // TODO: calculate this matrix only when we have to (when the interface orientation changes)
+                const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
+                    Cartesian3.ZERO,
+                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
+                    ONE,
+                    this._scratchVideoMatrix4
+                );
+                Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
+
+                // convert from the vuforia projection matrix (+X -Y +Z) to a more standard convention (+X +Y -Z)
+                // by negating the appropriate columns. 
+                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
+                projectionMatrix[0] *= -1; // x
+                projectionMatrix[1] *= -1; // y
+                projectionMatrix[2] *= -1; // z
+                projectionMatrix[3] *= -1; // w
+
+                projectionMatrix[8] *= -1;  // x
+                projectionMatrix[9] *= -1;  // y
+                projectionMatrix[10] *= -1; // z
+                projectionMatrix[11] *= -1; // w
+
+                // Argon.Cesium.Matrix4.multiplyByScale(projectionMatrix, Cartesian3.fromElements(1,-1,-1, this._scratchCartesian), projectionMatrix)
+
+                // Scale the projection matrix to fit nicely within a subview of type SINGULAR
+                // (This scale will not apply when the user is wearing a monocular HMD, since a
+                // monocular HMD would provide a subview of type LEFTEYE or RIGHTEYE)
+                // if (subview.type == Argon.SubviewType.SINGULAR) {
+                //     const widthRatio = subviewWidth / videoMode.width;
+                //     const heightRatio = subviewHeight / videoMode.height;
+
+                //     // aspect fill
+                //     const scaleFactor = Math.max(widthRatio, heightRatio);
+                //     // or aspect fit
+                //     // const scaleFactor = Math.min(widthRatio, heightRatio);
+
+                //     // scale x-axis
+                //     projectionMatrix[0] *= scaleFactor; // x
+                //     projectionMatrix[1] *= scaleFactor; // y
+                //     projectionMatrix[2] *= scaleFactor; // z
+                //     projectionMatrix[3] *= scaleFactor; // w
+                //     // scale y-axis
+                //     projectionMatrix[4] *= scaleFactor; // x
+                //     projectionMatrix[5] *= scaleFactor; // y
+                //     projectionMatrix[6] *= scaleFactor; // z
+                //     projectionMatrix[7] *= scaleFactor; // w
+                // }
+
+                subview.projectionMatrix = Matrix4.clone(projectionMatrix, subview.projectionMatrix);
+            }
+
+
+            // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+            // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
+            // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
+            
+            // default to identity subview pose (in relation to the overall view pose)
+            // TODO: use eye adjustment matrix to get subview poses (for eye separation). See commented out code above...
+            subview.pose = undefined; 
+        }
 
         if (this._application.ios) {
             const motionManager = this._getMotionManagerIOS();
@@ -105,7 +255,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 // Likewise, the reverse, O*R, is a local rotation R applied to the orientation O. 
                 const deviceOrientation = Quaternion.multiply(z90, motionQuaternion, this._scratchDeviceOrientation);
 
-                const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
+                const screenOrientationDegrees = this.screenOrientationDegrees;
 
                 const deviceUser = this.user;
                 const deviceStage = this.stage;
@@ -114,7 +264,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,0,this.suggestedUserHeight, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -146,7 +296,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             if (motionManager) {
                 const deviceOrientation = this._motionQuaternionAndroid;
 
-                const screenOrientationDegrees = this.frameState.screenOrientationDegrees;
+                const screenOrientationDegrees = this.screenOrientationDegrees;
 
                 const deviceUser = this.user;
                 const deviceStage = this.stage;
@@ -155,7 +305,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this._stableState.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,0,this.suggestedUserHeight, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -289,156 +439,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
 
     private locationWatchId?:number;
 
-    // private _scratchCartesian = new Argon.Cesium.Cartesian3;
-    private _scratchPerspectiveFrustum = new Argon.Cesium.PerspectiveFrustum;
-
-    protected onUpdateStableState(deviceState:Argon.DeviceStableState) {
-
-        if (!deviceState.isPresentingHMD || !vuforia.api) {
-            deviceState.viewport = undefined;
-            deviceState.subviews = undefined;
-            deviceState.strict = false;
-            return;
-        }
-
-        const subviews = deviceState.subviews = deviceState.subviews || [];
-
-        const device = vuforia.api.getDevice();
-        const renderingPrimitives = device.getRenderingPrimitives();
-        const renderingViews = renderingPrimitives.getRenderingViews();
-        const numViews = renderingViews.getNumViews();
-
-        const contentScaleFactor = vuforia.videoView.ios ? (<UIView>vuforia.videoView.ios).contentScaleFactor : platform.screen.mainScreen.scale;
-
-        subviews.length = numViews;
-
-        for (let i = 0; i < numViews; i++) {
-            const view = renderingViews.getView(i);
-
-            // TODO: support PostProcess rendering subview
-            if (view === vuforia.View.PostProcess) {
-                subviews.length--;
-                continue;
-            }
-
-            const subview = subviews[i] = subviews[i] || <Argon.SerializedSubview>{};
-
-            // Set subview type
-            switch (view) {
-                case vuforia.View.LeftEye:
-                    subview.type = Argon.SubviewType.LEFTEYE; break;
-                case vuforia.View.RightEye:
-                    subview.type = Argon.SubviewType.RIGHTEYE; break;
-                case vuforia.View.Singular:
-                    subview.type = Argon.SubviewType.SINGULAR; break;
-                default:
-                    subview.type = Argon.SubviewType.OTHER; break;
-            }
-
-            // Update subview viewport
-            const vuforiaSubviewViewport = renderingPrimitives.getViewport(view);
-            const subviewViewport = subview.viewport = subview.viewport || <Argon.Viewport>{};
-            subviewViewport.x = vuforiaSubviewViewport.x / contentScaleFactor;
-            subviewViewport.y = vuforiaSubviewViewport.y / contentScaleFactor;
-            subviewViewport.width = vuforiaSubviewViewport.z / contentScaleFactor;
-            subviewViewport.height = vuforiaSubviewViewport.w / contentScaleFactor;
-
-            // Start with the projection matrix for this subview
-            // Note: Vuforia uses a right-handed projection matrix with x to the right, y down, and z as the viewing direction.
-            // So we are converting to a more standard convention of x to the right, y up, and -z as the viewing direction. 
-            let projectionMatrix = <any>renderingPrimitives.getProjectionMatrix(view, vuforia.CoordinateSystemType.Camera);
-            
-            if (!isFinite(projectionMatrix[0])) {
-
-                // if our projection matrix is giving null values then the
-                // surface is not properly configured for some reason, so reset it
-                // (not sure why this happens, but it only seems to happen after or between 
-                // vuforia initializations)
-                if (i === 0) {
-                    const width = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.width : vuforia.videoView.android.getWidth();
-                    const height = vuforia.videoView.ios ? vuforia.videoView.ios.frame.size.height : vuforia.videoView.android.getHeight();
-                    vuforia.api.onSurfaceChanged(
-                        width * contentScaleFactor,
-                        height * contentScaleFactor
-                    );
-                }
-
-                const frustum = this._scratchPerspectiveFrustum;
-                frustum.fov = Math.PI/2;
-                frustum.near = 0.01;
-                frustum.far = 10000;
-                frustum.aspectRatio = subviewViewport.width / subviewViewport.height;
-                if (!isFinite(frustum.aspectRatio) || frustum.aspectRatio === 0) frustum.aspectRatio = 1;
-                subview.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, subview.projectionMatrix);
-
-            } else {
-
-                // Undo the video rotation since we already encode the interface orientation in our view pose
-                // Note: the "base" rotation for vuforia's video (at least on iOS) is the landscape right orientation,
-                // which is the orientation where the device is held in landscape with the home button on the right. 
-                // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
-                // So, we want to undo this rotation which vuforia applies for us.  
-                // TODO: calculate this matrix only when we have to (when the interface orientation changes)
-                const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
-                    Cartesian3.ZERO,
-                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
-                    ONE,
-                    this._scratchMatrix4
-                );
-                Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
-
-                // convert from the vuforia projection matrix (+X -Y +Z) to a more standard convention (+X +Y -Z)
-                // by negating the appropriate columns. 
-                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
-                projectionMatrix[0] *= -1; // x
-                projectionMatrix[1] *= -1; // y
-                projectionMatrix[2] *= -1; // z
-                projectionMatrix[3] *= -1; // w
-
-                projectionMatrix[8] *= -1;  // x
-                projectionMatrix[9] *= -1;  // y
-                projectionMatrix[10] *= -1; // z
-                projectionMatrix[11] *= -1; // w
-
-                // Argon.Cesium.Matrix4.multiplyByScale(projectionMatrix, Cartesian3.fromElements(1,-1,-1, this._scratchCartesian), projectionMatrix)
-
-                // Scale the projection matrix to fit nicely within a subview of type SINGULAR
-                // (This scale will not apply when the user is wearing a monocular HMD, since a
-                // monocular HMD would provide a subview of type LEFTEYE or RIGHTEYE)
-                // if (subview.type == Argon.SubviewType.SINGULAR) {
-                //     const widthRatio = subviewWidth / videoMode.width;
-                //     const heightRatio = subviewHeight / videoMode.height;
-
-                //     // aspect fill
-                //     const scaleFactor = Math.max(widthRatio, heightRatio);
-                //     // or aspect fit
-                //     // const scaleFactor = Math.min(widthRatio, heightRatio);
-
-                //     // scale x-axis
-                //     projectionMatrix[0] *= scaleFactor; // x
-                //     projectionMatrix[1] *= scaleFactor; // y
-                //     projectionMatrix[2] *= scaleFactor; // z
-                //     projectionMatrix[3] *= scaleFactor; // w
-                //     // scale y-axis
-                //     projectionMatrix[4] *= scaleFactor; // x
-                //     projectionMatrix[5] *= scaleFactor; // y
-                //     projectionMatrix[6] *= scaleFactor; // z
-                //     projectionMatrix[7] *= scaleFactor; // w
-                // }
-
-                subview.projectionMatrix = Matrix4.clone(projectionMatrix, subview.projectionMatrix);
-            }
-
-
-            // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-            // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
-            // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
-            
-            // default to identity subview pose (in relation to the overall view pose)
-            // TODO: use eye adjustment matrix to get subview poses (for eye separation). See commented out code above...
-            subview.pose = undefined; 
-        }
-    }
+    private _scratchStageCartographic = new Argon.Cesium.Cartographic;
 
     protected onStartGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
         if (typeof this.locationWatchId !== 'undefined') return Promise.resolve();;
@@ -455,7 +456,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
                 // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
                 this.configureStage(
-                    new Argon.Cesium.Cartographic(location.longitude, location.latitude, location.altitude),
+                    Argon.Cesium.Cartographic.fromDegrees(location.longitude, location.latitude, location.altitude, this._scratchStageCartographic),
                     location.horizontalAccuracy, 
                     location.verticalAccuracy
                 );
@@ -487,9 +488,6 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         }
     }
 
-    private _scratchMatrix4 = new Argon.Cesium.Matrix4;
-    private _scratchVideoQuaternion = new Argon.Cesium.Quaternion;
-
     private _ensurePermission(session:Argon.SessionPort) {
         if (this.focusServiceProvider.session == session) return; 
         if (session == this.sessionService.manager) return;
@@ -498,21 +496,12 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     
     handleRequestPresentHMD(session:Argon.SessionPort) {
         this._ensurePermission(session);
-        const device = vuforia.api && vuforia.api.getDevice();
-        device && device.setViewerActive(true);
         return Promise.resolve();
     }
 
     handleExitPresentHMD(session:Argon.SessionPort) {
         this._ensurePermission(session);
-        const device = vuforia.api && vuforia.api.getDevice();
-        device && device.setViewerActive(false);
         return Promise.resolve();
-    }
-
-    public _isHmdActive() {
-        const device = vuforia.api && vuforia.api.getDevice();
-        return device.isViewerActive();
     }
 
 }

@@ -123,17 +123,18 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         }
 
         const remove = this._deviceService.frameStateEvent.addEventListener((frameState)=>{
-            if (!this.isPresenting || !session.isConnected) return;
+            if (!session.isConnected) return;
 
-            if (frameState.geolocationDesired) {
-                this._deviceService.subscribeGeolocation(frameState.geolocationOptions, session);
+            const deviceService = this._deviceService;
+            if (deviceService.geolocationDesired) {
+                deviceService.subscribeGeolocation(deviceService.geolocationOptions, session);
             } else {
-                this._deviceService.unsubscribeGeolocation(session);
+                deviceService.unsubscribeGeolocation(session);
             }
 
             Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
-            if (!frameState.strict) {
+            if (!deviceService.strict) {
                 this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor;
                 for (const s of subviews) {
                     // const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
@@ -160,6 +161,8 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             vuforia.api && (this._vuforiaServiceProvider as NativescriptVuforiaServiceProvider)
                 .configureVuforiaVideoBackground(viewport, this.isPresenting);
             
+            if (!this.isPresenting) return;
+
             try {
                 const contextUser = this._contextService.user;
                 const deviceUser = this._deviceService.user;
