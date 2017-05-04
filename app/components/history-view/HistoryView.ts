@@ -50,7 +50,7 @@ interface CellViews {
 
 let openCells:Array<CellViews> = []
 
-const tapTimeout = 150;
+const tapTimeout = 300;
 var tapTimerId = -1;
 
 export function onItemLoaded(args) {
@@ -65,6 +65,7 @@ export function onItemLoaded(args) {
         if (data.state === GestureStateTypes.began) {
             if (application.android) {
                 closeAllCells(cell);
+                editing = false;
                 tapTimerId = setTimeout(()=>{
                     panStart = contentView.translateX + data.deltaX;
                     editing = true;
