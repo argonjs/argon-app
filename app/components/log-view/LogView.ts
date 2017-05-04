@@ -5,26 +5,20 @@ import {appViewModel} from '../common/AppViewModel';
 import {LogItem} from 'argon-web-view';
 import {Color} from 'color';
 import * as enums from 'ui/enums';
+import {Layout} from 'ui/layouts/layout'
 
 let label:Label;
 let shadow:Label;
 
 export function onLayoutLoaded(args) {
-    const layout = args.object;
+    const layout:Layout = args.object;
     layout.backgroundColor = new Color('transparent');
-
-    appViewModel['getRecentLogItems'] = function() {
-        updateLogListener(appViewModel.layerDetails.log);
-        return label.text;
-    };
     
     appViewModel.on('propertyChange', (args:PropertyChangeData)=>{
-        if (args.propertyName === 'debugEnabled') {
+        if (args.propertyName === 'debugEnabled' || args.propertyName === 'layerDetails') {
             updateLogListener(appViewModel.layerDetails.log);
         }
     })
-
-    layout.bindingContext = appViewModel;
 }
 
 export function onLoaded(args) {
