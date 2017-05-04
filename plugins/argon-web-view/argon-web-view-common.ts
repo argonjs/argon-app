@@ -46,7 +46,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
             const port = messageChannel.port2;
             port.onmessage = (msg:Argon.MessageEventLike) => {
                 if (!this.session) return;
-                const injectedMessage = "typeof __ARGON_PORT__ !== undefined && __ARGON_PORT__.postMessage("+msg.data+")";
+                const injectedMessage = "typeof __ARGON_PORT__ !== 'undefined' && __ARGON_PORT__.postMessage("+msg.data+")";
                 this.evaluateJavascriptWithoutPromise(injectedMessage);
             }
                  
