@@ -491,7 +491,6 @@ export function onInteractionToggle(args) {
 
 export function onOverview(args) {
     appViewModel.toggleOverview();
-    appViewModel.setDebugEnabled(false);
     appViewModel.hideMenu();
 }
 
