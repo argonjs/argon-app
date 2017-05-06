@@ -349,6 +349,12 @@ export function searchBarLoaded(args) {
     if (isFirstLoad) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
+
+            if (urlString.includes(" ") || !urlString.includes(".")) {
+                // queries with spaces or single words without dots go to google search
+                urlString = "http://www.google.com/search?q=" + encodeURI(urlString);
+            }
+
             if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
             
             const url = URI(urlString);
