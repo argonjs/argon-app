@@ -1,8 +1,8 @@
 import * as application from 'application';
-import {Observable} from 'data/observable';
+import {Observable, PropertyChangeData} from 'data/observable';
 import {View} from 'ui/core/view';
 import {ListView} from 'ui/list-view';
-import {BookmarkItem, historyList} from '../common/bookmarks'
+import {BookmarkItem, historyList, filterControl, filteredHistoryList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
 import {
@@ -15,6 +15,8 @@ import {AnimationCurve} from 'ui/enums'
 
 export class HistoryViewModel extends Observable {
     historyList = historyList;
+    filteredHistoryList = filteredHistoryList;
+    showFilteredResults = false;
 }
 export const viewModel = new HistoryViewModel();
 
@@ -114,3 +116,7 @@ function toggleCellSwipeState(cell:CellViews, open:boolean) {
         openCells.push(cell);
     }
 }
+
+filterControl.on('propertyChange', (evt:PropertyChangeData) => {
+    viewModel.set('showFilteredResults', filterControl.showFilteredResults);
+});

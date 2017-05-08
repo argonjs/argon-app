@@ -35,6 +35,14 @@ const favoriteList = new ObservableArray<BookmarkItem>();
 const historyList = new ObservableArray<BookmarkItem>();
 const realityList = new ObservableArray<BookmarkItem>();
 
+class FilterControl extends Observable {
+    showFilteredResults = false;
+}
+
+var filterControl = new FilterControl();
+var filteredFavoriteList = new ObservableArray<BookmarkItem>();
+var filteredHistoryList = new ObservableArray<BookmarkItem>();
+
 const favoriteMap = new Map<string, BookmarkItem>();
 const historyMap = new Map<string, BookmarkItem>();
 const realityMap = new Map<string, BookmarkItem>();
@@ -133,7 +141,10 @@ export {
     realityList,
     favoriteMap,
     historyMap,
-    realityMap
+    realityMap,
+    filterControl,
+    filteredFavoriteList,
+    filteredHistoryList
 }
 
 export function pushToHistory(url:string, title?:string) {
@@ -154,5 +165,29 @@ export function updateTitle(url:string, title:string) {
     var historyBookmarkItem = historyMap.get(url);
     if (historyBookmarkItem && !historyBookmarkItem.builtin) {
         historyBookmarkItem.set('title', title);
+    }
+}
+
+export function filterBookmarks(text:string) {
+    const regex = new RegExp(text, "i");
+    clearFilter();
+    favoriteList.forEach((bookmark)=> {
+        if (regex.test(bookmark.uri) || (bookmark.title && regex.test(bookmark.title))) {
+            filteredFavoriteList.push(bookmark);
+        }
+    });
+    historyList.forEach((bookmark)=> {
+        if (regex.test(bookmark.uri) || (bookmark.title && regex.test(bookmark.title))) {
+            filteredHistoryList.push(bookmark);
+        }
+    });
+}
+
+export function clearFilter() {
+    while (filteredFavoriteList.length > 0) {
+        filteredFavoriteList.pop();
+    }
+    while (filteredHistoryList.length > 0) {
+        filteredHistoryList.pop();
     }
 }
