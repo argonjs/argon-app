@@ -352,14 +352,14 @@ export function searchBarLoaded(args) {
 
             if (urlString.includes(" ") || !urlString.includes(".")) {
                 // queries with spaces or single words without dots go to google search
-                urlString = "http://www.google.com/search?q=" + encodeURI(urlString);
+                urlString = "https://www.google.com/search?q=" + encodeURI(urlString);
             }
 
             if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
             
             const url = URI(urlString);
             if (url.protocol() !== "http" && url.protocol() !== "https") {
-                url.protocol("http");
+                url.protocol("https");
             }
             setSearchBarText(url.toString());
             appViewModel.loadUrl(url.toString());
