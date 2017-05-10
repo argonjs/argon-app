@@ -132,6 +132,9 @@ export class AppViewModel extends Observable {  //observable creates data bindin
             console.log("Argon focus changed: " + (current ? current.uri : undefined));
         });
 
+        if (config.ENABLE_PERMISSION_CHECK)
+            argon.provider.context.requestPermission = permissionManager.requestPermission;
+
         argon.vuforia.isAvailable().then((available)=>{
             if (available) {
                 let licenseKey = getInternalVuforiaKey();
