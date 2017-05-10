@@ -1,6 +1,6 @@
 <GridLayout xmlns="http://schemas.nativescript.org/tns.xsd" >
     <ListView
-        items="{{ favoriteList }}"
+        items="{{ showFilteredResults ? filteredFavoriteList : favoriteList }}"
         loaded="onLoaded"
         rowHeight="64"
         backgroundColor="#FFFFFF">

@@ -349,11 +349,17 @@ export function searchBarLoaded(args) {
     if (isFirstLoad) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
+
+            if (urlString.includes(" ") || !urlString.includes(".")) {
+                // queries with spaces or single words without dots go to google search
+                urlString = "https://www.google.com/search?q=" + encodeURI(urlString);
+            }
+
             if (urlString.indexOf('//') === -1) urlString = '//' + urlString;
             
             const url = URI(urlString);
             if (url.protocol() !== "http" && url.protocol() !== "https") {
-                url.protocol("http");
+                url.protocol("https");
             }
             setSearchBarText(url.toString());
             appViewModel.loadUrl(url.toString());
@@ -458,6 +464,8 @@ export function onCancel(args) {
     appViewModel.hideRealityChooser();
     appViewModel.hideCancelButton();
     blurSearchBar();
+    setSearchBarText(appViewModel.currentUri);
+    bookmarks.filterControl.set('showFilteredResults', false);
 }
 
 export function onAddChannel(args) {
@@ -559,13 +567,19 @@ class IOSSearchBarController {
                     if (!appViewModel.layerDetails.uri) appViewModel.hideCancelButton();
                 });
             } else {
-                this.setPlaceholderText(appViewModel.layerDetails.uri);
-                this.uiSearchBar.text = "";
+                //this.setPlaceholderText(appViewModel.layerDetails.uri);
+                //this.uiSearchBar.text = "";
             }
+        }
+
+        const textFieldChangeHandler = () => {
+            bookmarks.filterBookmarks(this.uiSearchBar.text.toString());
+            bookmarks.filterControl.set('showFilteredResults', this.uiSearchBar.text.length > 0);
         }
 
         application.ios.addNotificationObserver(UITextFieldTextDidBeginEditingNotification, textFieldEditHandler);
         application.ios.addNotificationObserver(UITextFieldTextDidEndEditingNotification, textFieldEditHandler);
+        application.ios.addNotificationObserver(UITextFieldTextDidChangeNotification, textFieldChangeHandler);
     }
 
     private setPlaceholderText(text:string) {
@@ -581,6 +595,9 @@ class IOSSearchBarController {
     public setText(url) {
         if (!utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
             this.setPlaceholderText(url);
+            this.uiSearchBar.text = "";
+        } else {
+            this.uiSearchBar.text = url;
         }
     }
 }
@@ -602,6 +619,7 @@ class AndroidSearchBarController {
                     if (browserView.focussedLayer === browserView.realityLayer) {
                         appViewModel.showRealityChooser();
                     } else {
+                        bookmarks.filterControl.set('showFilteredResults', false);
                         appViewModel.showBookmarks();
                     }
                     appViewModel.showCancelButton();
@@ -619,6 +637,8 @@ class AndroidSearchBarController {
         const searchHandler = new android.widget.SearchView.OnQueryTextListener({
             onQueryTextChange(newText: String): boolean {
                 searchBar._onPropertyChangedFromNative(SearchBar.textProperty, newText);
+                bookmarks.filterBookmarks(newText.toString());
+                bookmarks.filterControl.set('showFilteredResults', newText.length > 0);
                 return false;
             },
             onQueryTextSubmit(query: String): boolean {

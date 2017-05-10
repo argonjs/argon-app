@@ -1,8 +1,8 @@
 import * as application from 'application';
-import {Observable} from 'data/observable';
+import {Observable, PropertyChangeData} from 'data/observable';
 import {View} from 'ui/core/view';
 import {ListView} from 'ui/list-view';
-import {BookmarkItem, favoriteList} from '../common/bookmarks'
+import {BookmarkItem, favoriteList, filterControl, filteredFavoriteList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
 import {
@@ -15,6 +15,8 @@ import {AnimationCurve} from 'ui/enums'
 
 export class FavoritesViewModel extends Observable {
     favoriteList = favoriteList;
+    filteredFavoriteList = filteredFavoriteList;
+    showFilteredResults = false;
 }
 export const viewModel = new FavoritesViewModel();
 
@@ -114,3 +116,7 @@ function toggleCellSwipeState(cell:CellViews, open:boolean) {
         openCells.push(cell);
     }
 }
+
+filterControl.on('propertyChange', (evt:PropertyChangeData) => {
+    viewModel.set('showFilteredResults', filterControl.showFilteredResults);
+});

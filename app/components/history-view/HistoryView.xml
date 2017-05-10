@@ -1,6 +1,6 @@
 <GridLayout xmlns="http://schemas.nativescript.org/tns.xsd" >
     <ListView
-        items="{{ historyList }}"
+        items="{{ showFilteredResults ? filteredHistoryList : historyList }}"
         loaded="onLoaded"
         rowHeight="40"
         backgroundColor="#FFFFFF">
