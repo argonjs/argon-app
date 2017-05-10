@@ -16,8 +16,8 @@
                 <Button id="menuButton" col="6" width="30" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
 
-                <Button id="locationPermission" visibility="{{ (permissions['location'] != 3 && enablePermissionIcon) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['location'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
-                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 3 && enablePermissionIcon) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['camera'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
+                <Button id="locationPermission" visibility="{{ (permissions['ar.stage'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['ar.stage'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['ar.camera'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['ar.camera'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
                 
                 <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>

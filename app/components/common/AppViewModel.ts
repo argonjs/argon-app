@@ -60,8 +60,8 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     currentUri = '';
     isFavorite = false;
     launchedFromUrl = false;
-    enablePermissionIcon = config.ENABLE_PERMISSION_ICON;
-    permissions = {location: PERMISSION_STATES.Prompt, camera: PERMISSION_STATES.Denied};
+    enablePermissions = config.ENABLE_PERMISSION_CHECK;
+    permissions = {'ar.stage': PERMISSION_STATES.NotRequired, 'ar.camera': PERMISSION_STATES.NotRequired};
 
     public argon:Argon.ArgonSystem;
 
@@ -247,12 +247,12 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
 
     showPermissionIcons() {
         this.ensureReady();
-        this.set('enablePermissionIcon', config.ENABLE_PERMISSION_ICON);
+        this.set('enablePermissions', config.ENABLE_PERMISSION_CHECK);
     }
     
     hidePermissionIcons() {
         this.ensureReady();
-        this.set('enablePermissionIcon', false);
+        this.set('enablePermissions', false);
     }
 
     setViewerEnabled(enabled:boolean) {
