@@ -1,7 +1,10 @@
 import {PermissionRequest} from '@argonjs/argon';
 import * as dialogs from 'ui/dialogs';
 import * as URI from 'urijs';
-
+import applicationSettings = require('application-settings');
+import {ObservableArray, ChangedData} from 'data/observable-array';
+import {Observable} from 'data/observable';
+import application = require('application');
 
 export enum PERMISSION_STATES {
     Prompt = 0, //show the user a prompt to decide whether to succeed 
@@ -13,14 +16,46 @@ export enum PERMISSION_STATES {
 const permissionNames = {'ar.stage': 'LOCATION', 'ar.camera': 'CAMERA'};
 const permissionDescription = {'ar.stage': 'You are about to let this app know where you are on the map!', 'ar.camera': 'You are about to let this app see through your camera!'};
 
+class PermissionItem extends Observable {
+    type:string;
+    hostname:string;
+    
+    constructor(item:{
+        type:string,
+        hostname:string
+    }) {
+        super(item);
+        return this;
+    }
+    
+    toJSON() {
+        return {
+            type: this.type,
+            hostname: this.hostname
+        }
+    }
+}
 
 class PermissionManager {
+    private PERMISSION_KEY = 'permission_history';
 
     private static locationPermission: PERMISSION_STATES;  //for testing. save state per host name ex) "app.argonjs.io"" ->should be moved to local cache
 
     constructor() {
         PermissionManager.locationPermission = PERMISSION_STATES.Prompt; //for testing. temp starting permission
 
+        this.permissionList.on('change', (data) => this.updateMap(data, this.permissionMap));
+
+        if (applicationSettings.hasKey(this.PERMISSION_KEY)) {
+            const savedPermissions:Array<PermissionItem> = JSON.parse(applicationSettings.getString(this.PERMISSION_KEY));
+            savedPermissions.forEach((item)=>{
+                if (!this.permissionMap.has(item.hostname))
+                    this.permissionList.push(new PermissionItem(item));
+            });
+        }
+
+        application.on(application.suspendEvent,this.savePermissionsOnApp);
+        this.permissionList.on('change', this.savePermissionsOnApp);
     }
 
     public requestPermission(request: PermissionRequest) { //should somehow recieve host name, also        
@@ -83,6 +118,25 @@ class PermissionManager {
         return Promise.resolve(false);
     }
 
+
+    private permissionList = new ObservableArray<PermissionItem>();
+    private permissionMap = new Map<string, PermissionItem>();
+
+    updateMap(data:ChangedData<PermissionItem>, map:Map<string, PermissionItem>) {
+        const list = <ObservableArray<PermissionItem>>data.object
+        for (let i=0; i < data.addedCount; i++) {
+            var item = list.getItem(data.index + i);
+            map.set(item.hostname, item);
+        }
+        data.removed && data.removed.forEach((item)=>{
+            map.delete(item.hostname);
+        })
+    }
+
+    savePermissionsOnApp() {
+        const permissionsToSave = this.permissionList.filter((item)=>true);
+        applicationSettings.setString(this.PERMISSION_KEY, JSON.stringify(permissionsToSave));
+    }
 
 }
 
