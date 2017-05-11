@@ -4,7 +4,7 @@ import * as URI from 'urijs';
 import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
 import {Observable} from 'data/observable';
-import application = require('application');
+// import application = require('application');
 import {appViewModel} from './AppViewModel';
 
 export enum PERMISSION_STATES {
@@ -15,15 +15,18 @@ export enum PERMISSION_STATES {
 }
 
 const permissionNames = {'ar.stage': 'LOCATION', 'ar.camera': 'CAMERA'};
-const permissionDescription = {'ar.stage': 'You are about to let this app know where you are on the map!', 'ar.camera': 'You are about to let this app see through your camera!'};
+const permissionDescription = {'ar.stage': 'You are about to grant this app your location!', 'ar.camera': 'You are about to let this app see through your camera!'};
+const PERMISSION_KEY = 'permission_history';
 
 class PermissionItem extends Observable {
-    type:string;
     hostname:string;
+    type:string;
+    state:PERMISSION_STATES;
     
     constructor(item:{
+        hostname:string,
         type:string,
-        hostname:string
+        state:PERMISSION_STATES
     }) {
         super(item);
         return this;
@@ -31,52 +34,71 @@ class PermissionItem extends Observable {
     
     toJSON() {
         return {
-            type: this.type,
-            hostname: this.hostname
+            hostname: this.hostname,
+            type: this.type,            
+            state: this.state        
         }
     }
 }
 
 class PermissionManager {
-    private PERMISSION_KEY = 'permission_history';
-
-    private static locationPermission: PERMISSION_STATES;  //for testing. save state per host name ex) "app.argonjs.io"" ->should be moved to local cache
+    static permissionList = new ObservableArray<PermissionItem>(); //local temp list of permissions
+    static permissionMap = new Map<string, PermissionItem>(); //string: hostname+type / PermissionItem: item itself
 
     constructor() {
-        PermissionManager.locationPermission = PERMISSION_STATES.Prompt; //for testing. temp starting permission
+        PermissionManager.permissionList.on('change', (data) => this.updateMap(data, PermissionManager.permissionMap));   //update map when list has changed
 
-        this.permissionList.on('change', (data) => this.updateMap(data, this.permissionMap));
-
-        if (applicationSettings.hasKey(this.PERMISSION_KEY)) {
-            const savedPermissions:Array<PermissionItem> = JSON.parse(applicationSettings.getString(this.PERMISSION_KEY));
+        if (applicationSettings.hasKey(PERMISSION_KEY)) {
+            const savedPermissions:Array<PermissionItem> = JSON.parse(applicationSettings.getString(PERMISSION_KEY));
             savedPermissions.forEach((item)=>{
-                if (!this.permissionMap.has(item.hostname))
-                    this.permissionList.push(new PermissionItem(item));
+                if (!PermissionManager.permissionMap.has(item.hostname + item.type))
+                    PermissionManager.permissionList.push(new PermissionItem(item));
             });
+            console.log("Number of Permission Items loaded: " + savedPermissions.length);
         }
 
-        application.on(application.suspendEvent,this.savePermissionsOnApp);
-        this.permissionList.on('change', this.savePermissionsOnApp);
+        // application.on(application.suspendEvent,this.savePermissionsOnApp); //save permissions when app is suspended (do we need this?)
+        PermissionManager.permissionList.on('change', this.savePermissionsOnApp);    //save permissions when permissions have changed
     }
 
-    public requestPermission(request: PermissionRequest) { //should somehow recieve host name, also        
+    public handlePermissionRequest(request: PermissionRequest) {     
         console.log("Permission requested {Source: " + request.uri + ", Type: " + permissionNames[request.type] + "}");
 
         if (request.uri === undefined) return Promise.resolve(false);
 
         const hostname = URI(request.uri).hostname();
 
-        const loadPermission = (type:string, hostname:string) => { //should get from cache based on host name
-            return PermissionManager.locationPermission;
+        const loadPermission = (type:string, hostname:string) => {
+            const newPermissionItem = PermissionManager.permissionMap.get(hostname + type);
+            if (newPermissionItem) {    //if permission record exists
+                let i = PermissionManager.permissionList.indexOf(newPermissionItem)
+                // console.log("getoldstate:"+PermissionManager.permissionList.getItem(i).state);
+                return PermissionManager.permissionList.getItem(i).state;
+            } else {
+                // console.log("new state loaded with default")
+                return PERMISSION_STATES.Prompt;    //Default to prompt if the permissions has not been asked before
+            }
         }
 
         const savePermission = (type:string, hostname:string, newState: PERMISSION_STATES) => {
-            PermissionManager.locationPermission = newState;
+            const newPermissionItem = PermissionManager.permissionMap.get(hostname+type);
+            if (newPermissionItem) {
+                let i = PermissionManager.permissionList.indexOf(newPermissionItem);
+                PermissionManager.permissionList.getItem(i).state = newState;
+                // console.log("change old state to:" + PermissionManager.permissionList.getItem(i).state)
+                // PermissionManager.permissionList.notifyPropertyChange('change', null);
+            } else {
+                PermissionManager.permissionList.push(new PermissionItem({
+                    hostname: hostname,
+                    type: type,
+                    state: newState
+                }))
+                // console.log("new item saved, should trigger update map")
+            }
         }
-        var currentState: PERMISSION_STATES = loadPermission(request.type, hostname);    //load using hostname & permission type
-        if (request.force)
-            currentState = PERMISSION_STATES.Prompt;
 
+        let currentState: PERMISSION_STATES = loadPermission(request.type, hostname);    //load using hostname & permission type
+        
         if (currentState === PERMISSION_STATES.Prompt) {
             dialogs.confirm({
                 title: permissionNames[request.type] + " Access",
@@ -86,14 +108,13 @@ class PermissionManager {
                 neutralButtonText: "Not now"
             }).then(result => { //Need to deal with the case where permission is granted but argon-app permission is not
                 if (result === undefined) {
-                    //currentState = PermissionStates.Prompt;
+                    currentState = PERMISSION_STATES.Prompt;                    
                 } else if (result) {
                     currentState = PERMISSION_STATES.Granted;
                 } else {
                     currentState = PERMISSION_STATES.Denied;
                 }
                 appViewModel.setPermission({type: request.type, state: currentState});
-
             }).then(()=>{
                 console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState])
                 savePermission(request.type, hostname, currentState);  //save using hostname & permission type
@@ -109,6 +130,7 @@ class PermissionManager {
                 }
             });
         } else {
+            // console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState] + " (no change)")
             switch(currentState) {
                 case PERMISSION_STATES.Granted:
                     return Promise.resolve(true);
@@ -121,24 +143,21 @@ class PermissionManager {
         return Promise.resolve(false);
     }
 
-
-    private permissionList = new ObservableArray<PermissionItem>();
-    private permissionMap = new Map<string, PermissionItem>();
-
     updateMap(data:ChangedData<PermissionItem>, map:Map<string, PermissionItem>) {
         const list = <ObservableArray<PermissionItem>>data.object
         for (let i=0; i < data.addedCount; i++) {
             var item = list.getItem(data.index + i);
-            map.set(item.hostname, item);
+            map.set(item.hostname + item.type, item);
         }
         data.removed && data.removed.forEach((item)=>{
-            map.delete(item.hostname);
+            map.delete(item.hostname + item.type);
         })
     }
 
-    savePermissionsOnApp() {
-        const permissionsToSave = this.permissionList.filter((item)=>true);
-        applicationSettings.setString(this.PERMISSION_KEY, JSON.stringify(permissionsToSave));
+    savePermissionsOnApp() {    //save permissions to local storage
+        const permissionsToSave = PermissionManager.permissionList.map((item)=>item);
+        applicationSettings.setString(PERMISSION_KEY, JSON.stringify(permissionsToSave));
+        // console.log(""+ permissionsToSave.length + "permission items saved to cache")
     }
 
 }
