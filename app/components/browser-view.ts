@@ -26,6 +26,7 @@ import applicationSettings = require('application-settings');
 import * as vuforia from 'nativescript-vuforia';
 import * as application from 'application';
 import * as utils from 'utils/utils';
+import * as analytics from "./common/analytics";
 
 import {appViewModel, LayerDetails} from './common/AppViewModel'
 import {NativescriptHostedRealityViewer} from './common/argon-reality-viewers'
@@ -144,6 +145,7 @@ export class BrowserView extends GridLayout {
                     webView.visibility = 'collapse';
                     layer.contentView.addChild(webView);
                     this.realityWebviews.set(viewer.uri, webView);
+                    analytics.updateInstalledRealityCount(this.realityWebviews.size);
                 }
             });
 
@@ -162,6 +164,7 @@ export class BrowserView extends GridLayout {
                 details.set('title', 'Reality: ' + (viewer.session && viewer.session.info.title) || getHost(uri));
                 layer.webView = this.realityWebviews.get(uri)!;
                 layer.details.set('log', layer.webView.log);
+                analytics.updateCurrentRealityUri(uri);
 
                 if (current === Argon.RealityViewer.LIVE) {
                     vuforia.configureVuforiaSurface();
@@ -215,6 +218,7 @@ export class BrowserView extends GridLayout {
                     } else {
                         layer.containerView.opacity = 1;
                     }
+                    analytics.updateArgonAppCount(this._countArgonApps());
                     break;
                 default: break;
             }
@@ -654,6 +658,14 @@ export class BrowserView extends GridLayout {
         // stop animating the views
         if (this._intervalId) clearInterval(this._intervalId);
         this._intervalId = undefined;
+    }
+
+    private _countArgonApps() {
+        var count = 0;
+        this.layers.forEach((layer) => {
+            if (layer.webView && layer.webView.isArgonApp) count++;
+        });
+        return count;
     }
 
     public loadUrl(url:string) {
