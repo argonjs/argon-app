@@ -469,8 +469,8 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                         kCLLocationAccuracyBest : 
                         enums.Accuracy.high : 
                     application.ios ? 
-                        kCLLocationAccuracyKilometer :
-                        enums.Accuracy.any,
+                        kCLLocationAccuracyNearestTenMeters :
+                        10,
                 updateDistance: application.ios ? kCLDistanceFilterNone : 0,
                 minimumUpdateTime : options && options.enableHighAccuracy ?
                     0 : 5000 // required on Android, ignored on iOS
