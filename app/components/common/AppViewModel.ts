@@ -133,7 +133,7 @@ export class AppViewModel extends Observable {  //observable creates data bindin
         });
 
         if (config.ENABLE_PERMISSION_CHECK)
-            argon.provider.context.requestPermission = permissionManager.requestPermission;
+            argon.provider.context.handlePermissionRequest = permissionManager.handlePermissionRequest;
 
         argon.vuforia.isAvailable().then((available)=>{
             if (available) {
