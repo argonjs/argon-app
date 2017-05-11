@@ -14,11 +14,11 @@ const appFocusTimerID = "App Focus";
 
 export function initAnalytics() {
     googleAnalytics.initalize({
-        trackingId: "UA-98725997-1",
+        trackingId: "UA-63191442-3",
         dispatchInterval: 10,
         logging: <any>{
-            native: true,
-            console: true
+            native: false,
+            console: false
         }
     });
 }
