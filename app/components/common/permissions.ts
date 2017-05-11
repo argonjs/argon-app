@@ -5,6 +5,7 @@ import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
 import {Observable} from 'data/observable';
 import application = require('application');
+import {appViewModel} from './AppViewModel';
 
 export enum PERMISSION_STATES {
     Prompt = 0, //show the user a prompt to decide whether to succeed 
@@ -91,6 +92,8 @@ class PermissionManager {
                 } else {
                     currentState = PERMISSION_STATES.Denied;
                 }
+                appViewModel.setPermission({type: request.type, state: currentState});
+
             }).then(()=>{
                 console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState])
                 savePermission(request.type, hostname, currentState);  //save using hostname & permission type
