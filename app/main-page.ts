@@ -206,6 +206,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             cancelButton.animate({
                 opacity:1
             });
+            appViewModel.hidePermissionIcons();
         } else {
             const overviewButton = headerView.getViewById('overviewButton');
             overviewButton.visibility = 'visible';
@@ -223,7 +224,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             }).then(()=>{
                 cancelButton.visibility = 'collapse';
             })
-            
+            appViewModel.showPermissionIcons();
             layout.off(GestureTypes.touch);
         }
     }
