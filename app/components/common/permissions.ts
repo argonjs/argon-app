@@ -1,4 +1,4 @@
-import {PermissionRequest} from '@argonjs/argon';
+import {PermissionTypes, PermissionRequest} from '@argonjs/argon';
 import * as dialogs from 'ui/dialogs';
 import * as URI from 'urijs';
 import applicationSettings = require('application-settings');
@@ -141,6 +141,19 @@ class PermissionManager {
             }
         }
         return Promise.resolve(false);
+    }
+
+    loadPermissions = (url: string) => {
+        const hostname = URI(url).hostname();
+        PermissionTypes.forEach((type) => {
+            const newPermissionItem = PermissionManager.permissionMap.get(hostname + type);
+            if (newPermissionItem) {    //if permission record exists
+                let i = PermissionManager.permissionList.indexOf(newPermissionItem)
+                appViewModel.setPermission({type: type, state: PermissionManager.permissionList.getItem(i).state});
+            } else {
+                appViewModel.setPermission({type: type, state: PERMISSION_STATES.NotRequired});
+            }
+        })
     }
 
     updateMap(data:ChangedData<PermissionItem>, map:Map<string, PermissionItem>) {

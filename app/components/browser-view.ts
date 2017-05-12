@@ -27,6 +27,7 @@ import * as vuforia from 'nativescript-vuforia';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 import * as analytics from "./common/analytics";
+import {permissionManager} from "./common/permissions"
 
 import {appViewModel, LayerDetails} from './common/AppViewModel'
 import {NativescriptHostedRealityViewer} from './common/argon-reality-viewers'
@@ -203,6 +204,7 @@ export class BrowserView extends GridLayout {
             switch(eventData.propertyName) {
                 case 'url':
                     layer.details.set('uri', eventData.value);
+                    permissionManager.loadPermissions(eventData.value);
                     break;
                 case 'title':
                     const title = webView.title || getHost(webView.url);
