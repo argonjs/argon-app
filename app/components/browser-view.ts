@@ -716,6 +716,8 @@ export class BrowserView extends GridLayout {
             }
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
+
+            permissionManager.loadPermissions(layer.details.uri);
         }
     }
 
