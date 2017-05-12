@@ -16,8 +16,8 @@
                 <Button id="menuButton" col="6" width="30" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
 
-                <Button id="locationPermission" visibility="{{ (permissions['ar.stage'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['ar.stage'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
-                <Button id="cameraPermission" visibility="{{ (permissions['ar.camera'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['ar.camera'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}"/>
+                <Button id="locationPermission" visibility="{{ (permissions['ar.stage'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['ar.stage'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onLocationPermissionIcon"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['ar.camera'] != 3 && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['ar.camera'] == 1 ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
                 
                 <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>
@@ -41,6 +41,10 @@
             <!--<Label class="menuItem" text="Settings" tap="onSettings"/>-->
             <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer Mode' }}" tap="onViewerToggle"/>
             <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
+        </StackLayout>
+        <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">
+            <Label id="permissionLabel" text="{{ currentPermissionName + ' Access ' + (currentPermissionState == 1 ? 'Granted' : 'Denied' ) }}" tap="onPermissionIconMenuChangeTap"/>
+            <Label id="changePermission" text="{{ 'Click to ' + (currentPermissionState == 1 ? 'Revoke' : 'Allow' ) }}" tap="onPermissionIconMenuChangeTap"/>
         </StackLayout>
     </GridLayout>
 </Page>

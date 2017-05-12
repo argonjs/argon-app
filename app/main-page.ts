@@ -29,6 +29,7 @@ export let menuView:View;
 export let browserView:BrowserView;
 export let bookmarksView:View;
 export let realityChooserView:View;
+export let permissionMenuView:View;
 
 let searchBar:SearchBar;
 let iosSearchBarController:IOSSearchBarController;
@@ -226,6 +227,40 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             })
             appViewModel.showPermissionIcons();
             layout.off(GestureTypes.touch);
+        }
+    } else if (evt.propertyName === "permissionMenuOpen") {
+        if (evt.value) {
+            appViewModel.hideOverview();
+            permissionMenuView.visibility = "visible";
+            permissionMenuView.animate({
+                scale: {
+                    x: 1,
+                    y: 1,
+                },
+                duration: 150,
+                opacity: 1,
+                curve: AnimationCurve.easeInOut
+            });
+            touchOverlayView.visibility = 'visible';
+            touchOverlayView.on(GestureTypes.touch,()=>{
+                touchOverlayView.off(GestureTypes.touch);
+                touchOverlayView.visibility = 'collapse';
+                appViewModel.hidePermissionMenu();
+            });
+        } else {
+            permissionMenuView.animate({
+                scale: {
+                    x: 0,
+                    y: 0,
+                },
+                duration: 150,
+                opacity: 0,
+                curve: AnimationCurve.easeInOut
+            }).then(() => {
+                permissionMenuView.visibility = "collapse";
+            });
+            touchOverlayView.off(GestureTypes.touch);
+            touchOverlayView.visibility = 'collapse';
         }
     }
 })
@@ -466,6 +501,15 @@ export function menuLoaded(args) {
     menuView.opacity = 0;
 }
 
+export function permissionMenuLoaded(args) {
+    permissionMenuView = args.object;
+    permissionMenuView.originX = 0;
+    permissionMenuView.originY = 0;
+    permissionMenuView.scaleX = 0;
+    permissionMenuView.scaleY = 0;
+    permissionMenuView.opacity = 0;
+}
+
 export function onSearchBarTap(args) {
     appViewModel.showBookmarks();
     appViewModel.showCancelButton();
@@ -483,6 +527,7 @@ export function onCancel(args) {
 export function onAddChannel(args) {
     browserView.addLayer();
     appViewModel.hideMenu();
+    appViewModel.hidePermissionMenu();
 }
 
 export function onReload(args) {
@@ -512,9 +557,11 @@ export function onInteractionToggle(args) {
 export function onOverview(args) {
     appViewModel.toggleOverview();
     appViewModel.hideMenu();
+    appViewModel.hidePermissionMenu();
 }
 
 export function onMenu(args) {
+    appViewModel.hidePermissionMenu();
     appViewModel.toggleMenu();
 }
 
@@ -522,20 +569,38 @@ export function onSelectReality(args) {
     appViewModel.showRealityChooser();
     appViewModel.showCancelButton();
     appViewModel.hideMenu();
+    appViewModel.hidePermissionMenu();
 }
 
 export function onSettings(args) {
     //code to open the settings view goes here
     appViewModel.hideMenu();
+    appViewModel.hidePermissionMenu();
 }
 
 export function onViewerToggle(args) {
     appViewModel.toggleViewer();
     appViewModel.hideMenu();
+    appViewModel.hidePermissionMenu();
 }
 
 export function onDebugToggle(args) {
     appViewModel.toggleDebug();
+}
+
+export function onLocationPermissionIcon(args) {
+    appViewModel.togglePermissionMenu('ar.stage');
+    appViewModel.hideMenu();
+}
+
+export function onCameraPermissionIcon(args) {
+    appViewModel.togglePermissionMenu('ar.camera');
+    appViewModel.hideMenu();
+}
+
+export function onPermissionIconMenuChangeTap(args) {
+    // change permissions and maybe reload?
+    
 }
 
 class IOSSearchBarController {
@@ -557,6 +622,7 @@ class IOSSearchBarController {
 
         const textFieldEditHandler = () => {
             appViewModel.hideMenu();
+            appViewModel.hidePermissionMenu();
             if (utils.ios.getter(UIResponder, this.uiSearchBar.isFirstResponder)) {
                 if (browserView.focussedLayer === browserView.realityLayer) {
                     appViewModel.showRealityChooser();

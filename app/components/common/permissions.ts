@@ -14,7 +14,7 @@ export enum PERMISSION_STATES {
     NotRequired = 3 //not being used by app
 }
 
-const permissionNames = {'ar.stage': 'LOCATION', 'ar.camera': 'CAMERA'};
+export const permissionNames = {'ar.stage': 'LOCATION', 'ar.camera': 'CAMERA'};
 const permissionDescription = {'ar.stage': 'You are about to grant this app your location!', 'ar.camera': 'You are about to let this app see through your camera!'};
 const PERMISSION_KEY = 'permission_history';
 

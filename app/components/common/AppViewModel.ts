@@ -7,6 +7,8 @@ import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './ar
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
+import {PERMISSION_STATES, permissionManager, permissionNames} from './permissions';
+import config from '../../config';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',
@@ -62,6 +64,10 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     launchedFromUrl = false;
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
     permissions = {'ar.stage': PERMISSION_STATES.NotRequired, 'ar.camera': PERMISSION_STATES.NotRequired};
+    permissionMenuOpen = false;
+    currentPermissionType = '';
+    currentPermissionName = '';
+    currentPermissionState = 3;
 
     public argon:Argon.ArgonSystem;
 
@@ -310,9 +316,31 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
     }
 
     setPermission(permission: {type: string, state: PERMISSION_STATES}) {
+        this.ensureReady();
         this.permissions[permission.type] = permission.state;
+        this.set('permissionMenuOpen', false);
         this.notifyPropertyChange("permissions", null);
     }
+
+    togglePermissionMenu(type: string) {
+        this.ensureReady();
+        if (!this.permissionMenuOpen)
+            this.updateCurrentPermissionInfo(type);  // If the menu is opening
+            
+        this.set('permissionMenuOpen', !this.permissionMenuOpen);
+    }
+
+    hidePermissionMenu() {
+        this.ensureReady();
+        this.set('permissionMenuOpen', false);
+    }
+
+    updateCurrentPermissionInfo(type: string) {
+        this.set('currentPermissionType', type);
+        this.set('currentPermissionState', this.permissions[type]);
+        this.set('currentPermissionName', permissionNames[type]);
+    }
+
 }
 
 export const appViewModel = new AppViewModel;
