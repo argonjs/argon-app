@@ -311,6 +311,7 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
 
     setPermission(permission: {type: string, state: PERMISSION_STATES}) {
         this.permissions[permission.type] = permission.state;
+        this.notifyPropertyChange("permissions", null);
     }
 }
 

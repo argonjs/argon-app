@@ -114,11 +114,10 @@ class PermissionManager {
                 } else {
                     currentState = PERMISSION_STATES.Denied;
                 }
-                appViewModel.setPermission({type: request.type, state: currentState});
             }).then(()=>{
                 console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState])
                 savePermission(request.type, hostname, currentState);  //save using hostname & permission type
-        
+                appViewModel.setPermission({type: request.type, state: currentState});
                 switch(currentState) {
                     case PERMISSION_STATES.Granted:
                         return Promise.resolve(true);
@@ -131,6 +130,7 @@ class PermissionManager {
             });
         } else {
             // console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState] + " (no change)")
+            appViewModel.setPermission({type: request.type, state: currentState});
             switch(currentState) {
                 case PERMISSION_STATES.Granted:
                     return Promise.resolve(true);
