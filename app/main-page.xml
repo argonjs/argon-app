@@ -43,7 +43,12 @@
             <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
         </StackLayout>
         <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">
-            <Label id="permissionLabel" text="{{ currentPermissionName + ' Access ' + (currentPermissionState == 1 ? 'Granted' : 'Denied' ) }}" tap="onPermissionIconMenuChangeTap"/>
+            <Label id="permissionLabel" tap="onPermissionIconMenuChangeTap">
+                <FormattedString>
+                    <Span text="{{ currentPermissionName + ' Access ' }}" />
+                    <Span backgroundColor="{{ (currentPermissionState == 1 ? 'red' : 'gray' ) }}" foregroundColor="white" text="{{ (currentPermissionState == 1 ? 'Granted' : 'Denied' ) }}" />
+                </FormattedString>
+            </Label>
             <Label id="changePermission" text="{{ 'Click to ' + (currentPermissionState == 1 ? 'Revoke' : 'Allow' ) }}" tap="onPermissionIconMenuChangeTap"/>
         </StackLayout>
     </GridLayout>
