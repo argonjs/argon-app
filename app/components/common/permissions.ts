@@ -97,7 +97,7 @@ class PermissionManager {
             }
         }
 
-        let currentState: PERMISSION_STATES = loadPermission(request.type, hostname);    //load using hostname & permission type
+        let currentState: PERMISSION_STATES = loadPermission(request.type, hostname);    // load using hostname & permission type
         
         if (currentState === PERMISSION_STATES.Prompt) {
             dialogs.confirm({
@@ -106,7 +106,7 @@ class PermissionManager {
                 okButtonText: "Grant permission",
                 cancelButtonText: "Deny access",
                 neutralButtonText: "Not now"
-            }).then(result => { //Need to deal with the case where permission is granted but argon-app permission is not
+            }).then(result => {
                 if (result === undefined) {
                     currentState = PERMISSION_STATES.Prompt;                    
                 } else if (result) {
@@ -116,7 +116,7 @@ class PermissionManager {
                 }
             }).then(()=>{
                 console.log("Permission request for : " + request.type + " -> resulted in : " + PERMISSION_STATES[currentState])
-                savePermission(request.type, hostname, currentState);  //save using hostname & permission type
+                savePermission(request.type, hostname, currentState);  // save using hostname & permission type
                 appViewModel.setPermission({type: request.type, state: currentState});
                 switch(currentState) {
                     case PERMISSION_STATES.Granted:
@@ -143,6 +143,37 @@ class PermissionManager {
         return Promise.resolve(false);
     }
 
+    public handlePermissionRevoke(request: PermissionRequest) {
+        console.log("Handle permission revoke");
+        
+        if (request.uri === undefined) return Promise.reject(new Error("Illegal URI when requesting permission revoke."));
+
+        const hostname = URI(request.uri).hostname();
+
+        // const newPermissionItem = PermissionManager.permissionMap.get(hostname + request.type);
+        // if (newPermissionItem === undefined) return Promise.reject(new Error("Requested revoke on not given permission! "));
+        // let i = PermissionManager.permissionList.indexOf(<PermissionItem>newPermissionItem)
+        // let currentState = PermissionManager.permissionList.getItem(i).state;
+
+        const savePermission = (type:string, hostname:string, newState: PERMISSION_STATES) => {
+            const newPermissionItem = PermissionManager.permissionMap.get(hostname+type);
+            if (newPermissionItem) {
+                let i = PermissionManager.permissionList.indexOf(newPermissionItem);
+                PermissionManager.permissionList.getItem(i).state = newState;
+            } else {
+                PermissionManager.permissionList.push(new PermissionItem({
+                    hostname: hostname,
+                    type: type,
+                    state: newState
+                }))
+            }
+        }
+
+        savePermission(request.type, hostname, PERMISSION_STATES.Denied);  // save using hostname & permission type
+        appViewModel.setPermission({type: request.type, state: PERMISSION_STATES.Denied});
+        return Promise.resolve();
+    }
+    
     loadPermissions = (url: string) => {
         const hostname = URI(url).hostname();
         PermissionTypes.forEach((type) => {

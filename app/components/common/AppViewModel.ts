@@ -138,8 +138,10 @@ export class AppViewModel extends Observable {  //observable creates data bindin
             console.log("Argon focus changed: " + (current ? current.uri : undefined));
         });
 
-        if (config.ENABLE_PERMISSION_CHECK)
+        if (config.ENABLE_PERMISSION_CHECK) {
             argon.provider.context.handlePermissionRequest = permissionManager.handlePermissionRequest;
+            argon.provider.context.handlePermissionRevoke = permissionManager.handlePermissionRevoke;
+        }
 
         argon.vuforia.isAvailable().then((available)=>{
             if (available) {
@@ -341,6 +343,17 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         this.set('currentPermissionName', permissionNames[type]);
     }
 
+    changePermissions() {
+        this.ensureReady();
+        if (this.currentPermissionState === PERMISSION_STATES.Granted) {
+            // this.argon.context.unsubscribe(this.currentPermissionType); --> need to change this! How can argon-app do an unsubscribe event?
+        } else {
+            this.permissions[this.currentPermissionType] = PERMISSION_STATES.Prompt;
+            this.notifyPropertyChange("permissions", null);
+            this.updateCurrentPermissionInfo(this.currentPermissionType);
+            // this.argon.context.subscribe(this.currentPermissionType); --> need to change this! How can argon-app do a subscribe event?
+        }
+    }
 }
 
 export const appViewModel = new AppViewModel;

@@ -599,8 +599,7 @@ export function onCameraPermissionIcon(args) {
 }
 
 export function onPermissionIconMenuChangeTap(args) {
-    // change permissions and maybe reload?
-    
+    appViewModel.changePermissions(); //unsubscribe or subscribe permission
 }
 
 class IOSSearchBarController {
