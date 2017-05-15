@@ -7,7 +7,7 @@ import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './ar
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import {LogItem} from 'argon-web-view';
-import {config} from '../../config';
+import config from '../../config';
 
 export interface LoadUrlEventData extends EventData {
     eventName: 'loadUrl',

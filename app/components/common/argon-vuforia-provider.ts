@@ -9,7 +9,7 @@ import {decrypt, screenOrientation} from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 import * as application from 'application';
-import {config} from '../../config';
+import config from '../../config';
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
