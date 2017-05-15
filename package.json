@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "@argonjs/argon": "1.2.0-19",
+    "@argonjs/argon": "1.2.0-20",
     "@speigg/nativescript-urlhandler": "^1.0.0",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",

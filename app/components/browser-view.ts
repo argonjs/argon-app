@@ -154,6 +154,7 @@ export class BrowserView extends GridLayout {
                     layer.contentView.removeChild(viewer.webView);
                     this.realityWebviews.delete(viewer.uri);
                 }
+                manager.reality.request(Argon.RealityViewer.LIVE);
             });
 
             manager.reality.changeEvent.addEventListener(({current})=>{
@@ -252,6 +253,7 @@ export class BrowserView extends GridLayout {
                 }
             })
             session.closeEvent.addEventListener(()=>{
+                if (layer.session) appViewModel.argon.provider.reality.removeInstaller(layer.session);
                 layer.session = undefined;
             })
         });
