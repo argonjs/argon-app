@@ -9,11 +9,11 @@
     }
   },
   "dependencies": {
-    "@argonjs/argon": "1.2.0-19",
+    "@argonjs/argon": "1.2.0-20",
     "@speigg/nativescript-urlhandler": "^1.0.0",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",
-    "nativescript-hook-debug-production": "^1.0.4",
+    "nativescript-google-analytics": "^0.3.7",
     "nativescript-permissions": "^1.2.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",

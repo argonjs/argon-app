@@ -96,6 +96,10 @@ export class ArgonWebView extends common.ArgonWebView {
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {
+            this.evaluateJavascript("(document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined')", ).then((result:string) => {
+                var boolResult = (result === "true");
+                this._setIsArgonApp(boolResult);
+            });
             if (this.android.getUrl() != this.currentUrl) {
                 // the page did not successfully load
                 if (this.currentUrl.startsWith("https")) {

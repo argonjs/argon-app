@@ -28,6 +28,7 @@ import { appViewModel } from './components/common/AppViewModel';
 import { handleOpenURL, AppURL } from '@speigg/nativescript-urlhandler';
 handleOpenURL((appURL: AppURL) => {
     if (!appURL) return;
+    appViewModel.launchedFromUrl = true;
     appViewModel.ready.then(()=>{
         console.log('Received url request: ' + appURL);
         const urlValue = appURL.params.get('url');
@@ -39,5 +40,22 @@ handleOpenURL((appURL: AppURL) => {
         }
     });
 });
+
+// Google Analytics
+import * as analytics from "./components/common/analytics";
+if (application.ios) {
+    class MyDelegate extends UIResponder implements UIApplicationDelegate {
+        public static ObjCProtocols = [UIApplicationDelegate];
+        applicationDidFinishLaunchingWithOptions(application: UIApplication, launchOptions: any): boolean {
+            analytics.initAnalytics();
+            return true;
+        }
+    }
+    application.ios.delegate = MyDelegate;
+} else {
+    application.on(application.launchEvent, function (args) {
+        analytics.initAnalytics();
+    });
+}
 
 application.start();

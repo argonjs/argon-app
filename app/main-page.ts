@@ -535,7 +535,7 @@ class IOSSearchBarController {
         this.uiSearchBar = searchBar.ios;
         this.textField = this.uiSearchBar.valueForKey("searchField");
 
-        this.uiSearchBar.keyboardType = UIKeyboardType.URL;
+        this.uiSearchBar.keyboardType = UIKeyboardType.WebSearch;
         this.uiSearchBar.autocapitalizationType = UITextAutocapitalizationType.None;
         this.uiSearchBar.searchBarStyle = UISearchBarStyle.Minimal;
         this.uiSearchBar.returnKeyType = UIReturnKeyType.Go;

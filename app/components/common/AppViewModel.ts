@@ -60,6 +60,7 @@ export class AppViewModel extends Observable {
     layerDetails:LayerDetails;
     currentUri = '';
     isFavorite = false;
+    launchedFromUrl = false;
 
     public argon:Argon.ArgonSystem;
 
