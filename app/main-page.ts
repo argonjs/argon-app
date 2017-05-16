@@ -366,6 +366,7 @@ export function searchBarLoaded(args) {
             appViewModel.hideBookmarks();
             appViewModel.hideRealityChooser();
             appViewModel.hideCancelButton();
+            bookmarks.filterControl.set('showFilteredResults', false);
             blurSearchBar();
         });
     }
