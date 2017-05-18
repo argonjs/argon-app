@@ -91,10 +91,16 @@ export class AppViewModel extends Observable {
         container.registerSingleton(Argon.DeviceServiceProvider, NativescriptDeviceServiceProvider);
         container.registerSingleton(Argon.RealityViewerFactory, NativescriptRealityViewerFactory);
 
-        const argon = this.argon = Argon.init(null, {
-            role: Argon.Role.MANAGER,
-            title: 'ArgonApp'
-        }, container);
+        let argon;
+        try {
+            argon = this.argon = Argon.init(null, {
+                role: Argon.Role.MANAGER,
+                title: 'ArgonApp'
+            }, container);
+        } catch (e) {
+            alert(e.message);
+        }
+        if (!argon) return;
 
         argon.reality.default = Argon.RealityViewer.LIVE;
 

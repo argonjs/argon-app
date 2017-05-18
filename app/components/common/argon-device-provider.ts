@@ -25,30 +25,23 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
     constructor(
         sessionService:Argon.SessionService, 
-        contextService:Argon.ContextService, 
+        entityService:Argon.EntityService, 
         viewService:Argon.ViewService,
-        visibilityService:Argon.VisibilityService,
-        vuforiaServiceProvider:Argon.VuforiaServiceProvider) {
-        super(sessionService, contextService, viewService, visibilityService);
+        visibilityService:Argon.VisibilityService) {
+        super(sessionService, entityService, viewService, visibilityService);
+    }
 
-        const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
-
-        vsp.stateUpdateEvent.addEventListener(()=>{
-            const now = global.performance.now();
-            // swap callback maps
-            const callbacks = this._callbacks;
-            this._callbacks = this._callbacks2;
-            this._callbacks2 = callbacks;
-            for (let i in callbacks) {
-                this._executeCallback(callbacks[i], now);
-            }
-            for (let i in callbacks) {
-                delete callbacks[i];
-            }
-        });
-
-        if (!vuforia.api) {
-            setInterval(() => vsp.stateUpdateEvent.raiseEvent(Argon.Cesium.JulianDate.now()), 34);
+    public executeReqeustAnimationFrameCallbacks() {
+        const now = global.performance.now();
+        // swap callback maps
+        const callbacks = this._callbacks;
+        this._callbacks = this._callbacks2;
+        this._callbacks2 = callbacks;
+        for (let i in callbacks) {
+            this._executeCallback(callbacks[i], now);
+        }
+        for (let i in callbacks) {
+            delete callbacks[i];
         }
     }
 
@@ -234,9 +227,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
             // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
             // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
             
-            // default to identity subview pose (in relation to the overall view pose)
-            // TODO: use eye adjustment matrix to get subview poses (for eye separation). See commented out code above...
-            subview.pose = undefined; 
+            // TODO: use eye adjustment matrix to set subview poses (for eye separation). See commented out code above...
         }
 
         if (this._application.ios) {
@@ -264,7 +255,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,this.suggestedUserHeight,0, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -305,7 +296,7 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
 
                 (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,0,this.suggestedUserHeight, this._scratchCartesian),
+                    Cartesian3.fromElements(0,this.suggestedUserHeight,0, this._scratchCartesian),
                     deviceStage
                 );
 
@@ -415,18 +406,19 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     constructor(
         container, 
         sessionService:Argon.SessionService, 
-        deviceService:Argon.DeviceService, 
-        contextService:Argon.ContextService, 
+        deviceService:Argon.DeviceService,
         viewService:Argon.ViewService,
-        contextServiceProvidere:Argon.ContextServiceProvider,
+        entityService:Argon.EntityService,
+        entityServiceProvider:Argon.EntityServiceProvider,
         private focusServiceProvider:Argon.FocusServiceProvider,
-        realityService:Argon.RealityService) {
+        vuforiaServiceProvider:Argon.VuforiaServiceProvider) {
+            
         super(
             sessionService, 
-            deviceService, 
-            contextService, 
-            viewService,         
-            contextServiceProvidere
+            deviceService,
+            viewService,
+            entityService, 
+            entityServiceProvider
         );
 
         application.on(application.orientationChangedEvent, ()=>{
@@ -435,13 +427,23 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             }, 600);
             this.publishStableState();
         });
+
+        const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
+
+        vsp.stateUpdateEvent.addEventListener(()=>{
+            (this.deviceService as NativescriptDeviceService).executeReqeustAnimationFrameCallbacks();
+        });
+
+        if (!vuforia.api) {
+            setInterval(() => vsp.stateUpdateEvent.raiseEvent(Argon.Cesium.JulianDate.now()), 34);
+        }
     }
 
     private locationWatchId?:number;
 
     private _scratchStageCartographic = new Argon.Cesium.Cartographic;
 
-    protected onStartGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
+    public onStartGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
         if (typeof this.locationWatchId !== 'undefined') return Promise.resolve();;
         
         return new Promise<void>((resolve, reject)=>{
@@ -481,7 +483,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     }
 
     
-    protected onStopGeolocationUpdates() : void {
+    public onStopGeolocationUpdates() : void {
         if (Argon.Cesium.defined(this.locationWatchId)) {
             geolocation.clearWatch(this.locationWatchId);
             this.locationWatchId = undefined;

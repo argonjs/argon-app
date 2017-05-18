@@ -63,7 +63,7 @@ export class NativescriptVuforiaServiceProvider {
             private focusServiceProvider:Argon.FocusServiceProvider,
             private contextService:Argon.ContextService,
             // private deviceService:Argon.DeviceService,
-            private contextServiceProvider:Argon.ContextServiceProvider,
+            private entityServiceProvider:Argon.EntityServiceProvider,
             realityService:Argon.RealityService) {
 
         // this.sessionService.connectEvent.addEventListener(()=>{
@@ -170,7 +170,7 @@ export class NativescriptVuforiaServiceProvider {
                     entityPosition.forwardExtrapolationDuration = 10/60;
                     entityOrientation.forwardExtrapolationDuration = 10/60;
                     contextService.entities.add(entity);
-                    this.contextServiceProvider.publishingReferenceFrameMap.set(id, this.contextService.user.id);
+                    this.entityServiceProvider.targetReferenceFrameMap.set(id, this.contextService.user.id);
                 }
                 
                 const trackableTime = JulianDate.clone(time); 

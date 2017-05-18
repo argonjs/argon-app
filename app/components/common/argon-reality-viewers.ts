@@ -40,7 +40,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         private _deviceService: Argon.DeviceService,
         private _vuforiaServiceProvider: Argon.VuforiaServiceProvider,
         uri:string) {
-            super(sessionService, viewService, _deviceService, uri);
+            super(sessionService, viewService, _contextService, _deviceService, uri);
     }
 
     private _zoomFactor = 1;
@@ -122,19 +122,20 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             overrideUser: true
         }
 
+        this._deviceService.suggestedGeolocationSubscriptionChangeEvent.addEventListener(()=>{
+            if (this._deviceService.suggestedGeolocationSubscription) {
+                this._deviceService.subscribeGeolocation(this._deviceService.suggestedGeolocationSubscription, session);
+            } else {
+                this._deviceService.unsubscribeGeolocation(session);
+            }
+        });
+
         const remove = this._deviceService.frameStateEvent.addEventListener((frameState)=>{
             if (!session.isConnected) return;
 
-            const deviceService = this._deviceService;
-            if (deviceService.geolocationDesired) {
-                deviceService.subscribeGeolocation(deviceService.geolocationOptions, session);
-            } else {
-                deviceService.unsubscribeGeolocation(session);
-            }
-
             Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
-            if (!deviceService.strict) {
+            if (!this._deviceService.strict) {
                 this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor;
                 for (const s of subviews) {
                     // const frustum = Argon.decomposePerspectiveProjectionMatrix(s.projectionMatrix, this._scratchFrustum);
