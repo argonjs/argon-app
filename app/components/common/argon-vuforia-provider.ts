@@ -410,7 +410,7 @@ export class NativescriptVuforiaServiceProvider {
         if (this._sessionData.has(session))
             throw new Error('Already initialized');
 
-        if (config.DEBUG_DEVELOPMENT_LICENSE_KEY != "") options.key = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
+        if (config.DEBUG_DEVELOPMENT_LICENSE_KEY) options.key = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
 
         const keyPromise = options.key ? 
             Promise.resolve(options.key) : 
@@ -419,13 +419,13 @@ export class NativescriptVuforiaServiceProvider {
         const sessionData = new VuforiaSessionData(keyPromise);
         this._sessionData.set(session, sessionData);
 
-        const initResult = new Promise((resolve)=>{
+        const initResultPromise = new Promise((resolve)=>{
             sessionData.initResultResolver = resolve;
         });
 
         this._selectControllingSession();
 
-        return initResult;
+        return keyPromise.then(()=>initResultPromise);
     }
 
     private _handleClose(session:Argon.SessionPort) {
