@@ -630,11 +630,10 @@ export class NativescriptVuforiaServiceProvider {
             })
 
             if (!match) {
-                if (!config.DEBUG_DISABLE_ORIGIN_CHECK && !config.DEBUG)
+                if (config.DEBUG && config.DEBUG_DISABLE_ORIGIN_CHECK) {
+                    alert(`Note: The current origin does not match any of the allowed origins:\n\n${origins.join('\n')}`);
+                } else {
                     throw new Error('Invalid origin');
-                else if (config.DEBUG) {
-                    alert(`The current origin "${origin}" does not match any of the allowed origins:\n ${JSON.stringify(origins, null, '\t')}`
-                    );
                 }
             }
 
