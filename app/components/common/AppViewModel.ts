@@ -6,8 +6,10 @@ import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
+import * as URI from 'urijs';
 import {LogItem} from 'argon-web-view';
-import {PERMISSION_STATES, permissionManager, permissionNames} from './permissions';
+import {PermissionState, PermissionType, Permission, SessionPort} from '@argonjs/argon'
+import {permissionManager} from './permissions'
 import config from '../../config';
 
 export interface LoadUrlEventData extends EventData {
@@ -63,11 +65,12 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     isFavorite = false;
     launchedFromUrl = false;
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
-    permissions = {'ar.stage': PERMISSION_STATES.NotRequired, 'ar.camera': PERMISSION_STATES.NotRequired};
+    permissions = {'ar.stage': PermissionState.NOT_REQUIRED, 'ar.camera': PermissionState.NOT_REQUIRED, 'ar.3dmesh': PermissionState.NOT_REQUIRED};
     permissionMenuOpen = false;
-    currentPermissionType = '';
-    currentPermissionName = '';
-    currentPermissionState = 3;
+
+    currentPermissionSession: SessionPort;  //the focused session
+    selectedPermission: Permission;  //type, name, state
+    currentPermissionURL: string;
 
     public argon:Argon.ArgonSystem;
 
@@ -139,8 +142,15 @@ export class AppViewModel extends Observable {  //observable creates data bindin
         });
 
         if (config.ENABLE_PERMISSION_CHECK) {
-            argon.provider.context.handlePermissionRequest = permissionManager.handlePermissionRequest;
-            argon.provider.context.handlePermissionRevoke = permissionManager.handlePermissionRevoke;
+            argon.provider.permission.handlePermissionRequest = (session, id) => {
+                return permissionManager.handlePermissionRequest(session, id);
+            }
+            argon.session.connectEvent.addEventListener((session: SessionPort) => {
+                session.on['ar.permission.query'] = ({type} : {type: PermissionType}) => {
+                    const state: PermissionState = permissionManager.getPermissionStateBySession(session, type) || PermissionState.NOT_REQUIRED;                    
+                    return Promise.resolve({state});
+                }
+            })
         }
 
         argon.vuforia.isAvailable().then((available)=>{
@@ -317,17 +327,17 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         this.set('bookmarksOpen', !url);
     }
 
-    setPermission(permission: {type: string, state: PERMISSION_STATES}) {
+    setPermission(permission: Permission) {
         this.ensureReady();
         this.permissions[permission.type] = permission.state;
         this.set('permissionMenuOpen', false);
         this.notifyPropertyChange("permissions", null);
     }
 
-    togglePermissionMenu(type: string) {
+    togglePermissionMenu(type: PermissionType) {
         this.ensureReady();
         if (!this.permissionMenuOpen)
-            this.updateCurrentPermissionInfo(type);  // If the menu is opening
+            this.updateCurrentPermission(type);  // If the menu is open
             
         this.set('permissionMenuOpen', !this.permissionMenuOpen);
     }
@@ -337,21 +347,37 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         this.set('permissionMenuOpen', false);
     }
 
-    updateCurrentPermissionInfo(type: string) {
-        this.set('currentPermissionType', type);
-        this.set('currentPermissionState', this.permissions[type]);
-        this.set('currentPermissionName', permissionNames[type]);
+    updateCurrentPermission(type: PermissionType) {
+        this.set('selectedPermission', new Permission(type, this.permissions[type]));
+        // this.notifyPropertyChange('selectedPermission', null);
     }
 
     changePermissions() {
         this.ensureReady();
-        if (this.currentPermissionState === PERMISSION_STATES.Granted) {
-            // this.argon.context.unsubscribe(this.currentPermissionType); --> need to change this! How can argon-app do an unsubscribe event?
-        } else {
-            this.permissions[this.currentPermissionType] = PERMISSION_STATES.Prompt;
+        if (this.selectedPermission.state === PermissionState.GRANTED) {
+            this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
             this.notifyPropertyChange("permissions", null);
-            this.updateCurrentPermissionInfo(this.currentPermissionType);
-            // this.argon.context.subscribe(this.currentPermissionType); --> need to change this! How can argon-app do a subscribe event?
+            if (this.currentPermissionSession) {    //if the current focus is an ar experience
+                const hostname = URI(this.currentPermissionSession.uri).hostname();
+                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+                this.updateCurrentPermission(this.selectedPermission.type);
+                this.currentPermissionSession.request('ar.entity.unsubscribe', {id: this.selectedPermission.type}).then(() => {
+                    this.currentPermissionSession.request('ar.entity.unsubscribed', {id: this.selectedPermission.type}).then(()=>{
+                    });
+                });
+            } else {        //if the current focus is an normal website
+                const hostname = URI(this.currentPermissionURL).hostname();
+                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+                this.updateCurrentPermission(this.selectedPermission.type);
+            }
+        } else {
+            this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
+            this.notifyPropertyChange("permissions", null);
+            if (this.currentPermissionSession) {
+                this.currentPermissionSession.request('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined}).then(() => {
+                    this.currentPermissionSession.send('ar.entity.subscribed', {id: this.selectedPermission.type, options: undefined});
+                });
+            }
         }
     }
 }

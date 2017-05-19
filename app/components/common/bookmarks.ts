@@ -99,7 +99,7 @@ const FAVORITE_LIST_KEY = 'favorite_list';
 const HISTORY_LIST_KEY = 'history_list';
 
 if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
-    console.log(applicationSettings.getString(FAVORITE_LIST_KEY))
+    // console.log(applicationSettings.getString(FAVORITE_LIST_KEY))
     const savedFavorites:Array<BookmarkItem> = JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY));
     savedFavorites.forEach((item)=>{
         if (!favoriteMap.has(item.uri))
@@ -108,7 +108,7 @@ if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
 }
 
 if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
-    console.log(applicationSettings.getString(HISTORY_LIST_KEY))
+    // console.log(applicationSettings.getString(HISTORY_LIST_KEY))
     const savedHistory:Array<BookmarkItem> = JSON.parse(applicationSettings.getString(HISTORY_LIST_KEY));
     savedHistory.forEach((item)=>{
         historyList.push(new BookmarkItem(item));

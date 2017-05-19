@@ -204,7 +204,8 @@ export class BrowserView extends GridLayout {
             switch(eventData.propertyName) {
                 case 'url':
                     layer.details.set('uri', eventData.value);
-                    permissionManager.loadPermissions(eventData.value);
+                    appViewModel.set('currentPermissionURL', eventData.value);
+                    permissionManager.loadPermissionsToUI(eventData.value);
                     break;
                 case 'title':
                     const title = webView.title || getHost(webView.url);
@@ -237,6 +238,11 @@ export class BrowserView extends GridLayout {
         webView.on('session', (e)=>{
             const session = e.session;
             layer.session = session;
+            if (session) {
+                appViewModel.set('currentPermissionSession', session);
+            } else {
+                appViewModel.set('currentPermissionSession', undefined);
+            }
             session.connectEvent.addEventListener(()=>{
                 if (this.focussedLayer && webView === this.focussedLayer.webView) {
                     appViewModel.argon.provider.focus.session = session;
@@ -717,7 +723,12 @@ export class BrowserView extends GridLayout {
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
 
-            permissionManager.loadPermissions(layer.details.uri);
+            permissionManager.loadPermissionsToUI(layer.details.uri);
+            if (layer.session) {
+                appViewModel.set('currentPermissionSession', layer.session);
+            } else {
+                appViewModel.set('currentPermissionSession', undefined);
+            }
         }
     }
 
