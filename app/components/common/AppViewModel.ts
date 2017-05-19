@@ -139,7 +139,7 @@ export class AppViewModel extends Observable {
 Congrats,
 You have successfully built the Argon Browser! 
 
-Unfortunately, it looks like you are missing a Vuforia License Key. Please supply your own license key in app/config.ts, and try building again!
+Unfortunately, it looks like you are missing a Vuforia License Key. Please supply your own key in "app/config.ts", and try building again!
 
 :D`
                     ),1000);
