@@ -3,6 +3,7 @@ import * as platform from "platform";
 import {Color} from "color";
 import * as application from "application";
 import * as utils from 'utils/utils';
+import config from '../../config'
 
 try {
   var ArgonPrivate = require('argon-private');
@@ -47,9 +48,7 @@ function updateScreenOrientation() {
   screenOrientation = getNativeScreenOrientation();
 }
 
-export function canDecrypt() : boolean { 
-  return !!ArgonPrivate;
-}
+export const canDecrypt = !!ArgonPrivate;
 
 export function decrypt(encryptedData:string) : Promise<string> {
   if (!ArgonPrivate) return Promise.reject(new Error("This build of Argon is incapable of decrypting messages."))
@@ -59,7 +58,7 @@ export function decrypt(encryptedData:string) : Promise<string> {
 }
 
 export function getInternalVuforiaKey() : string|undefined {
-  return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey();
+  return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey() || config.VUFORIA_LICENSE_KEY;
 }
 
 export function bringToFront(view: View) {

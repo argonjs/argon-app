@@ -5,7 +5,7 @@ import * as http from 'http';
 import * as file from 'file-system';
 import * as platform from 'platform';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
-import {decrypt, screenOrientation} from './util'
+import * as util from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
 import * as application from 'application';
@@ -134,7 +134,7 @@ export class NativescriptVuforiaServiceProvider {
             // Rotate the tracker to a landscape-right frame, 
             // where +X is right, +Y is down, and +Z is in the camera direction
             // (vuforia reports poses in this frame on iOS devices, not sure about android)
-            const currentScreenOrientationRadians = screenOrientation * CesiumMath.RADIANS_PER_DEGREE;
+            const currentScreenOrientationRadians = util.screenOrientation * CesiumMath.RADIANS_PER_DEGREE;
             const trackerOrientation = Quaternion.multiply(
                 Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, landscapeRightScreenOrientationRadians - currentScreenOrientationRadians, this._scratchQuaternion),
                 x180,
@@ -409,12 +409,14 @@ export class NativescriptVuforiaServiceProvider {
 
         if (this._sessionData.has(session))
             throw new Error('Already initialized');
-
-        if (config.DEBUG_DEVELOPMENT_LICENSE_KEY) options.key = config.DEBUG_DEVELOPMENT_LICENSE_KEY;
-
-        const keyPromise = options.key ? 
-            Promise.resolve(options.key) : 
-            this._decryptLicenseKey(options.encryptedLicenseData!, session);
+        
+        const keyPromise = Promise.resolve<string|undefined>(
+            options.key ?
+                options.key :
+                util.canDecrypt ?
+                    this._decryptLicenseKey(options.encryptedLicenseData!, session) :
+                    util.getInternalVuforiaKey()
+        );
 
         const sessionData = new VuforiaSessionData(keyPromise);
         this._sessionData.set(session, sessionData);
@@ -425,7 +427,7 @@ export class NativescriptVuforiaServiceProvider {
 
         this._selectControllingSession();
 
-        return keyPromise.then(()=>initResultPromise);
+        return keyPromise.then<{}>(()=>initResultPromise);
     }
 
     private _handleClose(session:Argon.SessionPort) {
@@ -611,7 +613,7 @@ export class NativescriptVuforiaServiceProvider {
     }
 
     private _decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
-        return decrypt(encryptedLicenseData.trim()).then((json)=>{
+        return util.decrypt(encryptedLicenseData.trim()).then((json)=>{
             const {key,origins} : {key:string,origins:string[]} = JSON.parse(json);
             if (!session.uri) throw new Error('Invalid origin');
 
@@ -627,7 +629,7 @@ export class NativescriptVuforiaServiceProvider {
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             })
 
-            if (!match && !config.DEBUG_DISABLE_ORIGIN_CHECK) {
+            if (!match && !config.DEBUG_DISABLE_ORIGIN_CHECK && !config.DEBUG) {
                 throw new Error('Invalid origin');
             }
 
@@ -646,6 +648,7 @@ export class NativescriptVuforiaServiceProvider {
         let videoWidth = videoMode.width;
         let videoHeight = videoMode.height;
         
+        const screenOrientation = util.screenOrientation;
         if (screenOrientation === 0 || screenOrientation === 180) {
             videoWidth = videoMode.height;
             videoHeight = videoMode.width;

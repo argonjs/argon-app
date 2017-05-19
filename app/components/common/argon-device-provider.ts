@@ -17,6 +17,7 @@ const Quaternion = Argon.Cesium.Quaternion;
 const CesiumMath = Argon.Cesium.CesiumMath;
 const Matrix4    = Argon.Cesium.Matrix4;
 
+const negX90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -CesiumMath.PI_OVER_TWO);
 const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const ONE = new Cartesian3(1,1,1);
 
@@ -244,7 +245,9 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 // If the orientation (O) is on the right and the rotation (R) is on the left, 
                 // such that the multiplication order is R*O, then R is a global rotation being applied on O. 
                 // Likewise, the reverse, O*R, is a local rotation R applied to the orientation O. 
-                const deviceOrientation = Quaternion.multiply(z90, motionQuaternion, this._scratchDeviceOrientation);
+                let deviceOrientation = Quaternion.multiply(z90, motionQuaternion, this._scratchDeviceOrientation);
+                // And then... convert to EUS!
+                deviceOrientation = Quaternion.multiply(negX90, deviceOrientation, deviceOrientation);
 
                 const screenOrientationDegrees = this.screenOrientationDegrees;
 
