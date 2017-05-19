@@ -629,8 +629,13 @@ export class NativescriptVuforiaServiceProvider {
                 return minimatch(origin.hostname, domainPattern) && minimatch(origin.path, pathPattern);
             })
 
-            if (!match && !config.DEBUG_DISABLE_ORIGIN_CHECK && !config.DEBUG) {
-                throw new Error('Invalid origin');
+            if (!match) {
+                if (!config.DEBUG_DISABLE_ORIGIN_CHECK && !config.DEBUG)
+                    throw new Error('Invalid origin');
+                else if (config.DEBUG) {
+                    alert(`The current origin "${origin}" does not match any of the allowed origins:\n ${JSON.stringify(origins, null, '\t')}`
+                    );
+                }
             }
 
             return key;

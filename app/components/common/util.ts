@@ -58,7 +58,7 @@ export function decrypt(encryptedData:string) : Promise<string> {
 }
 
 export function getInternalVuforiaKey() : string|undefined {
-  return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey() || config.VUFORIA_LICENSE_KEY;
+  return ArgonPrivate && ArgonPrivate.getVuforiaLicenseKey() || config.DEBUG_VUFORIA_LICENSE_KEY;
 }
 
 export function bringToFront(view: View) {
