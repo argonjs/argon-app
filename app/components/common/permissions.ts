@@ -33,11 +33,11 @@ class PermissionManager {
         if (session.uri === undefined)
             return Promise.reject(new Error("Invalid uri for permission request"));
 
-        return this.getPermissionFromUser(URI(session.uri).hostname(), <PermissionType>id);
+        return this.getPermissionFromUser(URI(session.uri).hostname() + URI(session.uri).port(), <PermissionType>id);
     }
 
     handlePermissionRequestByURI(uri: string, id: PermissionType) {
-        this.getPermissionFromUser(URI(uri).hostname(), id);
+        this.getPermissionFromUser(URI(uri).hostname() + URI(uri).port(), id);
     }
 
     private getPermissionFromUser(hostname: string, id: PermissionType) {
@@ -140,7 +140,7 @@ class PermissionManager {
     }
 
     getPermissionStateBySession(session: SessionPort, type: PermissionType) {
-        const hostname = URI(session.uri).hostname();
+        const hostname = URI(session.uri).hostname() + URI(session.uri).port();;
         const state = this.getPermissionFromMap(hostname, type);
         return state;
     }
