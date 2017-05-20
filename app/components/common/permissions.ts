@@ -64,6 +64,7 @@ class PermissionManager {
                 appViewModel.setPermission(new Permission(requestedPermission.type, newState));
                 switch(newState) {
                     case PermissionState.GRANTED:
+                        appViewModel.set('needReloadForPermissionChange', true);
                         return Promise.resolve();
                     case PermissionState.DENIED:
                     case PermissionState.PROMPT:

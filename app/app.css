@@ -14,6 +14,7 @@
 #permissionLabel {
     padding: 15px 15px 5px 15px;
     color: #545454;
+    text-align: center;
 }
 
 #changePermission {

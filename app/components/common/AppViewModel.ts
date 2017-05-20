@@ -6,7 +6,7 @@ import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
-// import * as URI from 'urijs';
+import * as URI from 'urijs';
 import {LogItem} from 'argon-web-view';
 import {PermissionState, PermissionType, Permission, SessionPort} from '@argonjs/argon'
 import {permissionManager} from './permissions'
@@ -67,9 +67,12 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
     permissions = {'ar.stage': PermissionState.NOT_REQUIRED, 'ar.camera': PermissionState.NOT_REQUIRED, 'ar.3dmesh': PermissionState.NOT_REQUIRED};
     permissionMenuOpen = false;
+    permissionChangesMade = false;
 
     currentPermissionSession: SessionPort;  //the focused session
     selectedPermission: Permission;  //type, name, state
+    needReloadForPermissionChange = false;
+    locIcon;
 
     public argon:Argon.ArgonSystem;
 
@@ -89,6 +92,8 @@ export class AppViewModel extends Observable {  //observable creates data bindin
         this.ready = new Promise<void>((resolve) => {
             this._resolveReady = resolve;
         });
+
+        this.locIcon = [String.fromCharCode(0xe0c7), String.fromCharCode(0xe0c8)];
     }
 
     setReady() {
@@ -304,6 +309,7 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
     
     loadUrl(url:string) {
         this.ensureReady();
+        appViewModel.set('permissionChangesMade', false);
         this.notify(<LoadUrlEventData>{
             eventName: AppViewModel.loadUrlEvent,
             object: this,
@@ -356,31 +362,29 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
 
     changePermissions() {
         this.ensureReady();
-        // if (this.selectedPermission.state === PermissionState.GRANTED) {
-        //     this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
-        //     this.notifyPropertyChange("permissions", null);
-        //     if (this.currentPermissionSession) {    //if the current focus is an ar experience
-        //         const hostname = URI(this.currentPermissionSession.uri).hostname();
-        //         permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-        //         this.updateCurrentPermission(this.selectedPermission.type);
-        //         this.currentPermissionSession.request('ar.entity.unsubscribe', {id: this.selectedPermission.type}).then(() => {
-        //             this.currentPermissionSession.request('ar.entity.unsubscribed', {id: this.selectedPermission.type}).then(()=>{
-        //             });
-        //         });
-        //     } else {        //if the current focus is an normal website
-        //         const hostname = URI(this.currentUri).hostname();
-        //         permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-        //         this.updateCurrentPermission(this.selectedPermission.type);
-        //     }
-        // } else {
-        //     this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
-        //     this.notifyPropertyChange("permissions", null);
-        //     if (this.currentPermissionSession) {
-        //         this.currentPermissionSession.request('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined}).then(() => {   //something is not right. Maybe I'm not calling this on the right sesssion?
-        //             this.currentPermissionSession.send('ar.entity.subscribed', {id: this.selectedPermission.type, options: undefined});
-        //         });
-        //     }
-        // }
+        if (!this.permissionChangesMade) {
+            this.set('permissionChangesMade', true);
+            if (this.selectedPermission.state === PermissionState.GRANTED) {    // We will change to prompt
+                this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
+                this.notifyPropertyChange("permissions", null);
+                if (this.currentUri) {
+                    const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                    permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+                }
+            } else {
+                this.set('permissionMenuOpen', false);
+                this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
+                this.notifyPropertyChange("permissions", null);
+                if (this.currentUri) {
+                    const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                    permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.PROMPT);
+                }
+                this.set('needReloadForPermissionChange', true);
+                // if (this.currentPermissionSession) {
+                //     this.currentPermissionSession.send('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined});
+                // }
+            }
+        }
     }
 }
 

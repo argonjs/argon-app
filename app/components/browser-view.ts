@@ -204,7 +204,6 @@ export class BrowserView extends GridLayout {
             switch(eventData.propertyName) {
                 case 'url':
                     layer.details.set('uri', eventData.value);
-                    appViewModel.set('currentPermissionSession', layer.session);
                     break;
                 case 'title':
                     const title = webView.title || getHost(webView.url);
