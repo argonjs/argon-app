@@ -359,8 +359,9 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
             error.code === NSURLErrorCannotConnectToHost) {
                 dialogs.alert("Cannot connect to host. Please check the URL or the server connection.");
         } else if (url && url.host &&
-            error.code === NSURLErrorTimedOut ||
-            error.code === NSURLErrorCancelled) {
+            error.code === NSURLErrorTimedOut
+            //|| error.code === NSURLErrorCancelled
+            ) {
                 dialogs.alert("Host is not responding. Please check if the host suppots HTTPS.");
         }
     }
