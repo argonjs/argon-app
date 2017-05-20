@@ -45,8 +45,8 @@
         <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">
             <Label id="permissionLabel" tap="onPermissionIconMenuChangeTap">
                 <FormattedString>
-                    <Span text="{{ selectedPermission.name + ' Access ' }}" />
-                    <Span backgroundColor="{{ (selectedPermission.state == 'granted' ? 'red' : 'gray' ) }}" foregroundColor="white" text="{{ permissionChangesMade ? 'removed' : (selectedPermission.state == 'granted' ? 'Granted' : 'Denied' ) }}" tap="onPermissionIconMenuChangeTap"/>
+                    <Span text="{{ 'Access ' + selectedPermission.description + ': ' }}" />
+                    <Span foregroundColor="black" text="{{ permissionChangesMade ? 'Removed' : (selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' ) }}" tap="onPermissionIconMenuChangeTap"/>
                 </FormattedString>
             </Label>
             <Label id="changePermission" color="{{ permissionChangesMade ? 'red' : 'gray' }}" text="{{ permissionChangesMade ? 'Reload the page for changes to apply' : ('Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' )) }}" tap="onPermissionIconMenuChangeTap"/>
