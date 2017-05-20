@@ -27,7 +27,7 @@ import * as vuforia from 'nativescript-vuforia';
 import * as application from 'application';
 import * as utils from 'utils/utils';
 import * as analytics from "./common/analytics";
-import {permissionManager} from "./common/permissions"
+// import {permissionManager} from "./common/permissions"
 
 import {appViewModel, LayerDetails} from './common/AppViewModel'
 import {NativescriptHostedRealityViewer} from './common/argon-reality-viewers'
@@ -204,8 +204,7 @@ export class BrowserView extends GridLayout {
             switch(eventData.propertyName) {
                 case 'url':
                     layer.details.set('uri', eventData.value);
-                    appViewModel.set('currentPermissionURL', eventData.value);
-                    permissionManager.loadPermissionsToUI(eventData.value);
+                    appViewModel.set('currentPermissionSession', layer.session);
                     break;
                 case 'title':
                     const title = webView.title || getHost(webView.url);
@@ -238,11 +237,7 @@ export class BrowserView extends GridLayout {
         webView.on('session', (e)=>{
             const session = e.session;
             layer.session = session;
-            if (session) {
-                appViewModel.set('currentPermissionSession', session);
-            } else {
-                appViewModel.set('currentPermissionSession', undefined);
-            }
+            appViewModel.set('currentPermissionSession', session);
             session.connectEvent.addEventListener(()=>{
                 if (this.focussedLayer && webView === this.focussedLayer.webView) {
                     appViewModel.argon.provider.focus.session = session;
@@ -722,14 +717,9 @@ export class BrowserView extends GridLayout {
             }
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
-
-            permissionManager.loadPermissionsToUI(layer.details.uri);
-            if (layer.session) {
-                appViewModel.set('currentPermissionSession', layer.session);
-            } else {
-                appViewModel.set('currentPermissionSession', undefined);
-            }
         }
+        
+        appViewModel.set('currentPermissionSession', layer.session);
     }
 
     get focussedLayer() {

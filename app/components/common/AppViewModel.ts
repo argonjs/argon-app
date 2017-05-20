@@ -6,7 +6,7 @@ import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
-import * as URI from 'urijs';
+// import * as URI from 'urijs';
 import {LogItem} from 'argon-web-view';
 import {PermissionState, PermissionType, Permission, SessionPort} from '@argonjs/argon'
 import {permissionManager} from './permissions'
@@ -70,7 +70,6 @@ export class AppViewModel extends Observable {  //observable creates data bindin
 
     currentPermissionSession: SessionPort;  //the focused session
     selectedPermission: Permission;  //type, name, state
-    currentPermissionURL: string;
 
     public argon:Argon.ArgonSystem;
 
@@ -330,14 +329,13 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
     setPermission(permission: Permission) {
         this.ensureReady();
         this.permissions[permission.type] = permission.state;
-        this.set('permissionMenuOpen', false);
         this.notifyPropertyChange("permissions", null);
     }
 
     togglePermissionMenu(type: PermissionType) {
         this.ensureReady();
-        if (!this.permissionMenuOpen)
-            this.updateCurrentPermission(type);  // If the menu is open
+        if (!this.permissionMenuOpen)   // If the menu is open
+            this.changeSelectedPermission(type);
             
         this.set('permissionMenuOpen', !this.permissionMenuOpen);
     }
@@ -347,38 +345,42 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         this.set('permissionMenuOpen', false);
     }
 
-    updateCurrentPermission(type: PermissionType) {
+    changeSelectedPermission(type: PermissionType) {
         this.set('selectedPermission', new Permission(type, this.permissions[type]));
         // this.notifyPropertyChange('selectedPermission', null);
     }
 
+    updatePermissionsFromStorage(uri: string) {
+        permissionManager.loadPermissionsToUI(uri);
+    }
+
     changePermissions() {
         this.ensureReady();
-        if (this.selectedPermission.state === PermissionState.GRANTED) {
-            this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
-            this.notifyPropertyChange("permissions", null);
-            if (this.currentPermissionSession) {    //if the current focus is an ar experience
-                const hostname = URI(this.currentPermissionSession.uri).hostname();
-                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-                this.updateCurrentPermission(this.selectedPermission.type);
-                this.currentPermissionSession.request('ar.entity.unsubscribe', {id: this.selectedPermission.type}).then(() => {
-                    this.currentPermissionSession.request('ar.entity.unsubscribed', {id: this.selectedPermission.type}).then(()=>{
-                    });
-                });
-            } else {        //if the current focus is an normal website
-                const hostname = URI(this.currentPermissionURL).hostname();
-                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-                this.updateCurrentPermission(this.selectedPermission.type);
-            }
-        } else {
-            this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
-            this.notifyPropertyChange("permissions", null);
-            if (this.currentPermissionSession) {
-                this.currentPermissionSession.request('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined}).then(() => {
-                    this.currentPermissionSession.send('ar.entity.subscribed', {id: this.selectedPermission.type, options: undefined});
-                });
-            }
-        }
+        // if (this.selectedPermission.state === PermissionState.GRANTED) {
+        //     this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
+        //     this.notifyPropertyChange("permissions", null);
+        //     if (this.currentPermissionSession) {    //if the current focus is an ar experience
+        //         const hostname = URI(this.currentPermissionSession.uri).hostname();
+        //         permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+        //         this.updateCurrentPermission(this.selectedPermission.type);
+        //         this.currentPermissionSession.request('ar.entity.unsubscribe', {id: this.selectedPermission.type}).then(() => {
+        //             this.currentPermissionSession.request('ar.entity.unsubscribed', {id: this.selectedPermission.type}).then(()=>{
+        //             });
+        //         });
+        //     } else {        //if the current focus is an normal website
+        //         const hostname = URI(this.currentUri).hostname();
+        //         permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+        //         this.updateCurrentPermission(this.selectedPermission.type);
+        //     }
+        // } else {
+        //     this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
+        //     this.notifyPropertyChange("permissions", null);
+        //     if (this.currentPermissionSession) {
+        //         this.currentPermissionSession.request('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined}).then(() => {   //something is not right. Maybe I'm not calling this on the right sesssion?
+        //             this.currentPermissionSession.send('ar.entity.subscribed', {id: this.selectedPermission.type, options: undefined});
+        //         });
+        //     }
+        // }
     }
 }
 

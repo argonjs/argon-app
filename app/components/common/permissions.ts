@@ -19,7 +19,7 @@ class PermissionManager {
         // Initially load permissions to map from local storage
         if (applicationSettings.hasKey(PERMISSION_KEY)) {
             this.permissionMap = JSON.parse(applicationSettings.getString(PERMISSION_KEY));
-            console.log("Permissions loaded from storage: " + applicationSettings.getString(PERMISSION_KEY));
+            // console.log("Permissions loaded from storage: " + applicationSettings.getString(PERMISSION_KEY));
         }
     }
 
@@ -90,12 +90,9 @@ class PermissionManager {
         if (newPermissionMapping) {
             const newPermissionMap = newPermissionMapping[type];
             if (newPermissionMap) {
-                console.log("getoldstate:"+newPermissionMap.state);
                 return newPermissionMap.state;
             }
         }
-    
-        console.log("new state loaded with default")
         return PermissionState.PROMPT;    //Default to prompt if the permissions has not been asked before
     }
 
@@ -103,7 +100,6 @@ class PermissionManager {
         let newPermissionMapping = this.permissionMap[hostname] || {};
         newPermissionMapping[type] = new Permission(type, newState);
         this.permissionMap[hostname] = newPermissionMapping;
-        console.log("new item saved on map")
         this.savePermissionsOnApp();
     }
 
@@ -140,25 +136,28 @@ class PermissionManager {
 
     private savePermissionsOnApp() {    //save permissions to local storage
         applicationSettings.setString(PERMISSION_KEY, JSON.stringify(this.permissionMap));
-        console.log(JSON.stringify(this.permissionMap));
-        console.log("Permissions saved to local storage");
     }
 
     getPermissionStateBySession(session: SessionPort, type: PermissionType) {
         const hostname = URI(session.uri).hostname();
         const state = this.getPermissionFromMap(hostname, type);
-        console.log("Permission query on: " + type + "resulted in: " + state);
         return state;
     }
 
     loadPermissionsToUI = (uri: string) => {
-        const hostname = URI(uri).hostname();
-
+        // clear permission icons
         for (let i in appViewModel.permissions) {
             appViewModel.setPermission(new Permission(<PermissionType>i, PermissionState.NOT_REQUIRED));
         }
-        for (let type in this.permissionMap[hostname]) {
-            appViewModel.setPermission(this.permissionMap[hostname][type]);
+
+        if (uri != "") {
+            const hostname = URI(uri).hostname() + URI(uri).port();
+            if (hostname) {
+                // load permissions to UI from map
+                for (let type in this.permissionMap[hostname]) {
+                    appViewModel.setPermission(this.permissionMap[hostname][type]);
+                }
+            }
         }
     }
 

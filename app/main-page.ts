@@ -41,6 +41,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
         setSearchBarText(appViewModel.currentUri);
         if (!appViewModel.currentUri) appViewModel.showBookmarks();
+        appViewModel.updatePermissionsFromStorage(appViewModel.currentUri);
     }
     else if (evt.propertyName === 'viewerEnabled') {
         // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
