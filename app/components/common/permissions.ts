@@ -45,19 +45,19 @@ class PermissionManager {
 
         if (requestedPermission.state === PermissionState.PROMPT || requestedPermission.state === PermissionState.NOT_REQUIRED) {
             dialogs.confirm({
-                title: requestedPermission.name + " Access",
-                message: "This app requires " + requestedPermission.name + " access.\n" + requestedPermission.description,
-                okButtonText: "Grant permission",
-                cancelButtonText: "Deny access",
-                neutralButtonText: "Not now"
+                title: requestedPermission.name + " Request",
+                message: "Will you allow " + hostname + " to access " + requestedPermission.description + "?",
+                cancelButtonText: "Not now",
+                neutralButtonText: "Deny access",
+                okButtonText: "Grant access"
             }).then(result => {
                 let newState;
-                if (result === undefined) {
-                    newState = PermissionState.PROMPT;
-                } else if (result) {
-                    newState = PermissionState.GRANTED;
-                } else {
+                if (result === undefined) { // neutral button (2nd button on iOS)
                     newState = PermissionState.DENIED;
+                } else if (result) {        // ok button (3rd button on iOS)
+                    newState = PermissionState.GRANTED;
+                } else {                    // cancel button (1st button on iOS)
+                    newState = PermissionState.PROMPT;
                 }
                 console.log("Permission request for : " + requestedPermission.name + " -> resulted in : " + PermissionState[newState])
                 this.savePermissionOnMap(hostname, requestedPermission.type, newState);
