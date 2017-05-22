@@ -145,13 +145,13 @@ class PermissionManager {
         return state;
     }
 
-    loadPermissionsToUI = (uri: string) => {
+    loadPermissionsToUI = (uri?: string) => {
         // clear permission icons
         for (let i in appViewModel.permissions) {
             appViewModel.setPermission(new Permission(<PermissionType>i, PermissionState.NOT_REQUIRED));
         }
 
-        if (uri != "") {
+        if (uri) {
             const hostname = URI(uri).hostname() + URI(uri).port();
             if (hostname) {
                 // load permissions to UI from map

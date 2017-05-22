@@ -39,7 +39,7 @@ var isFirstLoad = true;
 
 appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     if (evt.propertyName === 'currentUri') {
-        setSearchBarText(appViewModel.currentUri);
+        setSearchBarText(appViewModel.currentUri || '');
         if (!appViewModel.currentUri) appViewModel.showBookmarks();
         appViewModel.updatePermissionsFromStorage(appViewModel.currentUri);
         appViewModel.set('permissionChangesMade', false);
@@ -403,7 +403,7 @@ export function searchBarLoaded(args) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
 
-            if (!urlString) urlString = appViewModel.currentUri;
+            // if (!urlString) urlString = appViewModel.currentUri;
 
             if (urlString.includes(" ") || !urlString.includes(".")) {
                 // queries with spaces or single words without dots go to google search
@@ -529,7 +529,7 @@ export function onCancel(args) {
     appViewModel.hideRealityChooser();
     appViewModel.hideCancelButton();
     blurSearchBar();
-    setSearchBarText(appViewModel.currentUri);
+    setSearchBarText(appViewModel.currentUri || '');
     bookmarks.filterControl.set('showFilteredResults', false);
 }
 

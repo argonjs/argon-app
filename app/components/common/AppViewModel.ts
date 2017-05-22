@@ -61,7 +61,7 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     interactionMode:InteractionMode = 'immersive';
     interactionModeButtonEnabled = false;
     layerDetails:LayerDetails;
-    currentUri = '';
+    currentUri? = '';
     isFavorite = false;
     launchedFromUrl = false;
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
@@ -304,7 +304,7 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
     
     updateFavoriteStatus() {
         this.ensureReady();
-        this.set('isFavorite', !!bookmarks.favoriteMap.get(this.currentUri));
+        this.set('isFavorite', !!bookmarks.favoriteMap.get(this.currentUri!));
     }
     
     loadUrl(url:string) {
@@ -356,7 +356,7 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
         // this.notifyPropertyChange('selectedPermission', null);
     }
 
-    updatePermissionsFromStorage(uri: string) {
+    updatePermissionsFromStorage(uri?: string) {
         permissionManager.loadPermissionsToUI(uri);
     }
 

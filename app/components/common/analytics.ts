@@ -71,9 +71,10 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         // User needs to stay on a page for a few seconds for it to count as a page load
         // This way redirects and accidental clicks aren't logged
         clearTimeout(pageLoadTimerId);
-        if (appViewModel.currentUri) {
+        const uri = appViewModel.currentUri;
+        if (uri) {
             pageLoadTimerId = setTimeout(()=>{
-                logPageLoad(appViewModel.currentUri);
+                logPageLoad(uri);
             }, 3000);
         }
     }
