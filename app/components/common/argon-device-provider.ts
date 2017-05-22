@@ -288,7 +288,9 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
             const motionManager = this._getMotionManagerAndroid();
             if (motionManager) {
-                const deviceOrientation = this._motionQuaternionAndroid;
+                let deviceOrientation = this._motionQuaternionAndroid;
+                // convert to EUS
+                deviceOrientation = Quaternion.multiply(negX90, deviceOrientation, deviceOrientation);
 
                 const screenOrientationDegrees = this.screenOrientationDegrees;
 
