@@ -1,6 +1,6 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argon4",
+    "id": "edu.gatech.ael.argon4-testgs",
     "tns-android": {
       "version": "2.5.0"
     },
@@ -11,9 +11,11 @@
   "dependencies": {
     "@argonjs/argon": "1.2.0-20-refactor-y-up-23",
     "@speigg/nativescript-urlhandler": "^1.0.0",
+    "argon-private": "file:///Users/gspeiginer/Code/argon-project/argon-private",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.3",
     "nativescript-google-analytics": "^0.3.7",
+    "nativescript-hook-debug-production": "^1.0.4",
     "nativescript-permissions": "^1.2.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
