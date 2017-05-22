@@ -8,14 +8,13 @@ import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import * as util from './util'
 import * as minimatch from 'minimatch'
 import * as URI from 'urijs'
-import * as application from 'application';
 import config from '../../config';
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
+export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OptimizeSpeed; //application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
 if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor = 
+    (<UIView>vuforia.videoView.ios).contentScaleFactor =
         vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
-        1 : platform.screen.mainScreen.scale;
+        0.5 : platform.screen.mainScreen.scale;
 }
 
 export const VIDEO_DELAY = -0.5/60;
