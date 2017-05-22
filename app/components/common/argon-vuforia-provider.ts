@@ -11,11 +11,9 @@ import * as URI from 'urijs'
 import config from '../../config';
 
 export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OptimizeSpeed; //application.android ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
-if (vuforia.videoView.ios) {
-    (<UIView>vuforia.videoView.ios).contentScaleFactor =
-        vuforiaCameraDeviceMode === <vuforia.CameraDeviceMode> vuforia.CameraDeviceMode.OptimizeSpeed ? 
-        0.5 : platform.screen.mainScreen.scale;
-}
+// if (vuforia.videoView.ios) {
+//     (<UIView>vuforia.videoView.ios).contentScaleFactor = platform.screen.mainScreen.scale;
+// }
 
 export const VIDEO_DELAY = -0.5/60;
 
