@@ -48,7 +48,7 @@ export interface Layer {
     session?:Argon.SessionPort,
     containerView:GridLayout,
     contentView:GridLayout,
-    webView:ArgonWebView,
+    webView?:ArgonWebView,
     touchOverlay:GridLayout,
     titleBar:GridLayout,
     closeButton:Button,
@@ -164,8 +164,8 @@ export class BrowserView extends GridLayout {
                 const uri = viewer.uri;
                 details.set('uri', uri);
                 details.set('title', 'Reality: ' + (viewer.session && viewer.session.info.title) || getHost(uri));
-                layer.webView = this.realityWebviews.get(uri)!;
-                layer.details.set('log', layer.webView.log);
+                layer.webView = this.realityWebviews.get(uri);
+                layer.details.set('log', layer.webView && layer.webView.log);
                 analytics.updateCurrentRealityUri(uri);
 
                 if (current === Argon.RealityViewer.LIVE) {
@@ -183,7 +183,7 @@ export class BrowserView extends GridLayout {
                     }
                 });
 
-                sessionPromise.then((session)=>{
+                sessionPromise.then((session:Argon.SessionPort)=>{
                     if (current === manager.reality.current) {
                         if (session.info.title) details.set('title', 'Reality: ' + session.info.title);
                         layer.session = session;
@@ -198,7 +198,7 @@ export class BrowserView extends GridLayout {
     addLayer() : Layer {
         const layer:Layer = this._createLayer();
         
-        const webView = layer.webView;
+        const webView = layer.webView!;
 
         webView.on('propertyChange', (eventData:PropertyChangeData) => {
             switch(eventData.propertyName) {
