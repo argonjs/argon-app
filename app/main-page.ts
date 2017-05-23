@@ -403,7 +403,8 @@ export function searchBarLoaded(args) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
 
-            // if (!urlString) urlString = appViewModel.currentUri;
+            // Allows reloading by simply submitting the same url
+            if (urlString == "") urlString = <string>appViewModel.currentUri;
 
             if (urlString.includes(" ") || !urlString.includes(".")) {
                 // queries with spaces or single words without dots go to google search
