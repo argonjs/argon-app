@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "@argonjs/argon": "1.2.0-20-refactor-y-up-26",
+    "@argonjs/argon": "1.2.0-20-refactor-y-up-27",
     "@speigg/nativescript-urlhandler": "^1.0.0",
     "argon-private": "file:///Users/gspeiginer/Code/argon-project/argon-private",
     "argon-web-view": "file:plugins/argon-web-view",
