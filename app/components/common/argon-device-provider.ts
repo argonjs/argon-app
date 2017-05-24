@@ -367,8 +367,8 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 default:
                     dialogs.action({
                         title: "Location Services",
-                        message: `In order to provide the best Augmented Reality experience, 
-                            please open this app's settings and enable location services`,
+                        message: `In order to provide the best Augmented Reality experience,
+please open this app's settings and enable location services`,
                         cancelButtonText: "Cancel",
                         actions: ['Settings']
                     }).then((action)=>{
