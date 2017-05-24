@@ -376,19 +376,19 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
             if (this.currentUri) {
                 const identifier = URI(this.currentUri).hostname() + URI(this.currentUri).port();
                 permissionManager.savePermissionOnMap(identifier, this.selectedPermission.type, PermissionState.GRANTED);
-                const session = this.argon.provider.focus.session;
-                const entityServiceProvider = this.argon.provider.entity;
-                const type = this.selectedPermission.type;
-                // This part mimics the 'ar.entity.subscribe' handler
-                if (session) {
-                    const options = permissionManager.getLastUsedOption(session.uri, type);
-                    const subscriptions = entityServiceProvider.subscriptionsBySubscriber.get(session);
-                    const subscribers = entityServiceProvider.subscribersByEntity.get(type) || new Set<SessionPort>();
-                    entityServiceProvider.subscribersByEntity.set(type, subscribers);
-                    subscribers.add(session);
-                    if (subscriptions) subscriptions.set(type, options);    // This should always happen
-                    entityServiceProvider.sessionSubscribedEvent.raiseEvent({session: session, id: type, options: options});
-                }
+                // const session = this.argon.provider.focus.session;
+                // const entityServiceProvider = this.argon.provider.entity;
+                // const type = this.selectedPermission.type;
+                // // This part mimics the 'ar.entity.subscribe' handler
+                // if (session) {
+                //     const options = permissionManager.getLastUsedOption(session.uri, type);
+                //     const subscriptions = entityServiceProvider.subscriptionsBySubscriber.get(session);
+                //     const subscribers = entityServiceProvider.subscribersByEntity.get(type) || new Set<SessionPort>();
+                //     entityServiceProvider.subscribersByEntity.set(type, subscribers);
+                //     subscribers.add(session);
+                //     if (subscriptions) subscriptions.set(type, options);    // This should always happen
+                //     entityServiceProvider.sessionSubscribedEvent.raiseEvent({session: session, id: type, options: options});
+                // }
             }
         }
     }
