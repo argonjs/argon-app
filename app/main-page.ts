@@ -397,7 +397,8 @@ export function searchBarLoaded(args) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
 
-            // if (!urlString) urlString = appViewModel.currentUri;
+            // Allows page reload by clicking submit on the url bar
+            if (urlString == "") urlString = appViewModel.currentUri || "";
 
             if (urlString.includes(" ") || !urlString.includes(".")) {
                 // queries with spaces or single words without dots go to google search
