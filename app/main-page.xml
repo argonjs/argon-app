@@ -46,10 +46,10 @@
             <Label id="permissionLabel" tap="onPermissionIconMenuChangeTap">
                 <FormattedString>
                     <Span text="{{ 'Access ' + selectedPermission.description + ': ' }}" />
-                    <Span foregroundColor="black" text="{{ permissionChangesMade ? 'Removed' : (selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' ) }}" tap="onPermissionIconMenuChangeTap"/>
+                    <Span foregroundColor="black" text="{{ selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' }}" tap="onPermissionIconMenuChangeTap"/>
                 </FormattedString>
             </Label>
-            <Label id="changePermission" color="{{ permissionChangesMade ? 'red' : 'gray' }}" text="{{ permissionChangesMade ? 'Reload the page for changes to apply' : ('Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' )) }}" tap="onPermissionIconMenuChangeTap"/>
+            <Label id="changePermission" color="gray" text="{{ 'Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' ) }}" tap="onPermissionIconMenuChangeTap"/>
         </StackLayout>
     </GridLayout>
 </Page>

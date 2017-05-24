@@ -42,7 +42,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         setSearchBarText(appViewModel.currentUri || '');
         if (!appViewModel.currentUri) appViewModel.showBookmarks();
         appViewModel.updatePermissionsFromStorage(appViewModel.currentUri);
-        appViewModel.set('permissionChangesMade', false);
     }
     else if (evt.propertyName === 'viewerEnabled') {
         // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
@@ -263,11 +262,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             });
             touchOverlayView.off(GestureTypes.touch);
             touchOverlayView.visibility = 'collapse';
-        }
-    } else if (evt.propertyName === "needReloadForPermissionChange") {
-        if (evt.value) {
-            appViewModel.set('needReloadForPermissionChange', false);
-            onReload(null);
         }
     }
 })
@@ -540,7 +534,6 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    appViewModel.set('permissionChangesMade', false);
     appViewModel.hideMenu();
     browserView.focussedLayer && 
         browserView.focussedLayer.webView && 

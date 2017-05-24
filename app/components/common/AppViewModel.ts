@@ -67,12 +67,10 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
     permissions = {'ar.stage': PermissionState.NOT_REQUIRED, 'ar.camera': PermissionState.NOT_REQUIRED, 'ar.3dmesh': PermissionState.NOT_REQUIRED};
     permissionMenuOpen = false;
-    permissionChangesMade = false;
 
-    currentPermissionSession: SessionPort;  //the focused session
+    // currentPermissionSession: SessionPort;  //the focused session
     selectedPermission: Permission;  //type, name, state
-    needReloadForPermissionChange = false;
-    locIcon;
+    locIcon;    // Stores location icons
 
     public argon:Argon.ArgonSystem;
 
@@ -146,8 +144,8 @@ export class AppViewModel extends Observable {  //observable creates data bindin
         });
 
         if (config.ENABLE_PERMISSION_CHECK) {
-            argon.provider.permission.handlePermissionRequest = (session, id) => {
-                return permissionManager.handlePermissionRequest(session, id);
+            argon.provider.permission.handlePermissionRequest = (session, id, options) => {
+                return permissionManager.handlePermissionRequest(session, id, options);
             }
             argon.session.connectEvent.addEventListener((session: SessionPort) => {
                 session.on['ar.permission.query'] = ({type} : {type: PermissionType}) => {
@@ -155,6 +153,9 @@ export class AppViewModel extends Observable {  //observable creates data bindin
                     return Promise.resolve({state});
                 }
             })
+            argon.provider.permission.getPermissionState = (session, type) => {
+                return permissionManager.getPermissionState(session, type);
+            }
         }
 
         argon.vuforia.isAvailable().then((available)=>{
@@ -309,7 +310,6 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
     
     loadUrl(url:string) {
         this.ensureReady();
-        appViewModel.set('permissionChangesMade', false);
         this.notify(<LoadUrlEventData>{
             eventName: AppViewModel.loadUrlEvent,
             object: this,
@@ -362,27 +362,32 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
 
     changePermissions() {
         this.ensureReady();
-        if (!this.permissionChangesMade) {
-            this.set('permissionChangesMade', true);
-            if (this.selectedPermission.state === PermissionState.GRANTED) {    // We will change to prompt
-                this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
-                this.notifyPropertyChange("permissions", null);
-                if (this.currentUri) {
-                    const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
-                    permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-                }
-            } else {
-                this.set('permissionMenuOpen', false);
-                this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
-                this.notifyPropertyChange("permissions", null);
-                if (this.currentUri) {
-                    const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
-                    permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.PROMPT);
-                }
-                this.set('needReloadForPermissionChange', true);
-                // if (this.currentPermissionSession) {
-                //     this.currentPermissionSession.send('ar.entity.subscribe', {id: this.selectedPermission.type, options: undefined});
-                // }
+        if (this.selectedPermission.state === PermissionState.GRANTED) {    // If it is currently granted, revoke
+            this.permissions[this.selectedPermission.type] = PermissionState.DENIED;
+            this.notifyPropertyChange("permissions", null);
+            this.changeSelectedPermission(this.selectedPermission.type);    // Update the selected permission UI
+            if (this.currentUri) {
+                const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
+            }
+            // If current session is open, revoke
+            const currentSession = this.argon.provider.focus.session;
+            if (currentSession) {
+                currentSession.send('ar.entity.unsubscribed', {id: this.selectedPermission.type});
+            }
+        } else {
+            this.set('permissionMenuOpen', false);
+            this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
+            this.notifyPropertyChange("permissions", null);
+            this.changeSelectedPermission(this.selectedPermission.type);    // Update the selected permission UI
+            if (this.currentUri) {
+                const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.PROMPT);
+            }
+            const currentSession = this.argon.provider.focus.session;
+            if (currentSession) {
+                currentSession.send('ar.entity.subscribed', {id: this.selectedPermission.type,
+                    options: permissionManager.getLastUsedOption(currentSession.uri, this.selectedPermission.type)});
             }
         }
     }
