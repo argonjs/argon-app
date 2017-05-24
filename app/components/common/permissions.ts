@@ -135,9 +135,12 @@ class PermissionManager {
     }
 
     getPermissionStateBySession(session: SessionPort, type: PermissionType) {
-        const identifier = URI(session.uri).hostname() + URI(session.uri).port();;
-        const state = this.getPermissionFromMap(identifier, type);
-        return state;
+        if (session && session.uri && session.uri != "") {
+            const identifier = URI(session.uri).hostname() + URI(session.uri).port();;
+            const state = this.getPermissionFromMap(identifier, type);
+            return state;
+        }
+        return PermissionState.NOT_REQUIRED;
     }
 
     loadPermissionsToUI = (uri?: string) => {
@@ -169,16 +172,6 @@ class PermissionManager {
             const identifier = URI(uri).hostname() + URI(uri).port();
             return this.lastUsedOptions[identifier][type];
         }
-    }
-
-    public getPermissionState(session: SessionPort, type: PermissionType) {
-        // const identifier = URI(session.uri).hostname() + URI(session.uri).port();;
-        // const state = this.getPermissionFromMap(identifier, type);
-        // return state;
-        if (session) {
-            return PermissionState.DENIED;
-        }
-        return PermissionState.NOT_REQUIRED;        
     }
 }
 

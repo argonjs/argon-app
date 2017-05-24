@@ -154,7 +154,7 @@ export class AppViewModel extends Observable {  //observable creates data bindin
                 }
             })
             argon.provider.permission.getPermissionState = (session, type) => {
-                return permissionManager.getPermissionState(session, type);
+                return permissionManager.getPermissionStateBySession(session, type);
             }
         }
 
@@ -353,7 +353,6 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
 
     changeSelectedPermission(type: PermissionType) {
         this.set('selectedPermission', new Permission(type, this.permissions[type]));
-        // this.notifyPropertyChange('selectedPermission', null);
     }
 
     updatePermissionsFromStorage(uri?: string) {
@@ -367,27 +366,29 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
             this.notifyPropertyChange("permissions", null);
             this.changeSelectedPermission(this.selectedPermission.type);    // Update the selected permission UI
             if (this.currentUri) {
-                const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
-                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.DENIED);
-            }
-            // If current session is open, revoke
-            const currentSession = this.argon.provider.focus.session;
-            if (currentSession) {
-                currentSession.send('ar.entity.unsubscribed', {id: this.selectedPermission.type});
+                const identifier = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                permissionManager.savePermissionOnMap(identifier, this.selectedPermission.type, PermissionState.DENIED);
             }
         } else {
-            this.set('permissionMenuOpen', false);
-            this.permissions[this.selectedPermission.type] = PermissionState.PROMPT;
+            this.permissions[this.selectedPermission.type] = PermissionState.GRANTED;
             this.notifyPropertyChange("permissions", null);
             this.changeSelectedPermission(this.selectedPermission.type);    // Update the selected permission UI
             if (this.currentUri) {
-                const hostname = URI(this.currentUri).hostname() + URI(this.currentUri).port();
-                permissionManager.savePermissionOnMap(hostname, this.selectedPermission.type, PermissionState.PROMPT);
-            }
-            const currentSession = this.argon.provider.focus.session;
-            if (currentSession) {
-                currentSession.send('ar.entity.subscribed', {id: this.selectedPermission.type,
-                    options: permissionManager.getLastUsedOption(currentSession.uri, this.selectedPermission.type)});
+                const identifier = URI(this.currentUri).hostname() + URI(this.currentUri).port();
+                permissionManager.savePermissionOnMap(identifier, this.selectedPermission.type, PermissionState.GRANTED);
+                const session = this.argon.provider.focus.session;
+                const entityServiceProvider = this.argon.provider.entity;
+                const type = this.selectedPermission.type;
+                // This part mimics the 'ar.entity.subscribe' handler
+                if (session) {
+                    const options = permissionManager.getLastUsedOption(session.uri, type);
+                    const subscriptions = entityServiceProvider.subscriptionsBySubscriber.get(session);
+                    const subscribers = entityServiceProvider.subscribersByEntity.get(type) || new Set<SessionPort>();
+                    entityServiceProvider.subscribersByEntity.set(type, subscribers);
+                    subscribers.add(session);
+                    if (subscriptions) subscriptions.set(type, options);    // This should always happen
+                    entityServiceProvider.sessionSubscribedEvent.raiseEvent({session: session, id: type, options: options});
+                }
             }
         }
     }
