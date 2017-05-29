@@ -34,12 +34,6 @@ http://docs.nativescript.org/start/ns-setup-win (Windows, supports Android only)
 
 3. Execute `tns run ios`, or execute `tns prepare ios` and open argonapp.xcworkspace (located at /argon-app/platforms/ios) in XCode
 
-    *Note: If you have trouble deploying on the device, 
-    look for a build target with the digit 2 appended to the 
-    end (e.g, `argonapp 2`) and try building that instead. This seems to 
-    be the result of a bug in the nativescript-cli when generating 
-    the xcode project.* 
-
 4. Debug with javascript inspector using `tns debug ios`
 
 ### Android
@@ -54,7 +48,7 @@ You'll need to build argon-app with your own Vuforia license key to enable the v
 
 1) Get a Vuforia license key here: https://library.vuforia.com/articles/Training/Vuforia-License-Manager
 
-2) Open `argon-app/app/config.ts` and set `DEBUG_DEVELOPMENT_LICENSE_KEY` to your key string
+2) Open `argon-app/app/config.ts` and set `DEBUG_VUFORIA_LICENSE_KEY` to your key string
 
 ### Limitations
 
