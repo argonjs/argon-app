@@ -1,20 +1,22 @@
-import {Observable} from 'data/observable';
+import * as application from 'application';
+import {Observable, PropertyChangeData} from 'data/observable';
 import {View} from 'ui/core/view';
-import {ListView,ItemEventData} from 'ui/list-view';
-import {BookmarkItem, historyList} from '../common/bookmarks'
+import {ListView} from 'ui/list-view';
+import {BookmarkItem, historyList, filterControl, filteredHistoryList} from '../common/bookmarks'
 import {appViewModel} from '../common/AppViewModel'
 
 import {
   GestureTypes,
   GestureStateTypes,
   PanGestureEventData,
-  GestureEventData,
 } from 'ui/gestures';
 
 import {AnimationCurve} from 'ui/enums'
 
 export class HistoryViewModel extends Observable {
     historyList = historyList;
+    filteredHistoryList = filteredHistoryList;
+    showFilteredResults = false;
 }
 export const viewModel = new HistoryViewModel();
 
@@ -27,10 +29,11 @@ export function onLoaded(args) {
 }
 
 export function onTap(args) {
+    clearTimeout(tapTimerId);
     if (editing) return
     closeAllCells();
     var item:BookmarkItem = (args.object as View).bindingContext;
-    appViewModel.loadUrl(item.url);
+    appViewModel.loadUrl(item.uri);
 }
 
 export function onDelete(args) {
@@ -49,24 +52,40 @@ interface CellViews {
 
 let openCells:Array<CellViews> = []
 
+const tapTimeout = 300;
+var tapTimerId = -1;
+
 export function onItemLoaded(args) {
     var itemView:View = args.object;
     var contentView = itemView.getViewById('content');
     var deleteView = itemView.getViewById('delete');
     var cell = {contentView, deleteView};
-    
+
     var panStart=0;
     contentView.on(GestureTypes.pan, (data:PanGestureEventData)=>{
         
         if (data.state === GestureStateTypes.began) {
-            panStart = contentView.translateX;
-            closeAllCells(cell);
-            editing = true;
+            if (application.android) {
+                closeAllCells(cell);
+                editing = false;
+                tapTimerId = setTimeout(()=>{
+                    panStart = contentView.translateX + data.deltaX;
+                    editing = true;
+                }, tapTimeout);
+            } else {
+                panStart = contentView.translateX;
+                closeAllCells(cell);
+                editing = true;
+            }
+        } else {
+            // wait for tap timeout before handling this gesture (only on android)
+            if (!editing) return;
         }
         
         contentView.translateX = Math.min(Math.max(panStart + data.deltaX, -1000), 0);
         
         if (data.state === GestureStateTypes.ended) {
+            clearTimeout(tapTimerId);
             editing = false;
             var open = contentView.translateX < swipeLimit*0.75;
             toggleCellSwipeState(cell, open);
@@ -97,3 +116,7 @@ function toggleCellSwipeState(cell:CellViews, open:boolean) {
         openCells.push(cell);
     }
 }
+
+filterControl.on('propertyChange', (evt:PropertyChangeData) => {
+    viewModel.set('showFilteredResults', filterControl.showFilteredResults);
+});

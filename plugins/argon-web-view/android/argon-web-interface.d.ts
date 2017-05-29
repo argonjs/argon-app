@@ -7,10 +7,12 @@ declare module io {
             // Listen for webview events
             onArgonEvent(id: string, event: string, data: string);
 
+            /*
             // Make a custom type using this java class
             static extend(implementation: {
                 onArgonEvent: (id: string, event: string, data: string) => void,
             }): typeof AndroidWebInterface;
+            */
         }
     }
 }

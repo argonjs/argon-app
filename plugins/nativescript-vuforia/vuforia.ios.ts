@@ -1,10 +1,8 @@
+import * as utils from 'utils/utils';
+
 import common = require('./vuforia-common');
 import def = require('nativescript-vuforia');
 import application = require('application');
-import http = require('http');
-import file = require('file-system');
-import frames = require('ui/frame');
-import views = require('ui/core/view');
 import placeholder = require('ui/placeholder');
 
 global.moduleMerge(common, exports);
@@ -39,6 +37,7 @@ application.on(application.orientationChangedEvent, () => {
     if (VUFORIA_AVAILABLE) {
         Promise.resolve().then(configureVuforiaSurface); // delay until the interface orientation actually changes
     }
+    setTimeout(configureVuforiaSurface, 500);
 });
 
 application.on(application.resumeEvent, ()=> {
@@ -50,7 +49,7 @@ application.on(application.resumeEvent, ()=> {
     }
 })
 
-function configureVuforiaSurface() {
+export function configureVuforiaSurface() {
     if (!api) throw new Error();
     const contentScaleFactor = iosVideoView.contentScaleFactor;
     api.onSurfaceChanged(
@@ -81,13 +80,14 @@ export class API extends common.APIBase {
                 if (result === VuforiaInitResult.SUCCESS) {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
+                    setTimeout(configureVuforiaSurface, 500);
                     VuforiaSession.registerCallback((state)=>{
                         if (this.callback)
                          this.callback(new State(state));
                     });
                     VuforiaSession.onResume();
                 }
-                resolve(<number>result);
+                resolve(<def.InitResult><number>result);
             })
         })
     }
@@ -138,22 +138,19 @@ export class API extends common.APIBase {
     }
 
     onSurfaceChanged(width:number, height:number) : void {
-        VuforiaSession.onSurfaceChanged({
-            x: width,
-            y: height
-        });
-        const orientation:UIInterfaceOrientation = UIApplication.sharedApplication().statusBarOrientation;
+        VuforiaSession.onSurfaceChangedWidthHeight(width, height);
+        const orientation:UIInterfaceOrientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;
         switch (orientation) {
-            case UIInterfaceOrientation.UIInterfaceOrientationPortrait: 
+            case UIInterfaceOrientation.Portrait: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_90);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationPortraitUpsideDown: 
+            case UIInterfaceOrientation.PortraitUpsideDown: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_270);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeLeft: 
+            case UIInterfaceOrientation.LandscapeLeft: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_180);
                 break;
-            case UIInterfaceOrientation.UIInterfaceOrientationLandscapeRight: 
+            case UIInterfaceOrientation.LandscapeRight: 
                 VuforiaSession.setRotation(VuforiaRotation.IOS_0);
                 break;
             default: 
@@ -573,7 +570,7 @@ export class Renderer {
     getRecommendedFps(flags: def.FPSHint): number {
         return VuforiaRenderer.getRecommendedFps(<number>flags);
     }
-    getVideoBackgroundConfig(): def.VideoBackgroundConfig {
+    getVideoBackgroundConfig() : def.VideoBackgroundConfig {
         return VuforiaRenderer.getVideoBackgroundConfig();
     }
     setTargetFps(fps: number): boolean {

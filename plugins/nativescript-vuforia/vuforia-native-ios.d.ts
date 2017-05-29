@@ -547,7 +547,7 @@ declare class VuforiaSession extends NSObject {
 
 	static onResume(): void;
 
-	static onSurfaceChanged(size: VuforiaVec2I): void;
+	static onSurfaceChangedWidthHeight(width:number, height:number): void;
 
 	static onSurfaceCreated(): void;
 

@@ -1,13 +1,14 @@
 import {Observable, PropertyChangeData} from 'data/observable';
 import {View} from 'ui/core/view'
 import {Layout} from 'ui/layouts/layout'
-import {AnimationCurve} from 'ui/enums'
+import {filterControl} from '../common/bookmarks'
 
 class BookmarksViewModel extends Observable {
     index = 0;
     setIndex(value:number) {
         this.set('index', value);
     }
+    showFilteredResults = false;
 }
 
 let bookmarksView:View;
@@ -34,3 +35,7 @@ export function onTabSelect(args) {
     const index = tabsLayout.getChildIndex(tab);
     viewModel.setIndex(index);
 }
+
+filterControl.on('propertyChange', (evt:PropertyChangeData) => {
+    viewModel.set('showFilteredResults', filterControl.showFilteredResults);
+});

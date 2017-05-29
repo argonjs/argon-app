@@ -1,0 +1,77 @@
+.menuItem {
+    padding: 15px 15px 15px 15px;
+    color: #545454;
+}
+
+#menu {
+    background-color: #EEFAFAFA;
+}
+
+.action-btn {
+    color: #545454;
+    font-size: 10px;
+    padding: 5px 5px 5px 5px;
+    background-color: #FFFFFF;
+}
+
+.action-btn-disabled {
+    color: #BBBBBB;
+}
+
+.toggle-btn-on {
+    color: #EEAA00;
+}
+
+.toggle-btn-off {
+    color: #545454;
+}
+
+.permission-btn-granted {
+    color: #FF0000;
+}
+
+.permission-btn-denied {
+    color: #BBBBBB;
+}
+
+.material-icon {
+    font-family: "MaterialIcons-Regular";
+    font-size: 22px;
+    white-space: nowrap;
+    border-width: 0.1;
+    padding: 0px 0px 0px 0px;
+}
+
+.bookmark-title {
+    font-size: 18px;
+}
+
+.bookmark-subtitle {
+    font-size: 10px;
+}
+
+.delete-btn {
+    color: white;
+}
+
+.search-bar {
+    horizontal-align: stretch;
+    height: 50;
+}
+
+#overviewButton {
+    width: 50;
+}
+
+#menuButton {
+    width: 50;
+}
+
+#addButton {
+    width: 50;
+}
+
+#menuButtons {
+    height: 50;
+    padding: 5px;
+}

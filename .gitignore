@@ -1,7 +1,9 @@
 /node_modules
+/docs/_site
 /platforms
 /hooks
-/typings
-/docs/_site
+/lib
 .DS_Store
+/app/**/*.js
+/plugins/**/*.js
 *.js.map

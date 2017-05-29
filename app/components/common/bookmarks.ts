@@ -1,63 +1,60 @@
 import application = require('application');
 import applicationSettings = require('application-settings');
 import {ObservableArray, ChangedData} from 'data/observable-array';
-import {Observable, PropertyChangeData} from 'data/observable';
+import {Observable} from 'data/observable';
 
-import * as Argon from 'argon'
+import * as Argon from '@argonjs/argon'
 
 class BookmarkItem extends Observable {
-    key = 'url';
-    name:string;
-    url:string;
+    title?:string;
+    uri:string;
     builtin = false;
     
     constructor(item:{
-        name:string,
-        url:string,
-        [other:string]:any
+        title?:string,
+        uri:string
     }) {
-        super(item)
+        super(item);
+        const uri = item.uri;
+        // reuse an existing BookmarkItem if one exists
+        if (historyMap.has(uri)) return historyMap.get(uri)!; 
+        if (realityMap.has(uri)) return realityMap.get(uri)!; 
+        if (favoriteMap.has(uri)) return favoriteMap.get(uri)!; 
+        return this;
     }
     
     toJSON() {
         return {
-            name: this.name,
-            url: this.url
+            title: this.title,
+            uri: this.uri
         }
-    }
-}
-
-class RealityBookmarkItem extends BookmarkItem {
-    key = 'reality';
-    reality: Argon.RealityView
-    
-    constructor(
-        reality:Argon.RealityView
-    ) {
-        super({
-            reality,
-            name: reality.name,
-            url: reality['url'] || 'reality:' + reality.type
-        })
     }
 }
 
 const favoriteList = new ObservableArray<BookmarkItem>();
 const historyList = new ObservableArray<BookmarkItem>();
-const realityList = new ObservableArray<RealityBookmarkItem>();
+const realityList = new ObservableArray<BookmarkItem>();
+
+class FilterControl extends Observable {
+    showFilteredResults = false;
+}
+
+var filterControl = new FilterControl();
+var filteredFavoriteList = new ObservableArray<BookmarkItem>();
+var filteredHistoryList = new ObservableArray<BookmarkItem>();
 
 const favoriteMap = new Map<string, BookmarkItem>();
 const historyMap = new Map<string, BookmarkItem>();
-const realityMap = new WeakMap<Argon.RealityView, RealityBookmarkItem>();
+const realityMap = new Map<string, BookmarkItem>();
 
-function updateMap(data:ChangedData<BookmarkItem>, map:WeakMap<any, BookmarkItem>) {
+function updateMap(data:ChangedData<BookmarkItem>, map:Map<string, BookmarkItem>) {
     const list = <ObservableArray<BookmarkItem>>data.object
     for (let i=0; i < data.addedCount; i++) {
         var item = list.getItem(data.index + i);
-        map.set(item[item.key], item);
+        map.set(item.uri, item);
     }
     data.removed && data.removed.forEach((item)=>{
-        map.delete(item[item.key]);
+        map.delete(item.uri);
     })
 }
 
@@ -67,8 +64,20 @@ realityList.on('change', (data) => updateMap(data, realityMap));
 
 const builtinFavorites:Array<BookmarkItem> = [
     new BookmarkItem({
-        name: 'Argon Samples',
-        url: 'http://argonjs.io/samples/'
+        title: 'Argon Help',
+        uri: 'http://app.argonjs.io/'
+    }),
+    new BookmarkItem({
+        title: 'Argon Samples',
+        uri: 'https://samples.argonjs.io/'
+    }),
+    new BookmarkItem({
+        title: 'Argon-AFrame Samples',
+        uri: 'https://aframe.argonjs.io/'
+    }),
+    new BookmarkItem({
+        title: 'Credits',
+        uri: 'http://www.argonjs.io/#support'
     })
 ]
 
@@ -77,13 +86,8 @@ builtinFavorites.forEach((item)=> {
     favoriteList.push(item);
 });
 
-const LIVE_VIDEO_REALITY = {
-    name: 'Live Video',
-    type: 'live-video'
-}
-
-const builtinRealities:Array<RealityBookmarkItem> = [
-    new RealityBookmarkItem(LIVE_VIDEO_REALITY)
+const builtinRealities:Array<BookmarkItem> = [
+    new BookmarkItem({uri:Argon.RealityViewer.LIVE, title:'Live'})
 ]
 
 builtinRealities.forEach((item)=> { 
@@ -95,15 +99,16 @@ const FAVORITE_LIST_KEY = 'favorite_list';
 const HISTORY_LIST_KEY = 'history_list';
 
 if (applicationSettings.hasKey(FAVORITE_LIST_KEY)) {
-    console.log(applicationSettings.getString(FAVORITE_LIST_KEY))
+    // console.log(applicationSettings.getString(FAVORITE_LIST_KEY))
     const savedFavorites:Array<BookmarkItem> = JSON.parse(applicationSettings.getString(FAVORITE_LIST_KEY));
     savedFavorites.forEach((item)=>{
-        favoriteList.push(new BookmarkItem(item));
+        if (!favoriteMap.has(item.uri))
+            favoriteList.push(new BookmarkItem(item));
     });
 }
 
 if (applicationSettings.hasKey(HISTORY_LIST_KEY)) {
-    console.log(applicationSettings.getString(HISTORY_LIST_KEY))
+    // console.log(applicationSettings.getString(HISTORY_LIST_KEY))
     const savedHistory:Array<BookmarkItem> = JSON.parse(applicationSettings.getString(HISTORY_LIST_KEY));
     savedHistory.forEach((item)=>{
         historyList.push(new BookmarkItem(item));
@@ -131,12 +136,58 @@ historyList.on('change', saveHistory);
 
 export {
     BookmarkItem,
-    RealityBookmarkItem,
     favoriteList,
     historyList,
     realityList,
     favoriteMap,
     historyMap,
     realityMap,
-    LIVE_VIDEO_REALITY
+    filterControl,
+    filteredFavoriteList,
+    filteredHistoryList
+}
+
+export function pushToHistory(url:string, title?:string) {
+    const historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem) {
+        let i = historyList.indexOf(historyBookmarkItem);
+        historyList.splice(i, 1);
+        historyList.unshift(historyBookmarkItem);
+    } else {
+        historyList.unshift(new BookmarkItem({
+            uri: url,
+            title: title
+        }))
+    }
+}
+
+export function updateTitle(url:string, title:string) {
+    var historyBookmarkItem = historyMap.get(url);
+    if (historyBookmarkItem && !historyBookmarkItem.builtin) {
+        historyBookmarkItem.set('title', title);
+    }
+}
+
+export function filterBookmarks(text:string) {
+    const regex = new RegExp(text, "i");
+    clearFilter();
+    favoriteList.forEach((bookmark)=> {
+        if (regex.test(bookmark.uri) || (bookmark.title && regex.test(bookmark.title))) {
+            filteredFavoriteList.push(bookmark);
+        }
+    });
+    historyList.forEach((bookmark)=> {
+        if (regex.test(bookmark.uri) || (bookmark.title && regex.test(bookmark.title))) {
+            filteredHistoryList.push(bookmark);
+        }
+    });
+}
+
+export function clearFilter() {
+    while (filteredFavoriteList.length > 0) {
+        filteredFavoriteList.pop();
+    }
+    while (filteredHistoryList.length > 0) {
+        filteredHistoryList.pop();
+    }
 }

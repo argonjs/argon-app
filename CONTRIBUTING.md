@@ -5,9 +5,8 @@
 #### Table of Contents
 
 [How can I help?](#how-can-i-help)
- * [Reporting Bugs](#reporting-bugs)
- * [Suggestions](#making-suggestions)
- * [Pull Requests](#pull-requests)
+ * [Submitting an Issue](#submitting-an-issue)
+ * [Opening a Pull Request](#opening-a-pull-request)
 
 [:sparkles:Style:sparkles:](#style-guidelines)
  * [Branching Scheme](#our-branching-model)
@@ -20,26 +19,28 @@
 You can help in so many ways!
 Whether it's asking questions on our slack or on StackOverflow or even contributing code, we love any help we can get!
 
-### Reporting Bugs
+### Submitting an Issue
 
-Reporting bugs is great and you should do it (if you find a bug)! Just make a bug report through GitHub and make sure to include the following:
+If you think you've found a bug, first search the issues. If an issue already exists, please add a comment expressing your interest and any additional information.  This helps us prioritize issues.
 
- * What was the bug?
- * What did you expect to happen instead?
- * A piece of sample code that shows the bug is always great.
+If a related issue does not exist, submit a new one.  Please be concise and include as much of the following information as is relevant:
+* Minimum amount of sample code or steps to demonstrate or reproduce the issue
+* Screenshot or video capture if appropriate.
+* Your device operating system and version, the Argon Browser version, and the argon.js version.  Are they all up-to-date?  Is the issue specific to one of them?
+* Did this work in a previous version?
+* Ideas for how to fix or workaround the issue.  Also mention if you are willing to help fix it.  If so, we can often provide guidance and the issue may get fixed more quickly with your help.
 
-Please watch your GitHub inbox when you file a bug report so we can ask you questions.
+### Opening a Pull Request
 
+In general, you should make your pull request against the `develop` branch.
+You can use the following prefixes in your branch name to make the purpose clear:
+ * `fix/`
+ * `feat/`
 
-### Making Suggestions
-
-Making suggestions is even easier than filing the bug report, simply file a bug with your suggestion and prepend `[Enhancement]` in the title. We will tag it accordingly.
-
-
-### Pull Requests
-
-Sending PRs are a little more complicated than bugs. Please follow the style guidelines and the branching scheme described [here](#style-guidelines) and make sure that your branch passes all of our tests described [here](#tests).
-
+ Pull request tips
+   * If your pull request fixes an existing issue, include a link to the issue in the description (like this: [#1]).
+   * If your pull request needs additional work, include a [task list](https://github.com/blog/1375%0A-task-lists-in-gfm-issues-pulls-comments).
+   * Once you are done making new commits to address feedback, add a comment to the pull request such as `"this is ready"` since GitHub doesn't notify us about commits.
 
 
 ## Style Guidelines
@@ -48,32 +49,18 @@ The general style guidelines are as follows:
 
  * We use 4 spaces to indent **all** source files
  * No trailing spaces
-
-
-### Our Branching Model
-
-We want to follow a pretty simple branching model. All changes that are more than one commit are put into their own branch and prepended with `fix.` or `feature.`.
-
-When the branch is merged all changes must be rebased to the top of the branch it is merged into and it is merged without fast-forwarding.
-
-This is to keep the history linear but with bubble commits. It basically looks like so:
-![branching-model](http://nvie.com/img/merge-without-ff@2x.png)
-
-When you make a branch simply decide a prefix that fits for it out of:
- * `fix.`
- * `feature.`
-
-Then create a pull request against the `develop` branch. Once it is merged into `develop` it will be tested thoroughly.
-Once in a while any new features are merged into the master branch and tagged with a new release version.
-We use the semantic versioning scheme.
-
-
-### Typescript Style
-
+ 
 The typescript style is described in our `.tslint.json` file.
 Our tests will automatically check for style and print out helpful messages.
 
 
+### Our Branching Model
+
+We follow a pretty simple branching model. 
+
+Our primary working branh is the `develop` branch. Once in a while, the `develop` branch is
+tagged with a new release version and merged into the master branch. 
+
 ## Testing
 
-Testing is easy and it simply involves running the included scripts in the repo.
+In general, all our tests should run by executing `npm test`.

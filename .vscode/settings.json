@@ -2,10 +2,12 @@
 {
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"search.exclude": {
-		"**/node_modules": true
+		//"**/node_modules": true,
+		"**/platforms": true
 	},
     "files.exclude": {
-        "app/*.js": true,
+        "app/components/**/*.js": true,
+		"app/**/*.js": true,
 		"app/**/*.js.map": true
     }
 }

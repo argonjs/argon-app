@@ -2,24 +2,35 @@
   "nativescript": {
     "id": "edu.gatech.ael.argon4",
     "tns-android": {
-      "version": "1.7.1"
+      "version": "2.5.0"
     },
     "tns-ios": {
-      "version": "2.1.1"
+      "version": "2.5.0"
     }
   },
   "dependencies": {
-    "argon": "file:../argon",
+    "@argonjs/argon": "1.2.0-20-refactor-y-up-28",
+    "@speigg/nativescript-urlhandler": "^1.0.0",
     "argon-web-view": "file:plugins/argon-web-view",
-    "nativescript-screen-orientation": "git+https://github.com/bionictk/nativescript-screen-orientation.git",
+    "minimatch": "^3.0.3",
+    "nativescript-google-analytics": "^0.3.7",
+    "nativescript-hook-debug-production": "^1.0.4",
+    "nativescript-permissions": "^1.2.3",
+    "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^1.7.1",
+    "tns-core-modules": "^2.5.2",
     "urijs": "^1.17.1"
   },
   "devDependencies": {
+    "@types/minimatch": "^2.0.29",
+    "@types/urijs": "^1.15.31",
+    "babel-traverse": "6.15.0",
+    "babel-types": "6.15.0",
+    "babylon": "6.9.2",
+    "lazy": "1.0.11",
     "nativescript-dev-typescript": "^0.3.1",
-    "openpgp": "^2.3.0",
-    "typescript": "^1.9.0-dev.20160313"
+    "tns-platform-declarations": "^2.4.4",
+    "typescript": "^2.1.4"
   }
 }

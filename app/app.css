@@ -4,7 +4,23 @@
 }
 
 #menu {
-    background-color: #DDFAFAFA;
+    background-color: #EEFAFAFA;
+}
+
+#permissionMenu {
+    background-color: #EEFAFAFA;
+}
+
+#permissionLabel {
+    padding: 15px 15px 5px 15px;
+    color: #545454;
+    text-align: center;
+}
+
+#changePermission {
+    padding: 5px 15px 15px 15px;
+    color: #545454;
+    text-align: center;
 }
 
 .action-btn {
@@ -23,6 +39,14 @@
     color: #545454;
 }
 
+.permission-btn-granted {
+    color: #FF0000;
+}
+
+.permission-btn-denied {
+    color: #BBBBBB;
+}
+
 .material-icon {
     font-family: "MaterialIcons-Regular";
     font-size: 22px;
@@ -38,4 +62,24 @@
 
 .delete-btn {
     color: white;
+}
+
+.search-bar {
+    
+}
+
+#overviewButton {
+    width: 30;
+}
+
+#menuButton {
+    width: 30;
+}
+
+#addButton {
+    width: 30;
+}
+
+#menuButtons {
+    height: 44;
 }

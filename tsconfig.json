@@ -2,10 +2,17 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es5",
-        "sourceMap": true,
+        "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "noEmitHelpers": true,
-        "strictNullChecks": true
+        "noEmitOnError": true,
+        "strictNullChecks": true,
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "noUnusedLocals": true,
+        "lib": [
+            "es2015"
+        ]
     },
     "exclude": [
         "node_modules",
