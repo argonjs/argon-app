@@ -594,7 +594,7 @@ export function onDebugToggle(args) {
 }
 
 export function onLocationPermissionIcon(args) {
-    appViewModel.togglePermissionMenu('location');
+    appViewModel.togglePermissionMenu('geolocation');
     appViewModel.hideMenu();
 }
 

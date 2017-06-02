@@ -6,22 +6,21 @@ import {
     SessionPort,
     Permission,
     PermissionType,
-    PermissionState,
-    PermissionTypeByEntityId
+    PermissionState
 } from '@argonjs/argon'
 
 const PERMISSION_KEY = 'permission_history';
 
 export const PermissionNames = {
-        'location': 'Location',
+        'geolocation': 'Location',
         'camera': 'Camera',
-        'depthmesh': 'Structural mesh'
+        'world-structure': 'Structural mesh'
     };
 
 export const PermissionDescriptions = {
-        'location': 'your location', 
+        'geolocation': 'your location', 
         'camera': 'your camera',
-        'depthmesh': 'the structure of your surroundings'
+        'world-structure': 'the structure of your surroundings'
     };
 
 class PermissionManager {
@@ -37,9 +36,11 @@ class PermissionManager {
 
     handlePermissionRequest(session: SessionPort, id: string, options: any) {
         // Always allow when the request is about Vuforia subscriptions & manager subscriptions
-        let type = PermissionTypeByEntityId[id];
-        if (!type || session.uri === 'argon:manager')
+        if ((id !== 'ar.stage' && id !== 'camera' && id !=='world-structure') || session.uri === 'argon:manager')
             return Promise.resolve();
+
+        id = id === 'ar.stage' ? 'geolocation' : id;
+        let type: PermissionType = <PermissionType>id;
         
         console.log("Permission requested {Source: " + session.uri + ", Type: " + type + "}");
 

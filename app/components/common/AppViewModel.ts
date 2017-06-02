@@ -65,7 +65,7 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     isFavorite = false;
     launchedFromUrl = false;
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
-    permissions = {'location': PermissionState.NOT_REQUIRED, 'camera': PermissionState.NOT_REQUIRED, 'depthmesh': PermissionState.NOT_REQUIRED};
+    permissions = {'geolocation': PermissionState.NOT_REQUIRED, 'camera': PermissionState.NOT_REQUIRED, 'world-structure': PermissionState.NOT_REQUIRED};
     permissionDescriptions = PermissionDescriptions;
     permissionMenuOpen = false;
 
