@@ -594,12 +594,12 @@ export function onDebugToggle(args) {
 }
 
 export function onLocationPermissionIcon(args) {
-    appViewModel.togglePermissionMenu('ar.stage');
+    appViewModel.togglePermissionMenu('location');
     appViewModel.hideMenu();
 }
 
 export function onCameraPermissionIcon(args) {
-    appViewModel.togglePermissionMenu('ar.camera');
+    appViewModel.togglePermissionMenu('camera');
     appViewModel.hideMenu();
 }
 

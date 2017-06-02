@@ -9,7 +9,7 @@ import {getInternalVuforiaKey} from './util';
 import * as URI from 'urijs';
 import {LogItem} from 'argon-web-view';
 import {PermissionState, PermissionType, Permission, SessionPort} from '@argonjs/argon'
-import {permissionManager} from './permissions'
+import {permissionManager, PermissionDescriptions} from './permissions'
 import config from '../../config';
 
 export interface LoadUrlEventData extends EventData {
@@ -65,7 +65,8 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     isFavorite = false;
     launchedFromUrl = false;
     enablePermissions = config.ENABLE_PERMISSION_CHECK;
-    permissions = {'ar.stage': PermissionState.NOT_REQUIRED, 'ar.camera': PermissionState.NOT_REQUIRED, 'ar.3dmesh': PermissionState.NOT_REQUIRED};
+    permissions = {'location': PermissionState.NOT_REQUIRED, 'camera': PermissionState.NOT_REQUIRED, 'depthmesh': PermissionState.NOT_REQUIRED};
+    permissionDescriptions = PermissionDescriptions;
     permissionMenuOpen = false;
 
     // currentPermissionSession: SessionPort;  //the focused session
