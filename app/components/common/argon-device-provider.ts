@@ -86,6 +86,14 @@ export class NativescriptDeviceService extends Argon.DeviceService {
 
     onUpdateFrameState() {
 
+        const viewport = this.frameState.viewport;
+        const contentView = frames.topmost().currentPage.content;
+        const contentSize = contentView.getActualSize();
+
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = contentSize.width;
+        viewport.height = contentSize.height;
 
         if (this._application.ios) {
             const motionManager = this._getMotionManagerIOS();
@@ -289,6 +297,20 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             this.publishStableState();
         });
 
+        if (application.ios) {
+            application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarOrientationNotification, () => {
+                this.publishStableState();
+            });
+
+            application.ios.addNotificationObserver(UIApplicationDidChangeStatusBarFrameNotification, () => {
+                this.publishStableState();
+            });
+        }
+
+        application.on(application.resumeEvent, () => {
+            this.publishStableState();
+        });
+
         const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
 
         vsp.stateUpdateEvent.addEventListener(()=>{
@@ -307,13 +329,6 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     public onUpdateStableState(stableState:Argon.DeviceStableState) {
         
         const viewport = this.deviceService.frameState.viewport;
-        const contentView = frames.topmost().currentPage.content;
-        const contentSize = contentView.getActualSize();
-
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.width = contentSize.width;
-        viewport.height = contentSize.height;
 
         const subviews = this.deviceService.frameState.subviews;
         const device = vuforia.api.getDevice();
