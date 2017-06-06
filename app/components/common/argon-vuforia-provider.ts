@@ -193,6 +193,11 @@ export class NativescriptVuforiaServiceProvider {
         };
         
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);
+
+        // make sure the currently focussed session has priority
+        this.focusServiceProvider.sessionFocusEvent.addEventListener(()=>{
+            this._selectControllingSession();
+        })
 	}
         
     // private _deviceMode = vuforia.DeviceMode.VR;
@@ -570,7 +575,7 @@ export class NativescriptVuforiaServiceProvider {
     }
     
     private _objectTrackerUnloadDataSet(session:Argon.SessionPort, id: string, permanent=true): boolean {       
-        console.log(`Vuforia: unloading dataset (${id})...`);
+        console.log(`Vuforia: unloading dataset (permanent:${permanent} id:${id})...`);
         const sessionData = this._getSessionData(session);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
@@ -578,12 +583,12 @@ export class NativescriptVuforiaServiceProvider {
             if (dataSet != null) {
                 const deleted = objectTracker.destroyDataSet(dataSet);
                 if (deleted) {
+                    sessionData.dataSetInstanceById.delete(id);
                     if (permanent) {
                         const uri = sessionData.dataSetUriById.get(id)!;
                         sessionData.dataSetIdByUri.delete(uri);
                         sessionData.loadedDataSets.delete(id);
                         sessionData.dataSetUriById.delete(id);
-                        sessionData.dataSetInstanceById.delete(id);
                     }
                     if (session.version[0] > 0)
                         session.send('ar.vuforia.objectTrackerUnloadDataSetEvent', { id });
