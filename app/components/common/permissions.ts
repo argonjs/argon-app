@@ -6,11 +6,22 @@ import {
     SessionPort,
     Permission,
     PermissionType,
-    PermissionState,
-    PermissionNames
+    PermissionState
 } from '@argonjs/argon'
 
 const PERMISSION_KEY = 'permission_history';
+
+export const PermissionNames = {
+        'geolocation': 'Location',
+        'camera': 'Camera',
+        'world-structure': 'Structural mesh'
+    };
+
+export const PermissionDescriptions = {
+        'geolocation': 'your location', 
+        'camera': 'your camera',
+        'world-structure': 'the structure of your surroundings'
+    };
 
 class PermissionManager {
     private permissionMap = {};         // Key: identifier(=hostname+port), Value: List of Permissions
@@ -25,10 +36,13 @@ class PermissionManager {
 
     handlePermissionRequest(session: SessionPort, id: string, options: any) {
         // Always allow when the request is about Vuforia subscriptions & manager subscriptions
-        if (PermissionNames[id] === undefined || session.uri === 'argon:manager')
+        if ((id !== 'ar.stage' && id !== 'camera' && id !=='world-structure') || session.uri === 'argon:manager')
             return Promise.resolve();
 
-        console.log("Permission requested {Source: " + session.uri + ", Type: " + id + "}");
+        id = id === 'ar.stage' ? 'geolocation' : id;
+        let type: PermissionType = <PermissionType>id;
+        
+        console.log("Permission requested {Source: " + session.uri + ", Type: " + type + "}");
 
         if (session.uri === undefined)
             return Promise.reject(new Error("Invalid uri for permission request"));
@@ -36,13 +50,13 @@ class PermissionManager {
         const hostname = URI(session.uri).hostname();
         const port = URI(session.uri).port();
         const identifier = hostname + port;
-        const requestedPermission = new Permission(<PermissionType>id, this.getPermissionFromMap(identifier, <PermissionType>id));
+        const requestedPermission = new Permission(type, this.getPermissionFromMap(identifier, type));
         this.saveLastUsedOption(session.uri, requestedPermission.type, options);
 
         if (requestedPermission.state === PermissionState.PROMPT || requestedPermission.state === PermissionState.NOT_REQUIRED) {
             return dialogs.confirm({
-                title: requestedPermission.name + " Request",
-                message: "Will you allow " + hostname + ( port ? (":" + port):"") + " to access " + requestedPermission.description + "?",
+                title: PermissionNames[requestedPermission.type] + " Request",
+                message: "Will you allow " + hostname + ( port ? (":" + port):"") + " to access " + PermissionDescriptions[requestedPermission.type] + "?",
                 cancelButtonText: "Not now",
                 neutralButtonText: "Deny access",
                 okButtonText: "Grant access"
@@ -55,7 +69,7 @@ class PermissionManager {
                 } else {                    // cancel button (1st button on iOS)
                     newState = PermissionState.PROMPT;
                 }
-                console.log("Permission request for : " + requestedPermission.name + " -> resulted in : " + PermissionState[newState])
+                console.log("Permission request for : " + PermissionNames[requestedPermission.type] + " -> resulted in : " + PermissionState[newState])
                 this.savePermissionOnMap(identifier, requestedPermission.type, newState);
                 appViewModel.setPermission(new Permission(requestedPermission.type, newState));
                 switch(newState) {
@@ -69,7 +83,7 @@ class PermissionManager {
                 }
             });
         } else {
-            console.log("Permission request for : " + requestedPermission.name + " -> resulted in : " + PermissionState[requestedPermission.state] + " (no change)")
+            console.log("Permission request for : " + PermissionNames[requestedPermission.type] + " -> resulted in : " + PermissionState[requestedPermission.state] + " (no change)")
             appViewModel.setPermission(requestedPermission);
             switch(requestedPermission.state) {
                 case PermissionState.GRANTED:
