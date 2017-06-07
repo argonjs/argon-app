@@ -382,6 +382,12 @@ export class NativescriptVuforiaServiceProvider {
                 if (!vuforia.api.getCameraDevice().start()) 
                     throw new Error('Unable to start camera');
 
+                if (sessionData.hintValues) {
+                    sessionData.hintValues.forEach((value, hint, map) => {
+                        vuforia.api.setHint(hint, value);
+                    });
+                }
+
                 const loadedDataSets = sessionData.loadedDataSets;
                 const loadPromises:Promise<any>[] = [];
                 if (loadedDataSets) {
@@ -401,11 +407,6 @@ export class NativescriptVuforiaServiceProvider {
                 }
                 return activatePromises;
             }).then(()=>{
-                if (sessionData.hintValues) {
-                    sessionData.hintValues.forEach((value, hint, map) => {
-                        vuforia.api.setHint(hint, value);
-                    });
-                }
                 const objectTracker = vuforia.api.getObjectTracker();
                 if (!objectTracker) throw new Error('Vuforia: Unable to get objectTracker instance');
                 objectTracker.start();
@@ -623,11 +624,16 @@ export class NativescriptVuforiaServiceProvider {
     }
 
     private _setHint(session:Argon.SessionPort, options:{hint?:number, value?:number}) {
-        if (options.hint === undefined || options.value === undefined)
-            throw new Error('setHint requires hint and value');
-        const sessionData = this._getSessionData(session);
-        sessionData.hintValues.set(options.hint, options.value);
-        return Promise.resolve({result: vuforia.api.setHint(options.hint, options.value)});
+        return this._getCommandQueueForSession(session).push(()=>{
+            if (options.hint === undefined || options.value === undefined)
+                throw new Error('setHint requires hint and value');
+            var success = vuforia.api.setHint(options.hint, options.value);
+            if (success) {
+                const sessionData = this._getSessionData(session);
+                sessionData.hintValues.set(options.hint, options.value);
+            }
+            return {result: success};
+        });
     }
 
     private _decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
