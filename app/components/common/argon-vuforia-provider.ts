@@ -33,6 +33,7 @@ class VuforiaSessionData {
     dataSetUriById = new Map<string, string>();
     dataSetIdByUri = new Map<string, string>();
     dataSetInstanceById = new Map<string, vuforia.DataSet>();
+    hintValues = new Map<number, number>();
     constructor(public keyPromise: Promise<string>) {}
 }
 
@@ -95,6 +96,8 @@ export class NativescriptVuforiaServiceProvider {
                     ({id}:{id:string}) => this._handleObjectTrackerDeactivateDataSet(session, id);
                 session.on['ar.vuforia.objectTrackerUnloadDataSet'] = 
                     ({id}:{id:string}) => this._handleObjectTrackerUnloadDataSet(session, id);
+                session.on['ar.vuforia.setHint'] =
+                    options => this._setHint(session, options);
 
                 // backwards compatability
                 session.on['ar.vuforia.dataSetFetch'] = session.on['ar.vuforia.objectTrackerLoadDataSet'];
@@ -398,6 +401,11 @@ export class NativescriptVuforiaServiceProvider {
                 }
                 return activatePromises;
             }).then(()=>{
+                if (sessionData.hintValues) {
+                    sessionData.hintValues.forEach((value, hint, map) => {
+                        vuforia.api.setHint(hint, value);
+                    });
+                }
                 const objectTracker = vuforia.api.getObjectTracker();
                 if (!objectTracker) throw new Error('Vuforia: Unable to get objectTracker instance');
                 objectTracker.start();
@@ -612,6 +620,14 @@ export class NativescriptVuforiaServiceProvider {
         } else {
             return 'vuforia_trackable_' + trackable.getId();
         }
+    }
+
+    private _setHint(session:Argon.SessionPort, options:{hint?:number, value?:number}) {
+        if (options.hint === undefined || options.value === undefined)
+            throw new Error('setHint requires hint and value');
+        const sessionData = this._getSessionData(session);
+        sessionData.hintValues.set(options.hint, options.value);
+        return Promise.resolve({result: vuforia.api.setHint(options.hint, options.value)});
     }
 
     private _decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {
