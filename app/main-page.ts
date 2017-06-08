@@ -42,7 +42,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         setSearchBarText(appViewModel.currentUri || '');
         if (!appViewModel.currentUri) appViewModel.showBookmarks();
         appViewModel.updatePermissionsFromStorage(appViewModel.currentUri);
-        appViewModel.set('permissionChangesMade', false);
     }
     else if (evt.propertyName === 'viewerEnabled') {
         // const vuforiaDelegate = appViewModel.manager.container.get(Argon.VuforiaServiceDelegate);
@@ -264,11 +263,6 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             touchOverlayView.off(GestureTypes.touch);
             touchOverlayView.visibility = 'collapse';
         }
-    } else if (evt.propertyName === "needReloadForPermissionChange") {
-        if (evt.value) {
-            appViewModel.set('needReloadForPermissionChange', false);
-            onReload(null);
-        }
     }
 })
 
@@ -403,7 +397,8 @@ export function searchBarLoaded(args) {
         searchBar.on(SearchBar.submitEvent, () => {
             let urlString = searchBar.text;
 
-            // if (!urlString) urlString = appViewModel.currentUri;
+            // Allows page reload by clicking submit on the url bar
+            if (urlString == "") urlString = appViewModel.currentUri || "";
 
             if (urlString.includes(" ") || !urlString.includes(".")) {
                 // queries with spaces or single words without dots go to google search
@@ -540,7 +535,6 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    appViewModel.set('permissionChangesMade', false);
     appViewModel.hideMenu();
     browserView.focussedLayer && 
         browserView.focussedLayer.webView && 
@@ -600,12 +594,12 @@ export function onDebugToggle(args) {
 }
 
 export function onLocationPermissionIcon(args) {
-    appViewModel.togglePermissionMenu('ar.stage');
+    appViewModel.togglePermissionMenu('geolocation');
     appViewModel.hideMenu();
 }
 
 export function onCameraPermissionIcon(args) {
-    appViewModel.togglePermissionMenu('ar.camera');
+    appViewModel.togglePermissionMenu('camera');
     appViewModel.hideMenu();
 }
 

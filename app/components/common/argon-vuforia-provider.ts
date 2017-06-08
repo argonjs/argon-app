@@ -33,6 +33,7 @@ class VuforiaSessionData {
     dataSetUriById = new Map<string, string>();
     dataSetIdByUri = new Map<string, string>();
     dataSetInstanceById = new Map<string, vuforia.DataSet>();
+    hintValues = new Map<number, number>();
     constructor(public keyPromise: Promise<string>) {}
 }
 
@@ -95,6 +96,8 @@ export class NativescriptVuforiaServiceProvider {
                     ({id}:{id:string}) => this._handleObjectTrackerDeactivateDataSet(session, id);
                 session.on['ar.vuforia.objectTrackerUnloadDataSet'] = 
                     ({id}:{id:string}) => this._handleObjectTrackerUnloadDataSet(session, id);
+                session.on['ar.vuforia.setHint'] =
+                    options => this._setHint(session, options);
 
                 // backwards compatability
                 session.on['ar.vuforia.dataSetFetch'] = session.on['ar.vuforia.objectTrackerLoadDataSet'];
@@ -193,6 +196,11 @@ export class NativescriptVuforiaServiceProvider {
         };
         
         vuforia.api.setStateUpdateCallback(stateUpdateCallback);
+
+        // make sure the currently focussed session has priority
+        this.focusServiceProvider.sessionFocusEvent.addEventListener(()=>{
+            this._selectControllingSession();
+        })
 	}
         
     // private _deviceMode = vuforia.DeviceMode.VR;
@@ -373,6 +381,12 @@ export class NativescriptVuforiaServiceProvider {
                     
                 if (!vuforia.api.getCameraDevice().start()) 
                     throw new Error('Unable to start camera');
+
+                if (sessionData.hintValues) {
+                    sessionData.hintValues.forEach((value, hint, map) => {
+                        vuforia.api.setHint(hint, value);
+                    });
+                }
 
                 const loadedDataSets = sessionData.loadedDataSets;
                 const loadPromises:Promise<any>[] = [];
@@ -570,7 +584,7 @@ export class NativescriptVuforiaServiceProvider {
     }
     
     private _objectTrackerUnloadDataSet(session:Argon.SessionPort, id: string, permanent=true): boolean {       
-        console.log(`Vuforia: unloading dataset (${id})...`);
+        console.log(`Vuforia: unloading dataset (permanent:${permanent} id:${id})...`);
         const sessionData = this._getSessionData(session);
         const objectTracker = vuforia.api.getObjectTracker();
         if (objectTracker) {
@@ -578,12 +592,12 @@ export class NativescriptVuforiaServiceProvider {
             if (dataSet != null) {
                 const deleted = objectTracker.destroyDataSet(dataSet);
                 if (deleted) {
+                    sessionData.dataSetInstanceById.delete(id);
                     if (permanent) {
                         const uri = sessionData.dataSetUriById.get(id)!;
                         sessionData.dataSetIdByUri.delete(uri);
                         sessionData.loadedDataSets.delete(id);
                         sessionData.dataSetUriById.delete(id);
-                        sessionData.dataSetInstanceById.delete(id);
                     }
                     if (session.version[0] > 0)
                         session.send('ar.vuforia.objectTrackerUnloadDataSetEvent', { id });
@@ -607,6 +621,19 @@ export class NativescriptVuforiaServiceProvider {
         } else {
             return 'vuforia_trackable_' + trackable.getId();
         }
+    }
+
+    private _setHint(session:Argon.SessionPort, options:{hint?:number, value?:number}) {
+        return this._getCommandQueueForSession(session).push(()=>{
+            if (options.hint === undefined || options.value === undefined)
+                throw new Error('setHint requires hint and value');
+            var success = vuforia.api.setHint(options.hint, options.value);
+            if (success) {
+                const sessionData = this._getSessionData(session);
+                sessionData.hintValues.set(options.hint, options.value);
+            }
+            return {result: success};
+        });
     }
 
     private _decryptLicenseKey(encryptedLicenseData:string, session:Argon.SessionPort) : Promise<string> {

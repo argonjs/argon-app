@@ -6,15 +6,26 @@ import {
     SessionPort,
     Permission,
     PermissionType,
-    PermissionState,
-    PermissionNames
+    PermissionState
 } from '@argonjs/argon'
 
 const PERMISSION_KEY = 'permission_history';
 
-class PermissionManager {
-    private permissionMap = {};         // Key: hostname, Value: List of Permissions
+export const PermissionNames = {
+        'geolocation': 'Location',
+        'camera': 'Camera',
+        'world-structure': 'Structural mesh'
+    };
 
+export const PermissionDescriptions = {
+        'geolocation': 'your location', 
+        'camera': 'your camera',
+        'world-structure': 'the structure of your surroundings'
+    };
+
+class PermissionManager {
+    private permissionMap = {};         // Key: identifier(=hostname+port), Value: List of Permissions
+    private lastUsedOptions = {};        // Key: identifier(=hostname+port), Value: List of last used Options
     constructor() {
         // Initially load permissions to map from local storage
         if (applicationSettings.hasKey(PERMISSION_KEY)) {
@@ -23,30 +34,29 @@ class PermissionManager {
         }
     }
 
-    handlePermissionRequest(session: SessionPort, id: string) {
-        // Vuforia subscriptions & manager subscriptions
-        if (PermissionNames[id] === undefined || session.uri === 'argon:manager')
+    handlePermissionRequest(session: SessionPort, id: string, options: any) {
+        // Always allow when the request is about Vuforia subscriptions & manager subscriptions
+        if ((id !== 'ar.stage' && id !== 'camera' && id !=='world-structure') || session.uri === 'argon:manager')
             return Promise.resolve();
 
-        console.log("Permission requested {Source: " + session.uri + ", Type: " + id + "}");
+        id = id === 'ar.stage' ? 'geolocation' : id;
+        let type: PermissionType = <PermissionType>id;
+        
+        console.log("Permission requested {Source: " + session.uri + ", Type: " + type + "}");
 
         if (session.uri === undefined)
             return Promise.reject(new Error("Invalid uri for permission request"));
 
-        return this.getPermissionFromUser(URI(session.uri).hostname() + URI(session.uri).port(), <PermissionType>id);
-    }
-
-    handlePermissionRequestByURI(uri: string, id: PermissionType) {
-        this.getPermissionFromUser(URI(uri).hostname() + URI(uri).port(), id);
-    }
-
-    private getPermissionFromUser(hostname: string, id: PermissionType) {
-        const requestedPermission = new Permission(<PermissionType>id, this.getPermissionFromMap(hostname, <PermissionType>id));
+        const hostname = URI(session.uri).hostname();
+        const port = URI(session.uri).port();
+        const identifier = hostname + port;
+        const requestedPermission = new Permission(type, this.getPermissionFromMap(identifier, type));
+        this.saveLastUsedOption(session.uri, requestedPermission.type, options);
 
         if (requestedPermission.state === PermissionState.PROMPT || requestedPermission.state === PermissionState.NOT_REQUIRED) {
-            dialogs.confirm({
-                title: requestedPermission.name + " Request",
-                message: "Will you allow " + hostname + " to access " + requestedPermission.description + "?",
+            return dialogs.confirm({
+                title: PermissionNames[requestedPermission.type] + " Request",
+                message: "Will you allow " + hostname + ( port ? (":" + port):"") + " to access " + PermissionDescriptions[requestedPermission.type] + "?",
                 cancelButtonText: "Not now",
                 neutralButtonText: "Deny access",
                 okButtonText: "Grant access"
@@ -59,12 +69,11 @@ class PermissionManager {
                 } else {                    // cancel button (1st button on iOS)
                     newState = PermissionState.PROMPT;
                 }
-                console.log("Permission request for : " + requestedPermission.name + " -> resulted in : " + PermissionState[newState])
-                this.savePermissionOnMap(hostname, requestedPermission.type, newState);
+                console.log("Permission request for : " + PermissionNames[requestedPermission.type] + " -> resulted in : " + PermissionState[newState])
+                this.savePermissionOnMap(identifier, requestedPermission.type, newState);
                 appViewModel.setPermission(new Permission(requestedPermission.type, newState));
                 switch(newState) {
                     case PermissionState.GRANTED:
-                        appViewModel.set('needReloadForPermissionChange', true);
                         return Promise.resolve();
                     case PermissionState.DENIED:
                     case PermissionState.PROMPT:
@@ -74,7 +83,7 @@ class PermissionManager {
                 }
             });
         } else {
-            console.log("Permission request for : " + requestedPermission.name + " -> resulted in : " + PermissionState[requestedPermission.state] + " (no change)")
+            console.log("Permission request for : " + PermissionNames[requestedPermission.type] + " -> resulted in : " + PermissionState[requestedPermission.state] + " (no change)")
             appViewModel.setPermission(requestedPermission);
             switch(requestedPermission.state) {
                 case PermissionState.GRANTED:
@@ -86,8 +95,8 @@ class PermissionManager {
         return Promise.reject(new Error("Permission not handled properly!"));
     }
 
-    getPermissionFromMap = (hostname: string, type: PermissionType) => {
-        const newPermissionMapping = this.permissionMap[hostname];
+    getPermissionFromMap = (identifier: string, type: PermissionType) => {
+        const newPermissionMapping = this.permissionMap[identifier];
         if (newPermissionMapping) {
             const newPermissionMap = newPermissionMapping[type];
             if (newPermissionMap) {
@@ -97,10 +106,10 @@ class PermissionManager {
         return PermissionState.PROMPT;    //Default to prompt if the permissions has not been asked before
     }
 
-    savePermissionOnMap = (hostname:string, type: PermissionType, newState: PermissionState) => {
-        let newPermissionMapping = this.permissionMap[hostname] || {};
+    savePermissionOnMap = (identifier:string, type: PermissionType, newState: PermissionState) => {
+        let newPermissionMapping = this.permissionMap[identifier] || {};
         newPermissionMapping[type] = new Permission(type, newState);
-        this.permissionMap[hostname] = newPermissionMapping;
+        this.permissionMap[identifier] = newPermissionMapping;
         this.savePermissionsOnApp();
     }
 
@@ -140,9 +149,12 @@ class PermissionManager {
     }
 
     getPermissionStateBySession(session: SessionPort, type: PermissionType) {
-        const hostname = URI(session.uri).hostname() + URI(session.uri).port();;
-        const state = this.getPermissionFromMap(hostname, type);
-        return state;
+        if (session && session.uri && session.uri != "") {
+            const identifier = URI(session.uri).hostname() + URI(session.uri).port();;
+            const state = this.getPermissionFromMap(identifier, type);
+            return state;
+        }
+        return PermissionState.NOT_REQUIRED;
     }
 
     loadPermissionsToUI = (uri?: string) => {
@@ -152,16 +164,29 @@ class PermissionManager {
         }
 
         if (uri) {
-            const hostname = URI(uri).hostname() + URI(uri).port();
-            if (hostname) {
+            const identifier = URI(uri).hostname() + URI(uri).port();
+            if (identifier) {
                 // load permissions to UI from map
-                for (let type in this.permissionMap[hostname]) {
-                    appViewModel.setPermission(this.permissionMap[hostname][type]);
+                for (let type in this.permissionMap[identifier]) {
+                    appViewModel.setPermission(this.permissionMap[identifier][type]);
                 }
             }
         }
     }
 
+    saveLastUsedOption(uri: string, type: PermissionType, option: any) {
+        const identifier = URI(uri).hostname() + URI(uri).port();
+        let tempMap = this.lastUsedOptions[identifier] || {};
+        tempMap[type] = option;
+        this.lastUsedOptions[identifier] = tempMap;
+    }
+
+    getLastUsedOption(uri: string|undefined, type: PermissionType) {
+        if (uri) {
+            const identifier = URI(uri).hostname() + URI(uri).port();
+            return this.lastUsedOptions[identifier][type];
+        }
+    }
 }
 
 export const permissionManager = new PermissionManager;

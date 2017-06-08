@@ -75,3 +75,19 @@
     height: 50;
     padding: 5px;
 }
+
+#permissionMenu {
+    background-color: #EEFAFAFA;
+}
+
+#permissionLabel {
+    padding: 15px 15px 5px 15px;
+    color: #545454;
+    text-align: center;
+}
+
+#changePermission {
+    padding: 5px 15px 15px 15px;
+    color: #545454;
+    text-align: center;
+}

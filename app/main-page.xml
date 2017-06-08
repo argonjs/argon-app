@@ -16,8 +16,8 @@
                 <Button id="menuButton" col="6" width="30" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
 
-                <Button id="locationPermission" visibility="{{ (permissions['ar.stage'] != 'not_required' && permissions['ar.stage'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['ar.stage'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['ar.stage'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
-                <Button id="cameraPermission" visibility="{{ (permissions['ar.camera'] != 'not_required' && permissions['ar.camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['ar.camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
+                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
                 
                 <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>
@@ -45,11 +45,11 @@
         <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">
             <Label id="permissionLabel" tap="onPermissionIconMenuChangeTap">
                 <FormattedString>
-                    <Span text="{{ 'Access ' + selectedPermission.description + ': ' }}" />
-                    <Span foregroundColor="black" text="{{ permissionChangesMade ? 'Removed' : (selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' ) }}" tap="onPermissionIconMenuChangeTap"/>
+                    <Span text="{{ 'Access ' + permissionDescriptions[selectedPermission.type] + ': ' }}" />
+                    <Span foregroundColor="black" text="{{ selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' }}" tap="onPermissionIconMenuChangeTap"/>
                 </FormattedString>
             </Label>
-            <Label id="changePermission" color="{{ permissionChangesMade ? 'red' : 'gray' }}" text="{{ permissionChangesMade ? 'Reload the page for changes to apply' : ('Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' )) }}" tap="onPermissionIconMenuChangeTap"/>
+            <Label id="changePermission" color="gray" text="{{ 'Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' ) }}" tap="onPermissionIconMenuChangeTap"/>
         </StackLayout>
     </GridLayout>
 </Page>
