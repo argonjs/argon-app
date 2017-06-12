@@ -25,23 +25,23 @@ if (!global.performance.now) {
 }
 
 import { appViewModel } from './components/common/AppViewModel';
-import { handleOpenURL, AppURL } from '@speigg/nativescript-urlhandler';
-handleOpenURL((appURL: AppURL) => {
-    if (!appURL) return;
+import * as URI from 'urijs';
+function handleOpenURL(urlString: string) {
+    if (!urlString) return;
+    const url = URI(urlString);
+    if (url.protocol() !== "http" && url.protocol() !== "https") {
+        url.protocol("https");
+    }
+    var urlValue = url.toString();
+    console.log('Received url request: ' + urlValue);
     appViewModel.launchedFromUrl = true;
-    appViewModel.ready.then(()=>{
-        console.log('Received url request: ' + appURL);
-        const urlValue = appURL.params.get('url');
-        if (urlValue) {
-            appViewModel.openUrl(decodeURIComponent(urlValue));
-        } else {
-            const url = 'https://' + appURL.path;
-            appViewModel.openUrl(url);
-        }
-    });
-});
+    if (appViewModel.currentUri === '') {
+        appViewModel.loadUrl(urlValue);
+    } else {
+        appViewModel.openUrl(urlValue);
+    };
+}
 
-// Google Analytics
 import * as analytics from "./components/common/analytics";
 if (application.ios) {
     class MyDelegate extends UIResponder implements UIApplicationDelegate {
@@ -50,10 +50,27 @@ if (application.ios) {
             analytics.initAnalytics();
             return true;
         }
+        applicationOpenURLOptions(application: UIApplication, url: NSURL, options: any): boolean {
+            appViewModel.launchedFromUrl = true;
+            appViewModel.ready.then(()=>{
+                var urlValue = URI(url.absoluteString).query(true)['url'];
+                handleOpenURL(urlValue);
+            });
+            return true;
+        }
     }
     application.ios.delegate = MyDelegate;
 } else {
     application.on(application.launchEvent, function (args) {
+        var extras = args.android.getExtras();
+        if (extras) {
+            // TODO: enable url-launch from background state
+            appViewModel.launchedFromUrl = true;
+            appViewModel.ready.then(()=>{
+                var url = extras.getString('url');
+                handleOpenURL(url);
+            });
+        }
         analytics.initAnalytics();
     });
 }
