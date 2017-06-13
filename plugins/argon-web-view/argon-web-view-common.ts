@@ -12,7 +12,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public isArgonApp = false;
 
     public title : string;
-    public progress : number;
+    public progress : number; // range is 0 to 1.0
 
     private _log = new ObservableArray<def.LogItem>();
     public get log() {return this._log};
