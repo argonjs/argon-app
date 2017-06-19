@@ -20,6 +20,7 @@ declare module "argon-web-view" {
         log: ObservableArray<LogItem>;
         
         title?: string;
+        progress: number;
 
         isArgonApp: boolean;
 

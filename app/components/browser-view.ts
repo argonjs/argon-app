@@ -5,6 +5,7 @@ import {Color} from 'color';
 import {GridLayout, ItemSpec} from 'ui/layouts/grid-layout';
 import {Label} from 'ui/label';
 import {Button} from 'ui/button';
+import {Progress} from 'ui/progress';
 import {ArgonWebView} from 'argon-web-view';
 import {WebView, LoadEventData} from 'ui/web-view'
 import {
@@ -54,7 +55,8 @@ export interface Layer {
     closeButton:Button,
     titleLabel: Label,
     visualIndex: number,
-    details: LayerDetails
+    details: LayerDetails,
+    progressBar: Progress
 }
 
 export class BrowserView extends GridLayout {
@@ -222,8 +224,16 @@ export class BrowserView extends GridLayout {
                     }
                     analytics.updateArgonAppCount(this._countArgonApps());
                     break;
+                case 'progress':
+                    layer.progressBar.value = eventData.value * 100;
+                    break;
                 default: break;
             }
+        });
+
+        webView.on(WebView.loadStartedEvent, (eventData: LoadEventData) => {
+            layer.progressBar.value = 0;
+            layer.progressBar.visibility = Visibility.visible;
         });
         
         webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
@@ -231,6 +241,11 @@ export class BrowserView extends GridLayout {
             if (!eventData.error && webView !== this.realityLayer.webView) {
                 bookmarks.pushToHistory(eventData.url, webView.title);
             }
+            layer.progressBar.value = 100;
+            // wait a moment before hiding the progress bar
+            setTimeout(function() {
+                layer.progressBar.visibility = Visibility.collapse;
+            }, 30);
         });
         
         webView.on('session', (e)=>{
@@ -335,6 +350,13 @@ export class BrowserView extends GridLayout {
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
         contentView.addChild(webView);
+
+        var progress = new Progress();
+        progress.verticalAlignment = VerticalAlignment.top;
+        progress.maxValue = 100;
+        progress.height = 5;
+        progress.visibility = Visibility.collapse;
+        contentView.addChild(progress);
         
         var layer = {
             containerView,
@@ -345,7 +367,8 @@ export class BrowserView extends GridLayout {
             closeButton,
             titleLabel,
             visualIndex: this.layers.length,
-            details: new LayerDetails()
+            details: new LayerDetails(),
+            progressBar: progress
         };
         
         this.layers.push(layer);

@@ -85,6 +85,9 @@ export class ArgonWebView extends common.ArgonWebView {
                             callback.invoke(origin, false, false); // deny geolocation permission
                         }
                     });
+                },
+                onProgressChanged: (view: android.webkit.WebView, newProgress: number): void => {
+                    this.set('progress', newProgress / 100.0);
                 }
             })));
         });
@@ -111,12 +114,7 @@ export class ArgonWebView extends common.ArgonWebView {
                 this.currentUrl = this.android.getUrl();
             }
             this.set('title', this.android.getTitle());
-            this.set('progress', this.android.getProgress());
         });
-    }
-
-    get progress() {
-        return this.android.getProgress();
     }
 
     _setIsArgonApp(flag:boolean) {
