@@ -11,7 +11,9 @@
         "skipDefaultLibCheck": true,
         "noUnusedLocals": true,
         "lib": [
-            "es2016"
+            "es2016",
+            "es6",
+            "dom"
         ],
         "baseUrl": ".",
         "paths": {
