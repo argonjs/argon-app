@@ -13,6 +13,7 @@ const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
 
 var androidVideoView: plugin.VuforiaGLView|undefined = undefined;
 var vuforiaRenderer: plugin.VuforiaRenderer;
+var initialized = false;
 
 export const videoView = new placeholder.Placeholder();
 videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
@@ -37,6 +38,12 @@ application.on(application.suspendEvent, ()=> {
     if (VUFORIA_AVAILABLE) {
         console.log('Pausing Vuforia');
         vuforia.Vuforia.onPause();
+        if (initialized) {
+            console.log('Pausing camera and renderer');
+            api && api.getCameraDevice().stop();
+            androidVideoView && androidVideoView.onPause();
+            vuforiaRenderer && (vuforiaRenderer.mIsActive = false);
+        }
     }
 })
 
@@ -53,6 +60,12 @@ application.on(application.resumeEvent, ()=> {
         vuforia.Vuforia.onResume();
         vuforia.Vuforia.onSurfaceCreated();
         configureVuforiaSurface();
+        if (initialized) {
+            console.log('Resuming camera and renderer');
+            api && api.getCameraDevice().start();
+            androidVideoView && androidVideoView.onResume();
+            vuforiaRenderer && (vuforiaRenderer.mIsActive = true);
+        }
     }
 })
 
@@ -111,6 +124,7 @@ export class API extends common.APIBase {
                         }));
 
                         vuforia.Vuforia.onResume();
+                        initialized = true;
                     }
                     resolve(<def.InitResult><number>result);
                 }
