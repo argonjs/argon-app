@@ -230,7 +230,7 @@ export class BrowserView extends GridLayout {
 
         webView.on(WebView.loadStartedEvent, (eventData: LoadEventData) => {
             layer.progressBar.value = 0;
-            layer.progressBar.visibility = Visibility.visible;
+            layer.progressBar.visibility = 'visible';
         });
         
         webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
@@ -241,7 +241,7 @@ export class BrowserView extends GridLayout {
             layer.progressBar.value = 100;
             // wait a moment before hiding the progress bar
             setTimeout(function() {
-                layer.progressBar.visibility = Visibility.collapse;
+                layer.progressBar.visibility = 'collapse';
             }, 30);
         });
         
@@ -349,10 +349,10 @@ export class BrowserView extends GridLayout {
         contentView.addChild(webView);
 
         var progress = new Progress();
-        progress.verticalAlignment = VerticalAlignment.top;
+        progress.verticalAlignment = 'top';
         progress.maxValue = 100;
         progress.height = 5;
-        progress.visibility = Visibility.collapse;
+        progress.visibility = 'collapse';
         contentView.addChild(progress);
         
         var layer = {

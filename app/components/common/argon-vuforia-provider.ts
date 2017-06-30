@@ -34,7 +34,7 @@ class VuforiaSessionData {
     dataSetIdByUri = new Map<string, string>();
     dataSetInstanceById = new Map<string, vuforia.DataSet>();
     hintValues = new Map<number, number>();
-    constructor(public keyPromise: Promise<string>) {}
+    constructor(public keyPromise: Promise<string|undefined>) {}
 }
 
 @Argon.DI.autoinject
@@ -335,7 +335,7 @@ export class NativescriptVuforiaServiceProvider {
         
         return keyPromise.then<void>( key => {
 
-            if (!vuforia.api.setLicenseKey(key)) {
+            if (!key || !vuforia.api.setLicenseKey(key)) {
                 return Promise.reject(new Error('Vuforia: Unable to set the license key'));
             }
 
