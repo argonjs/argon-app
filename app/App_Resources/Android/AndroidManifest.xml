@@ -34,7 +34,7 @@
 		android:theme="@style/AppTheme">
 
 		<activity
-			android:name="com.tns.NativeScriptActivity"
+			android:name="edu.gatech.argon4.MainActivity"
 			android:label="@string/title_activity_kimera"
 			android:configChanges="keyboardHidden|orientation|screenSize"
 			android:theme="@style/LaunchScreenTheme"
