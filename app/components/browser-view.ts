@@ -9,11 +9,7 @@ import {Progress} from 'ui/progress';
 import {ArgonWebView} from 'argon-web-view';
 import {WebView, LoadEventData} from 'ui/web-view'
 import {
-    AnimationCurve, 
-    VerticalAlignment, 
-    HorizontalAlignment, 
-    TextAlignment,
-    Visibility
+    AnimationCurve,
 } from 'ui/enums';
 import {
   GestureTypes
@@ -65,7 +61,7 @@ export class BrowserView extends GridLayout {
     
     videoView:View = vuforia.videoView;
     scrollView = new ScrollView;
-    layerContainer = new GridLayout;
+    layerContainer = new AbsoluteLayout;
     layers:Layer[] = [];
         
     private _focussedLayer?:Layer;
@@ -115,7 +111,7 @@ export class BrowserView extends GridLayout {
         let layer:Layer = this._createLayer();
         layer.titleBar.backgroundColor = new Color(0xFF222222);
         layer.titleLabel.color = new Color('white');
-        layer.closeButton.visibility = 'collapsed';
+        layer.closeButton.visibility = 'collapse';
         
         if (this.videoView) {
             // this.videoView.horizontalAlignment = 'stretch';
@@ -208,8 +204,9 @@ export class BrowserView extends GridLayout {
                     layer.details.set('uri', eventData.value);
                     break;
                 case 'title':
-                    const title = webView.title || getHost(webView.url);
-                    bookmarks.updateTitle(webView.url, title);
+                    const url = webView.url!;
+                    const title = webView.title || getHost(url);
+                    bookmarks.updateTitle(url, title);
                     layer.details.set('title', title);
                     break;
                 case 'isArgonApp':
@@ -296,7 +293,7 @@ export class BrowserView extends GridLayout {
 
         // Cover the webview to detect gestures and disable interaction
         const touchOverlay = new GridLayout();
-        touchOverlay.style.visibility = 'collapsed';
+        touchOverlay.style.visibility = 'collapse';
         touchOverlay.horizontalAlignment = 'stretch';
         touchOverlay.verticalAlignment = 'stretch';
         touchOverlay.on(GestureTypes.tap, (event) => {
@@ -309,15 +306,15 @@ export class BrowserView extends GridLayout {
         titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
         titleBar.addColumn(new ItemSpec(1, 'star'));
         titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
-        titleBar.verticalAlignment = VerticalAlignment.top;
-        titleBar.horizontalAlignment = HorizontalAlignment.stretch;
+        titleBar.verticalAlignment = 'top';
+        titleBar.horizontalAlignment = 'stretch';
         titleBar.backgroundColor = new Color(240, 255, 255, 255);
-        titleBar.visibility = Visibility.collapse;
+        titleBar.visibility = 'collapse';
         titleBar.opacity = 0;
         
         const closeButton = new Button();
-        closeButton.horizontalAlignment = HorizontalAlignment.stretch;
-        closeButton.verticalAlignment = VerticalAlignment.stretch;
+        closeButton.horizontalAlignment = 'stretch';
+        closeButton.verticalAlignment = 'stretch';
         closeButton.text = 'close';
         closeButton.className = 'material-icon';
         closeButton.style.fontSize = application.android ? 16 : 22;
@@ -330,9 +327,9 @@ export class BrowserView extends GridLayout {
         });
         
         const titleLabel = new Label();
-        titleLabel.horizontalAlignment = HorizontalAlignment.stretch;
-        titleLabel.verticalAlignment = application.android ? VerticalAlignment.center : VerticalAlignment.stretch;
-        titleLabel.textAlignment = TextAlignment.center;
+        titleLabel.horizontalAlignment = 'stretch';
+        titleLabel.verticalAlignment = application.android ? 'middle' : 'stretch';
+        titleLabel.textAlignment = 'center';
         titleLabel.color = new Color('black');
         titleLabel.fontSize = 14;
         GridLayout.setRow(titleLabel, 0);
@@ -416,15 +413,17 @@ export class BrowserView extends GridLayout {
     onMeasure(widthMeasureSpec, heightMeasureSpec) {
         const width = utils.layout.getMeasureSpecSize(widthMeasureSpec);
         const height = utils.layout.getMeasureSpecSize(heightMeasureSpec);
+        const dipWidth = utils.layout.toDeviceIndependentPixels(width);
+        const dipHeight = utils.layout.toDeviceIndependentPixels(height);
         
         if (!this._overviewEnabled) {
-            this.layerContainer.width = width;
-            this.layerContainer.height = height;
+            this.layerContainer.width = dipWidth;
+            this.layerContainer.height = dipHeight;
         }
         
         this.layers.forEach((layer)=>{
-            layer.containerView.width = width;
-            layer.containerView.height = height;
+            layer.containerView.width = dipWidth;
+            layer.containerView.height = dipHeight;
         });
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -570,7 +569,7 @@ export class BrowserView extends GridLayout {
         })
 
         // Show titlebars
-        layer.titleBar.visibility = Visibility.visible;
+        layer.titleBar.visibility = 'visible';
         layer.titleBar.animate({
             opacity: 1,
             duration: OVERVIEW_ANIMATION_DURATION
@@ -591,7 +590,7 @@ export class BrowserView extends GridLayout {
     private _showLayerInStack(layer:Layer) {
         const idx = this.layers.indexOf(layer);
         
-        layer.touchOverlay.style.visibility = 'collapsed';
+        layer.touchOverlay.style.visibility = 'collapse';
 
         if (application.ios) {
             // todo: this is causing issues on android, investigate further
@@ -640,7 +639,7 @@ export class BrowserView extends GridLayout {
             opacity: 0,
             duration: OVERVIEW_ANIMATION_DURATION
         }).then(()=>{
-            layer.titleBar.visibility = Visibility.collapse;
+            layer.titleBar.visibility = 'collapse';
         })
 
         // Update for the first time & animate.
@@ -704,7 +703,7 @@ export class BrowserView extends GridLayout {
         }
 
         if (this.focussedLayer && this.focussedLayer.webView) {
-            if (this.focussedLayer.webView.getCurrentUrl() === url) {
+            if (this.focussedLayer.webView.url === url) {
                 this.focussedLayer.webView.reload();
             } else {
                 if (this.focussedLayer.webView.src === url) {

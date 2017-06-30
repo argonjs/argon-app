@@ -8,8 +8,6 @@ const AndroidWebInterface = io.argonjs.AndroidWebInterface;
 
 export class ArgonWebView extends common.ArgonWebView {
 
-    private currentUrl: string = "";
-
     /*
     private static layersById: {
         [id: string]: ArgonWebView,
@@ -94,7 +92,7 @@ export class ArgonWebView extends common.ArgonWebView {
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
             this._didCommitNavigation();
-            this.currentUrl = args.url;
+            this.set('url', args.url)
             this.set('title', this.android.getTitle());
         });
 
@@ -103,15 +101,17 @@ export class ArgonWebView extends common.ArgonWebView {
                 var boolResult = (result === "true");
                 this._setIsArgonApp(boolResult);
             });
-            if (this.android.getUrl() != this.currentUrl) {
+            const webview = (this.android as android.webkit.WebView);
+            const url = webview.getUrl();
+            if (url != this.url) {
                 // the page did not successfully load
-                if (this.currentUrl.startsWith("https")) {
+                if (url.startsWith("https")) {
                     // the certificate is likely invalid
                     dialogs.alert("Argon cannot currently load https pages with invalid certificates.").then(()=> {
                         // do nothing for now
                     });
                 }
-                this.currentUrl = this.android.getUrl();
+                this.set('url', url);
             }
             this.set('title', this.android.getTitle());
         });
@@ -144,12 +144,6 @@ export class ArgonWebView extends common.ArgonWebView {
 
     bringToFront() {
         this.android.bringToFront();
-    }
-
-    public getCurrentUrl() : string {
-        // on Android, the url property isn't updated until after the page appears
-        // we need it updated as soon as the load starts
-        return this.currentUrl;
     }
 
     getWebViewVersion() : number {

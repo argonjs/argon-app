@@ -1,6 +1,6 @@
 import * as Argon from '@argonjs/argon';
 import * as common from './argon-web-view-common';
-import {WebView} from 'ui/web-view';
+import {NavigationType} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
 import * as dialogs from 'ui/dialogs';
@@ -109,7 +109,7 @@ export class ArgonWebView extends common.ArgonWebView  {
         }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
 
         // We want to replace the UIWebView created by superclass with WKWebView instance
-        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        this.nativeView = this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate // remove reference to UIWebView delegate created by super class
         const delegate = this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
@@ -165,11 +165,6 @@ export class ArgonWebView extends common.ArgonWebView  {
         super.onUnloaded();
     }
 
-    public getCurrentUrl() : string {
-        // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
-        return this.url;
-    }
-
     reload() {
         this._ios.reloadFromOrigin();
     }
@@ -222,9 +217,7 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         const owner = this._owner.get();
         if (!owner) return;     
         const wkWebView = <WKWebView>owner.ios;
-        owner['_suspendLoading'] = true; 
-        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString); 
-        owner['_suspendLoading'] = false; 
+        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString);
     }
     
     // WKScriptMessageHandler
@@ -260,26 +253,26 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     webViewDecidePolicyForNavigationActionDecisionHandler(webview:WKWebView, navigationAction:WKNavigationAction, decisionHandler:(policy:WKNavigationActionPolicy)=>void) {
         if (navigationAction.targetFrame && navigationAction.targetFrame.mainFrame) {
             const navigationType:WKNavigationType = navigationAction.navigationType;
-            var navTypeIndex = WebView.navigationTypes.indexOf('other');
+            var navType:NavigationType = 'other';
             switch (navigationType) {
                 case WKNavigationType.LinkActivated:
-                    navTypeIndex = WebView.navigationTypes.indexOf('linkClicked');
+                    navType = 'linkClicked';
                     break;
                 case WKNavigationType.FormSubmitted:
-                    navTypeIndex = WebView.navigationTypes.indexOf('formSubmitted');
+                    navType = 'formSubmitted';
                     break;
                 case WKNavigationType.BackForward:
-                    navTypeIndex = WebView.navigationTypes.indexOf('backForward');
+                    navType = 'backForward';
                     break;
                 case WKNavigationType.Reload:
-                    navTypeIndex = WebView.navigationTypes.indexOf('reload');
+                    navType = 'reload';
                     break;
                 case WKNavigationType.FormResubmitted:
-                    navTypeIndex = WebView.navigationTypes.indexOf('formResubmitted');
+                    navType = 'formResubmitted';
                     break;
             }
             const owner = this._owner.get();
-            if (owner) owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, WebView.navigationTypes[navTypeIndex]);
+            if (owner) owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, navType);
         }
 
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);

@@ -1,8 +1,7 @@
-import * as def from 'argon-web-view'
+import * as def from '.'
 import {WebView} from 'ui/web-view'
 import * as Argon from '@argonjs/argon'
-import {ObservableArray} from 'data/observable-array';
-
+import {ObservableArray} from 'data/observable-array';    
 
 export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
@@ -10,6 +9,10 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public static logEvent = 'log';
 
     public isArgonApp = false;
+
+    private _url: string|undefined;
+    get url() { return this._url };
+    set url(url) { this._url = url };
 
     public title : string;
     public progress : number; // range is 0 to 1.0
@@ -34,9 +37,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public _handleArgonMessage(message:string) {
 
         if (this.session && !this.session.isConnected) return;
+        const sessionUrl = this.url;
 
-        if (!this.session) { 
-            const sessionUrl = this.getCurrentUrl();
+        if (!this.session && sessionUrl) { 
             
             console.log('Connecting to argon.js session at ' + sessionUrl);
             const manager = Argon.ArgonSystem.instance!;
@@ -77,7 +80,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public abstract evaluateJavascriptWithoutPromise(script:string) : void;
 
     public abstract bringToFront();
-
-    public abstract getCurrentUrl() : string;
+    
+    public on(event: string, callback: (data: any) => void, thisArg?: any) {
+        return super.on(event, callback, thisArg);
+    }
 
 }

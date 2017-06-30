@@ -11,8 +11,15 @@
         "skipDefaultLibCheck": true,
         "noUnusedLocals": true,
         "lib": [
-            "es2015"
-        ]
+            "es2016"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "./node_modules/tns-core-modules/*",
+                "./node_modules/*"
+            ]
+        }
     },
     "exclude": [
         "node_modules",

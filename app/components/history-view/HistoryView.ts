@@ -57,8 +57,8 @@ var tapTimerId = -1;
 
 export function onItemLoaded(args) {
     var itemView:View = args.object;
-    var contentView = itemView.getViewById('content');
-    var deleteView = itemView.getViewById('delete');
+    var contentView = itemView.getViewById<View>('content');
+    var deleteView = itemView.getViewById<View>('delete');
     var cell = {contentView, deleteView};
 
     var panStart=0;

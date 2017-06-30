@@ -180,7 +180,7 @@ Unfortunately, it looks like you are missing a Vuforia License Key. Please suppl
             }
         });
 
-        this.setLayerDetails(new LayerDetails(null));
+        this.setLayerDetails(new LayerDetails());
         
         this._resolveReady();
     }

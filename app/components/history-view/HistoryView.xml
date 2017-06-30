@@ -2,7 +2,6 @@
     <ListView
         items="{{ showFilteredResults ? filteredHistoryList : historyList }}"
         loaded="onLoaded"
-        rowHeight="40"
         backgroundColor="#FFFFFF">
         <ListView.itemTemplate>
             <GridLayout backgroundColor="#FFFFFF" height="40" loaded="onItemLoaded">
