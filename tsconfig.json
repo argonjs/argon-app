@@ -10,6 +10,8 @@
         "skipLibCheck": true,
         "skipDefaultLibCheck": true,
         "noUnusedLocals": true,
+        "inlineSourceMap": true,
+        "inlineSources": true,
         "lib": [
             "es2016",
             "es6",
