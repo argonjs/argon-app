@@ -724,7 +724,7 @@ class AndroidSearchBarController {
                 bookmarks.filterControl.set('showFilteredResults', newText.length > 0);
                 return false;
             },
-            onQueryTextSubmit(query: String): boolean {
+            onQueryTextSubmit(query: string): boolean {
                 searchBar.notify(<EventData>{
                     eventName: SearchBar.submitEvent,
                     object: this
@@ -732,8 +732,10 @@ class AndroidSearchBarController {
                 return true;
             }
         });
+        console.log("searchHandler: " + searchHandler);
 
-        this.searchView.setOnQueryTextListener(searchHandler);
+        // TODO: this crashes with nativescript 3.0+
+        //this.searchView.setOnQueryTextListener(searchHandler);
     }
 
     public setText(url) {
