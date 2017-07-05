@@ -316,7 +316,7 @@ export class BrowserView extends GridLayout {
         closeButton.horizontalAlignment = 'stretch';
         closeButton.verticalAlignment = 'stretch';
         closeButton.text = 'close';
-        closeButton.className = 'material-icon';
+        closeButton.className = 'material-icon action-btn';
         closeButton.style.fontSize = application.android ? 16 : 22;
         closeButton.color = new Color('black');
         GridLayout.setRow(closeButton, 0);

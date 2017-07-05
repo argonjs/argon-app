@@ -10,7 +10,7 @@
                 </GridLayout>
                 <GridLayout id="content" rows="*" columns="64,*" backgroundColor="#FFFFFF" tap="onTap">
                     <GridLayout backgroundColor="#44FFAF00" row="0" col="0" rows="*" columns="*">
-                        <Label textAlignment="center" verticalAlignment="center" class="material-icon" text="bookmark_border" />
+                        <Label textAlignment="center" verticalAlignment="center" class="material-icon bookmark-icon" text="bookmark_border" />
                     </GridLayout>
                     <StackLayout col="1" padding="10" class="bookmark-item"> 
                         <Label text="{{ title }}" class="bookmark-title" horizontalAlignment="stretch" />
