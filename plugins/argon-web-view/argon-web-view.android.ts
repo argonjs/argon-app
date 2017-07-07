@@ -2,6 +2,7 @@ import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
 import dialogs = require("ui/dialogs");
+import {Observable} from 'data/observable';
 //import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
@@ -85,15 +86,18 @@ export class ArgonWebView extends common.ArgonWebView {
                     });
                 },
                 onProgressChanged: (view: android.webkit.WebView, newProgress: number): void => {
-                    this.set('progress', newProgress / 100.0);
+                    //this.set('progress', newProgress / 100.0);
+                    Observable.prototype.set.call(this, 'progress', newProgress / 100.0);
                 }
             })));
         });
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
             this._didCommitNavigation();
-            this.set('url', args.url)
-            this.set('title', this.android.getTitle());
+            //this.set('url', args.url)
+            //this.set('title', this.android.getTitle());
+            Observable.prototype.set.call(this, 'url', args.url);
+            Observable.prototype.set.call(this, 'title', this.android.getTitle());
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {
@@ -111,9 +115,11 @@ export class ArgonWebView extends common.ArgonWebView {
                         // do nothing for now
                     });
                 }
-                this.set('url', url);
+                //this.set('url', url);
+                Observable.prototype.set.call(this, 'url', url);
             }
-            this.set('title', this.android.getTitle());
+            //this.set('title', this.android.getTitle());
+            Observable.prototype.set.call(this, 'title', this.android.getTitle());
         });
     }
 
@@ -121,10 +127,12 @@ export class ArgonWebView extends common.ArgonWebView {
         //console.log("_setIsArgonApp: " + flag);
         if (!this.isArgonApp && flag) {
             this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            this.set("isArgonApp", true);
+            //this.set("isArgonApp", true);
+            Observable.prototype.set.call(this, 'isArgonApp', true);
         } else if (this.isArgonApp && !flag) {
             this.android.setBackgroundColor(android.graphics.Color.WHITE);
-            this.set("isArgonApp", false);
+            //this.set("isArgonApp", false);
+            Observable.prototype.set.call(this, 'isArgonApp', false);
         }
     }
 

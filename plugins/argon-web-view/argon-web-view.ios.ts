@@ -4,6 +4,7 @@ import {NavigationType} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
 import * as dialogs from 'ui/dialogs';
+import {Observable} from 'data/observable';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
@@ -129,12 +130,14 @@ export class ArgonWebView extends common.ArgonWebView  {
             this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.opaque = false;        
-            this.set("isArgonApp", true);
+            //this.set("isArgonApp", true);
+            Observable.prototype.set.call(this, 'isArgonApp', true);
         } else if (this.isArgonApp && !flag) {
             this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.opaque = true;        
-            this.set("isArgonApp", false);
+            //this.set("isArgonApp", false);
+            Observable.prototype.set.call(this, 'isArgonApp', false);
         }
     }
 
@@ -202,13 +205,15 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
         switch (keyPath) {
             case "title": 
-                owner.set(keyPath, wkWebView.title); 
+                //owner.set(keyPath, wkWebView.title); 
+                Observable.prototype.set.call(owner, keyPath, wkWebView.title);
                 break;
             case "URL": 
                 this.updateURL();
                 break;
             case "estimatedProgress":
-                owner.set('progress', wkWebView.estimatedProgress);
+                //owner.set('progress', wkWebView.estimatedProgress);
+                Observable.prototype.set.call(owner, 'progress', wkWebView.estimatedProgress);
                 break;
         }
     }
@@ -217,7 +222,8 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         const owner = this._owner.get();
         if (!owner) return;     
         const wkWebView = <WKWebView>owner.ios;
-        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString);
+        //owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString);
+        Observable.prototype.set.call(owner, 'url', wkWebView.URL && wkWebView.URL.absoluteString);
     }
     
     // WKScriptMessageHandler
