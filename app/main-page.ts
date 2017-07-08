@@ -716,10 +716,9 @@ class AndroidSearchBarController {
         // 2) the user attempts to navigate back to the previous page by updating the search bar text
         // 3) nativescript sees this as submitting the same query and treats it as a no-op
         // https://github.com/NativeScript/NativeScript/issues/3965
-        const searchHandler = new android.widget.SearchView.OnQueryTextListener({
+        const searchHandler = new android.support.v7.widget.SearchView.OnQueryTextListener({
             onQueryTextChange(newText: string): boolean {
                 textProperty.nativeValueChange(searchBar, newText)
-                // searchBar._onPropertyChangedFromNative(textProperty, newText);
                 bookmarks.filterBookmarks(newText.toString());
                 bookmarks.filterControl.set('showFilteredResults', newText.length > 0);
                 return false;
@@ -732,10 +731,8 @@ class AndroidSearchBarController {
                 return true;
             }
         });
-        console.log("searchHandler: " + searchHandler);
 
-        // TODO: this crashes with nativescript 3.0+
-        //this.searchView.setOnQueryTextListener(searchHandler);
+        this.searchView.setOnQueryTextListener(searchHandler);
     }
 
     public setText(url) {
