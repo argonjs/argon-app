@@ -15,8 +15,7 @@ import {
   GestureTypes
 } from 'ui/gestures';
 import {bringToFront} from './common/util';
-import {PropertyChangeData} from 'data/observable'
-import {Observable} from 'data/observable';
+import {Observable, PropertyChangeData, WrappedValue} from 'data/observable';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import dialogs = require("ui/dialogs");
 import applicationSettings = require('application-settings');
@@ -708,9 +707,8 @@ export class BrowserView extends GridLayout {
             } else {
                 if (this.focussedLayer.webView.src === url) {
                     // webView.src does not update when the user clicks a link on a webpage
-                    // clear the src property to force a property update (note that notifyPropertyChange doesn't work here)
-                    this.focussedLayer.webView.src = "";
-                    this.focussedLayer.webView.src = url;
+                    // use a WrappedValue to force a property update
+                    this.focussedLayer.webView.src = <any>(new WrappedValue(url));
                 } else {
                     this.focussedLayer.webView.src = url;
                 }
