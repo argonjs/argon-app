@@ -1,6 +1,5 @@
 import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
-import * as enums from 'ui/enums';
 
 import {ArgonWebView, SessionEventData} from 'argon-web-view';
 import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
@@ -11,6 +10,7 @@ import {
   PinchGestureEventData
 } from 'ui/gestures';
 
+import {View} from 'ui/core/view'
 
 interface DOMTouch {
     readonly clientX: number;
@@ -110,7 +110,8 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
 
         console.log("Setting up Vuforia viewer session");
 
-        vuforia.videoView.parent.on(GestureTypes.pinch, this._handlePinchGestureEventData, this);
+        
+        (vuforia.videoView.parent as View).on(GestureTypes.pinch, this._handlePinchGestureEventData, this);
 
         session.on['ar.view.uievent'] = (uievent:DOMTouchEvent) => { 
             this._handleForwardedDOMTouchEventData(uievent);
@@ -209,7 +210,7 @@ export class NativescriptHostedRealityViewer extends Argon.HostedRealityViewer {
         });
 
         this.presentChangeEvent.addEventListener(()=>{
-            this.webView.visibility = this.isPresenting ? enums.Visibility.visible : enums.Visibility.collapse;
+            this.webView.visibility = this.isPresenting ? 'visible' : 'collapse';
         });
     }
     

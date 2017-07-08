@@ -14,8 +14,10 @@ class BookmarkItem extends Observable {
         title?:string,
         uri:string
     }) {
-        super(item);
-        const uri = item.uri;
+        super();
+        this.title = item.title;
+        const uri = this.uri = item.uri;
+
         // reuse an existing BookmarkItem if one exists
         if (historyMap.has(uri)) return historyMap.get(uri)!; 
         if (realityMap.has(uri)) return realityMap.get(uri)!; 

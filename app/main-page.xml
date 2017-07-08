@@ -8,6 +8,7 @@
     <Page.actionBar>
         <ActionBar>
             <ActionBar.titleView margin="0px" padding="0px" >
+            
             <GridLayout columns="auto, auto, auto, *, auto, auto, auto, auto" rows="auto" horizontalAlignment="stretch" loaded="headerLoaded">
                 <SearchBar col="3" class="search-bar" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
                 <Label col="4" width="10" />
@@ -16,8 +17,8 @@
                 <Button id="menuButton" col="6" width="30" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
 
-                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
-                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
+                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon action-btn permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
                 
                 <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>
@@ -35,11 +36,13 @@
             <GridLayout id="menuButtons" rows="*" columns="*,*,*" class="menuItem" horizontalAlignment="stretch" orientation="horizontal">
                 <Button col="0" id="reload" class="material-icon action-btn" text="refresh" tap="onReload"/>
                 <Button col="1" id="favorite" class="{{ isFavorite ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off' }}" text="{{ isFavorite ? 'star' : 'star_border' }}" tap="onFavoriteToggle"/>
-                <Button col="2" id="interaction" class="{{ interactionModeButtonEnabled ? 'material-icon action-btn' : 'material-icon action-btn-disabled' }}" text="{{interactionMode === 'immersive' ? 'description' : 'public'}}" isEnabled="{{interactionModeButtonEnabled}}" tap="onInteractionToggle"/>
+                <Button col="2" id="interaction" visibility="collapsed" class="{{ interactionModeButtonEnabled ? 'material-icon action-btn' : 'material-icon action-btn-disabled' }}" text="{{interactionMode === 'immersive' ? 'description' : 'public'}}" isEnabled="{{interactionModeButtonEnabled}}" tap="onInteractionToggle"/>
             </GridLayout>
+            <DockLayout class="menuItem" orientation="horizontal" stretchLastChild="true"><Switch dock="right"/><Label dock="left" text="Immersive Mode" /></DockLayout>
+            <DockLayout class="menuItem" orientation="horizontal" stretchLastChild="true"><Switch dock="right"/><Label dock="left" text="Show All Layers" /></DockLayout>
             <Label class="menuItem" text="Select Reality..." tap="onSelectReality"/>
             <!--<Label class="menuItem" text="Settings" tap="onSettings"/>-->
-            <Label class="menuItem" text="{{ viewerEnabled ? 'Disable Viewer' : 'Enable Viewer Mode' }}" tap="onViewerToggle"/>
+            <Label class="menuItem" text="{{ viewerEnabled ? 'Exit Viewer' : 'Enter Viewer Mode' }}" tap="onViewerToggle"/>
             <Label class="menuItem" text="{{ debugEnabled ? 'Hide Console' : 'Show Console' }}" tap="onDebugToggle"/>
         </StackLayout>
         <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">

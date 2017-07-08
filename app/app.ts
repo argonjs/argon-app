@@ -1,16 +1,19 @@
 import application = require("application");
-if (application.android) {
-    application.mainModule = "entry-page"
-} else {
-    application.mainModule = "main-page"
-}
-application.cssFile = "./app.css";
 
 /***
  * Creates a performance.now() function
  */
+//Augment the NodeJS global type with our own extensions
+declare global {
+    namespace NodeJS {
+        interface Global {
+            performance: {now:()=>number};
+        }
+    }
+}
+
 if (!global.performance) {
-    global.performance = {};
+    global.performance = <any>{};
 }
 if (!global.performance.now) {
     if (application.android) {
@@ -155,4 +158,5 @@ if (application.ios) {
     });
 }
 
-application.start();
+application.setCssFileName('./app.css');
+application.start(application.android ? 'entry-page' : 'main-page');

@@ -4,7 +4,6 @@ import {Label} from 'ui/label';
 import {appViewModel} from '../common/AppViewModel';
 import {LogItem} from 'argon-web-view';
 import {Color} from 'color';
-import * as enums from 'ui/enums';
 import {Layout} from 'ui/layouts/layout'
 
 let label:Label;
@@ -23,12 +22,12 @@ export function onLayoutLoaded(args) {
 
 export function onLoaded(args) {
     label = args.object;
-    label.verticalAlignment = enums.VerticalAlignment.bottom;
+    label.verticalAlignment = 'bottom';
 }
 
 export function onShadowLoaded(args) {
     shadow = args.object;
-    shadow.verticalAlignment = enums.VerticalAlignment.bottom;
+    shadow.verticalAlignment = 'bottom';
     shadow.translateX = 0.5;
     shadow.translateY = 0.5;
 }

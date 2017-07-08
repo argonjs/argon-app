@@ -10,9 +10,20 @@
         "skipLibCheck": true,
         "skipDefaultLibCheck": true,
         "noUnusedLocals": true,
+        "inlineSourceMap": true,
+        "inlineSources": true,
         "lib": [
-            "es2015"
-        ]
+            "es2016",
+            "es6",
+            "dom"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "./node_modules/tns-core-modules/*",
+                "./node_modules/*"
+            ]
+        }
     },
     "exclude": [
         "node_modules",

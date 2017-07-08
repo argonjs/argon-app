@@ -2,13 +2,12 @@ import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
 import dialogs = require("ui/dialogs");
+import {Observable} from 'data/observable';
 //import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
 
 export class ArgonWebView extends common.ArgonWebView {
-
-    private currentUrl: string = "";
 
     /*
     private static layersById: {
@@ -87,15 +86,18 @@ export class ArgonWebView extends common.ArgonWebView {
                     });
                 },
                 onProgressChanged: (view: android.webkit.WebView, newProgress: number): void => {
-                    this.set('progress', newProgress / 100.0);
+                    //this.set('progress', newProgress / 100.0);
+                    Observable.prototype.set.call(this, 'progress', newProgress / 100.0);
                 }
             })));
         });
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
             this._didCommitNavigation();
-            this.currentUrl = args.url;
-            this.set('title', this.android.getTitle());
+            //this.set('url', args.url)
+            //this.set('title', this.android.getTitle());
+            Observable.prototype.set.call(this, 'url', args.url);
+            Observable.prototype.set.call(this, 'title', this.android.getTitle());
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {
@@ -103,17 +105,21 @@ export class ArgonWebView extends common.ArgonWebView {
                 var boolResult = (result === "true");
                 this._setIsArgonApp(boolResult);
             });
-            if (this.android.getUrl() != this.currentUrl) {
+            const webview = (this.android as android.webkit.WebView);
+            const url = webview.getUrl();
+            if (url != this.url) {
                 // the page did not successfully load
-                if (this.currentUrl.startsWith("https")) {
+                if (url.startsWith("https")) {
                     // the certificate is likely invalid
                     dialogs.alert("Argon cannot currently load https pages with invalid certificates.").then(()=> {
                         // do nothing for now
                     });
                 }
-                this.currentUrl = this.android.getUrl();
+                //this.set('url', url);
+                Observable.prototype.set.call(this, 'url', url);
             }
-            this.set('title', this.android.getTitle());
+            //this.set('title', this.android.getTitle());
+            Observable.prototype.set.call(this, 'title', this.android.getTitle());
         });
     }
 
@@ -121,10 +127,12 @@ export class ArgonWebView extends common.ArgonWebView {
         //console.log("_setIsArgonApp: " + flag);
         if (!this.isArgonApp && flag) {
             this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            this.set("isArgonApp", true);
+            //this.set("isArgonApp", true);
+            Observable.prototype.set.call(this, 'isArgonApp', true);
         } else if (this.isArgonApp && !flag) {
             this.android.setBackgroundColor(android.graphics.Color.WHITE);
-            this.set("isArgonApp", false);
+            //this.set("isArgonApp", false);
+            Observable.prototype.set.call(this, 'isArgonApp', false);
         }
     }
 
@@ -144,12 +152,6 @@ export class ArgonWebView extends common.ArgonWebView {
 
     bringToFront() {
         this.android.bringToFront();
-    }
-
-    public getCurrentUrl() : string {
-        // on Android, the url property isn't updated until after the page appears
-        // we need it updated as soon as the load starts
-        return this.currentUrl;
     }
 
     getWebViewVersion() : number {

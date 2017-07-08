@@ -1,9 +1,10 @@
 import * as Argon from '@argonjs/argon';
 import * as common from './argon-web-view-common';
-import {WebView} from 'ui/web-view';
+import {NavigationType} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
 import * as dialogs from 'ui/dialogs';
+import {Observable} from 'data/observable';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon';
 
@@ -109,7 +110,7 @@ export class ArgonWebView extends common.ArgonWebView  {
         }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
 
         // We want to replace the UIWebView created by superclass with WKWebView instance
-        this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        this.nativeView = this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate // remove reference to UIWebView delegate created by super class
         const delegate = this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
@@ -129,12 +130,14 @@ export class ArgonWebView extends common.ArgonWebView  {
             this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.opaque = false;        
-            this.set("isArgonApp", true);
+            //this.set("isArgonApp", true);
+            Observable.prototype.set.call(this, 'isArgonApp', true);
         } else if (this.isArgonApp && !flag) {
             this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
             this._ios.opaque = true;        
-            this.set("isArgonApp", false);
+            //this.set("isArgonApp", false);
+            Observable.prototype.set.call(this, 'isArgonApp', false);
         }
     }
 
@@ -163,11 +166,6 @@ export class ArgonWebView extends common.ArgonWebView  {
     public onUnloaded() {
         this._ios.navigationDelegate = <any>undefined;
         super.onUnloaded();
-    }
-
-    public getCurrentUrl() : string {
-        // note: this.src is what the webview was originally set to load, this.url is the actual current url. 
-        return this.url;
     }
 
     reload() {
@@ -207,13 +205,15 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
 
         switch (keyPath) {
             case "title": 
-                owner.set(keyPath, wkWebView.title); 
+                //owner.set(keyPath, wkWebView.title); 
+                Observable.prototype.set.call(owner, keyPath, wkWebView.title);
                 break;
             case "URL": 
                 this.updateURL();
                 break;
             case "estimatedProgress":
-                owner.set('progress', wkWebView.estimatedProgress);
+                //owner.set('progress', wkWebView.estimatedProgress);
+                Observable.prototype.set.call(owner, 'progress', wkWebView.estimatedProgress);
                 break;
         }
     }
@@ -222,9 +222,8 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         const owner = this._owner.get();
         if (!owner) return;     
         const wkWebView = <WKWebView>owner.ios;
-        owner['_suspendLoading'] = true; 
-        owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString); 
-        owner['_suspendLoading'] = false; 
+        //owner.set("url", wkWebView.URL && wkWebView.URL.absoluteString);
+        Observable.prototype.set.call(owner, 'url', wkWebView.URL && wkWebView.URL.absoluteString);
     }
     
     // WKScriptMessageHandler
@@ -260,26 +259,26 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     webViewDecidePolicyForNavigationActionDecisionHandler(webview:WKWebView, navigationAction:WKNavigationAction, decisionHandler:(policy:WKNavigationActionPolicy)=>void) {
         if (navigationAction.targetFrame && navigationAction.targetFrame.mainFrame) {
             const navigationType:WKNavigationType = navigationAction.navigationType;
-            var navTypeIndex = WebView.navigationTypes.indexOf('other');
+            var navType:NavigationType = 'other';
             switch (navigationType) {
                 case WKNavigationType.LinkActivated:
-                    navTypeIndex = WebView.navigationTypes.indexOf('linkClicked');
+                    navType = 'linkClicked';
                     break;
                 case WKNavigationType.FormSubmitted:
-                    navTypeIndex = WebView.navigationTypes.indexOf('formSubmitted');
+                    navType = 'formSubmitted';
                     break;
                 case WKNavigationType.BackForward:
-                    navTypeIndex = WebView.navigationTypes.indexOf('backForward');
+                    navType = 'backForward';
                     break;
                 case WKNavigationType.Reload:
-                    navTypeIndex = WebView.navigationTypes.indexOf('reload');
+                    navType = 'reload';
                     break;
                 case WKNavigationType.FormResubmitted:
-                    navTypeIndex = WebView.navigationTypes.indexOf('formResubmitted');
+                    navType = 'formResubmitted';
                     break;
             }
             const owner = this._owner.get();
-            if (owner) owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, WebView.navigationTypes[navTypeIndex]);
+            if (owner) owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, navType);
         }
 
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);

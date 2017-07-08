@@ -1,7 +1,7 @@
 import * as URI from 'urijs';
 import * as application from 'application';
 import * as utils from 'utils/utils';
-import {SearchBar} from 'ui/search-bar';
+import {SearchBar, textProperty} from 'ui/search-bar';
 import {Page} from 'ui/page';
 import {Button} from 'ui/button';
 import {View} from 'ui/core/view';
@@ -102,7 +102,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
             }).then(()=>{
                 searchBar.visibility = 'collapse';
             })
-            const addButton = headerView.getViewById('addButton');
+            const addButton = headerView.getViewById<Button>('addButton');
             addButton.visibility = 'visible';
             addButton.opacity = 0;
             addButton.translateX = -10;
@@ -118,7 +118,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
                 opacity: 1,
                 curve: AnimationCurve.easeInOut
             })
-            const addButton = headerView.getViewById('addButton');
+            const addButton = headerView.getViewById<Button>('addButton');
             addButton.animate({
                 translate: {x:-10, y:0},
                 opacity:0
@@ -191,36 +191,36 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
     } 
     else if (evt.propertyName === 'cancelButtonShown') {
         if (evt.value) {
-            const overviewButton = headerView.getViewById('overviewButton');
+            const overviewButton = headerView.getViewById<Button>('overviewButton');
             overviewButton.animate({
                 opacity:0
             }).then(()=>{
                 overviewButton.visibility = 'collapse';
             })
-            const menuButton = headerView.getViewById('menuButton');
+            const menuButton = headerView.getViewById<Button>('menuButton');
             menuButton.animate({
                 opacity:0
             }).then(()=>{
                 menuButton.visibility = 'collapse';
             })
-            const cancelButton = headerView.getViewById('cancelButton');
+            const cancelButton = headerView.getViewById<Button>('cancelButton');
             cancelButton.visibility = 'visible';
             cancelButton.animate({
                 opacity:1
             });
             appViewModel.hidePermissionIcons();
         } else {
-            const overviewButton = headerView.getViewById('overviewButton');
+            const overviewButton = headerView.getViewById<Button>('overviewButton');
             overviewButton.visibility = 'visible';
             overviewButton.animate({
                 opacity:1
             })
-            const menuButton = headerView.getViewById('menuButton');
+            const menuButton = headerView.getViewById<Button>('menuButton');
             menuButton.visibility = 'visible';
             menuButton.animate({
                 opacity:1
             })
-            const cancelButton = headerView.getViewById('cancelButton');
+            const cancelButton = headerView.getViewById<Button>('cancelButton');
             cancelButton.animate({
                 opacity:0
             }).then(()=>{
@@ -468,11 +468,11 @@ export function browserViewLoaded(args) {
     }
 
     // Setup the debug view
-    let debug:HtmlView = <HtmlView>browserView.page.getViewById("debug");
+    let debug:HtmlView = browserView.page.getViewById<HtmlView>("debug");
     debug.horizontalAlignment = 'stretch';
     debug.verticalAlignment = 'stretch';
     debug.backgroundColor = new Color(150, 255, 255, 255);
-    debug.visibility = "collapsed";
+    debug.visibility = "collapse";
     debug.isUserInteractionEnabled = false;
 }
 
@@ -716,14 +716,14 @@ class AndroidSearchBarController {
         // 2) the user attempts to navigate back to the previous page by updating the search bar text
         // 3) nativescript sees this as submitting the same query and treats it as a no-op
         // https://github.com/NativeScript/NativeScript/issues/3965
-        const searchHandler = new android.widget.SearchView.OnQueryTextListener({
-            onQueryTextChange(newText: String): boolean {
-                searchBar._onPropertyChangedFromNative(SearchBar.textProperty, newText);
+        const searchHandler = new android.support.v7.widget.SearchView.OnQueryTextListener({
+            onQueryTextChange(newText: string): boolean {
+                textProperty.nativeValueChange(searchBar, newText)
                 bookmarks.filterBookmarks(newText.toString());
                 bookmarks.filterControl.set('showFilteredResults', newText.length > 0);
                 return false;
             },
-            onQueryTextSubmit(query: String): boolean {
+            onQueryTextSubmit(query: string): boolean {
                 searchBar.notify(<EventData>{
                     eventName: SearchBar.submitEvent,
                     object: this

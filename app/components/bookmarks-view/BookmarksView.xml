@@ -12,7 +12,7 @@
     </GridLayout>
     <GridLayout row="1" height="1px" backgroundColor="#BBBBBB"></GridLayout>
     <GridLayout row="2" rows="auto,auto" columns="*" visibility="{{ showFilteredResults ? 'visible' : 'collapsed' }}" >
-        <GridLayout row="0" height="30px" paddingLeft="10" backgroundColor="#F5F5F5">
+        <GridLayout row="0" height="30" paddingLeft="10" backgroundColor="#F5F5F5">
             <Label verticalAlignment="center" text="Filtered Results" />
         </GridLayout>
         <GridLayout row="1" height="1px" backgroundColor="#BBBBBB"></GridLayout>

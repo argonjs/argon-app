@@ -11,5 +11,6 @@
             "ios": "1.0.0",
             "android": "1.1.0"
         }
-    }
+    },
+    "types" : "argon-web-view.d.ts"
 }

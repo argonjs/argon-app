@@ -1,49 +1,41 @@
+import {WebView} from 'ui/web-view'
+import {EventData} from 'data/observable'
+import {SessionPort} from '@argonjs/argon';
+import {ObservableArray} from 'data/observable-array';
 
-declare module "argon-web-view" {
+export interface LogItem {
+    type: 'log'|'warn'|'error',
+    message: string,
+    lines: string[]
+}
 
-    import {WebView} from 'ui/web-view'
-    import {EventData} from 'data/observable'
-    import {SessionPort} from '@argonjs/argon';
-    import {ObservableArray} from 'data/observable-array';
+export class ArgonWebView extends WebView {
+    static sessionConnectEvent:string;
+    static logEvent:string;
+    
+    session?: SessionPort;
+    log: ObservableArray<LogItem>;
+    
+    readonly url?: string;
+    readonly title?: string;
+    readonly progress: number;
 
-    export interface LogItem {
-        type: 'log'|'warn'|'error',
-        message: string,
-        lines: string[]
-    }
+    isArgonApp: boolean;
 
-    export class ArgonWebView extends WebView {
-        static sessionConnectEvent:string;
-        static logEvent:string;
-        
-        session?: SessionPort;
-        log: ObservableArray<LogItem>;
-        
-        title?: string;
-        progress: number;
+    public evaluateJavascriptWithoutPromise(source:string) : void;
 
-        isArgonApp: boolean;
+    /**
+     * Raised when a session event occurs.
+     */
+    on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
 
-        public evaluateJavascriptWithoutPromise(source:string) : void;
+    on(event: string, callback: (args: EventData) => void, thisArg?: any);
+}
 
-        /**
-         * Raised when a session event occurs.
-         */
-        on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
+export interface SessionEventData extends EventData {
+    session: SessionPort;
+}
 
-        on(event: string, callback: (args: EventData) => void, thisArg?: any);
-
-        /**
-         * Safe way to query the current url on both platforms.
-         */
-        getCurrentUrl();
-    }
-
-    export interface SessionEventData extends EventData {
-        session: SessionPort;
-    }
-
-    export interface LogEventData extends EventData {
-        log: LogItem;
-    }
+export interface LogEventData extends EventData {
+    log: LogItem;
 }

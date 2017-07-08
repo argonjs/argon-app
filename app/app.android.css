@@ -38,7 +38,7 @@
     font-family: "MaterialIcons-Regular";
     font-size: 22px;
     white-space: nowrap;
-    border-width: 0.1;
+    border-width: 0;
     padding: 0px 0px 0px 0px;
 }
 
@@ -48,6 +48,10 @@
 
 .bookmark-subtitle {
     font-size: 10px;
+}
+
+.bookmark-icon {
+    padding-top: 44px;
 }
 
 .delete-btn {
@@ -61,14 +65,17 @@
 
 #overviewButton {
     width: 50;
+    height: 50;
 }
 
 #menuButton {
     width: 50;
+    height: 50;
 }
 
 #addButton {
     width: 50;
+    height: 50;
 }
 
 #menuButtons {
