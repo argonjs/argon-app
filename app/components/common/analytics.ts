@@ -57,7 +57,7 @@ appViewModel.ready.then(()=>{
 
         appViewModel.argon.provider.focus.sessionFocusEvent.addEventListener(({current})=>{
             if (current && current.uri != "argon:manager") {
-                logAppFocus(current.uri);
+                logAppFocus(current.uri || "");
                 current.closeEvent.addEventListener(() => { clearAppFocus(); });
             } else {
                 clearAppFocus();
