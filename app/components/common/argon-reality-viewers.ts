@@ -41,7 +41,6 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         private _vuforiaServiceProvider: Argon.VuforiaServiceProvider,
         uri:string) {
             super(sessionService, viewService, _contextService, _deviceService, uri);
-            this.userTracking = '3DOF';
     }
 
     private _zoomFactor = 1;
@@ -121,7 +120,8 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         const subviews:Argon.SerializedSubviewList = [];
 
         const frameStateOptions = {
-            overrideUser: true
+            overrideUser: true,
+            userTracking: <'none'|'3DOF'|'6DOF'>'3DOF'
         }
 
         this._deviceService.suggestedGeolocationSubscriptionChangeEvent.addEventListener(()=>{
@@ -176,7 +176,6 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
                     frameState.time,
                     frameState.viewport,
                     subviews,
-                    this.userTracking,
                     frameStateOptions
                 );
                 session.send('ar.reality.frameState', contextFrameState);
