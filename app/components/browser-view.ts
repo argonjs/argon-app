@@ -195,38 +195,36 @@ export class BrowserView extends GridLayout {
 
     addLayer() : Layer {
         const layer:Layer = this._createLayer();
-        
         const webView = layer.webView!;
-
-        webView.on('propertyChange', (eventData:PropertyChangeData) => {
-            switch(eventData.propertyName) {
-                case 'url':
-                    layer.details.set('uri', eventData.value);
-                    break;
-                case 'title':
-                    const url = webView.url!;
-                    const title = webView.title || getHost(url);
-                    bookmarks.updateTitle(url, title);
-                    layer.details.set('title', title);
-                    break;
-                case 'isArgonApp':
-                    const isArgonApp = eventData.value;
-                    if (isArgonApp || layer === this.focussedLayer || this._overviewEnabled) {
-                        layer.containerView.animate({
-                            opacity: 1,
-                            duration: OVERVIEW_ANIMATION_DURATION
-                        });
-                    } else {
-                        layer.containerView.opacity = 1;
-                    }
-                    analytics.updateArgonAppCount(this._countArgonApps());
-                    break;
-                case 'progress':
-                    layer.progressBar.value = eventData.value * 100;
-                    break;
-                default: break;
+        
+        webView.on('urlChange', () => {
+            layer.details.set('uri', webView.url);
+        })
+        
+        webView.on('titleChange', () => {
+            const url = webView.url;
+            const title = webView.title || getHost(url) || '';
+            layer.details.set('title', title);
+            bookmarks.updateTitle(url, title);
+        })
+        
+        webView.on('isArgonPageChange', () => {
+            const isArgonPage = webView.isArgonPage;
+            if (isArgonPage || layer === this.focussedLayer || this._overviewEnabled) {
+                layer.containerView.animate({
+                    opacity: 1,
+                    duration: OVERVIEW_ANIMATION_DURATION
+                });
+            } else {
+                layer.containerView.opacity = 1;
             }
-        });
+            analytics.updateArgonAppCount(this._countArgonApps());
+        })
+        
+        webView.on('progressChange', () => {
+            console.log('progress: ' + webView.progress);
+            layer.progressBar.value = webView.progress * 100;
+        })
 
         webView.on(WebView.loadStartedEvent, (eventData: LoadEventData) => {
             layer.progressBar.value = 0;
@@ -239,16 +237,22 @@ export class BrowserView extends GridLayout {
                 bookmarks.pushToHistory(eventData.url, webView.title);
             }
             layer.progressBar.value = 100;
+            
             // wait a moment before hiding the progress bar
             setTimeout(function() {
                 layer.progressBar.visibility = 'collapse';
             }, 30);
+
+            // workaround to fix layout issues that appeared in ios 11 beta 
+            webView.requestLayout();
         });
         
-        webView.on('session', (e)=>{
-            const session = e.session;
+        webView.on('sessionChange', ()=>{
+            const session = webView.session;
             layer.session = session;
-            appViewModel.set('currentPermissionSession', session);
+
+            if (!session) return;
+
             session.connectEvent.addEventListener(()=>{
                 if (this.focussedLayer && webView === this.focussedLayer.webView) {
                     appViewModel.argon.provider.focus.session = session;
@@ -347,8 +351,17 @@ export class BrowserView extends GridLayout {
         webView.horizontalAlignment = 'stretch';
         webView.verticalAlignment = 'stretch';
         contentView.addChild(webView);
+        
+        // if (webView.ios) {
+        //     const wkwebView:WKWebView = webView.ios;
+        //     wkwebView.scrollView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight;
+        //     const contentView = wkwebView.scrollView.subviews[0];
+        //     contentView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight;
+        //     contentView.frame = wkwebView.scrollView.bounds;
+        // }
 
         var progress = new Progress();
+        progress.className = 'progress';
         progress.verticalAlignment = 'top';
         progress.maxValue = 100;
         progress.height = 5;
@@ -424,6 +437,12 @@ export class BrowserView extends GridLayout {
         this.layers.forEach((layer)=>{
             layer.containerView.width = dipWidth;
             layer.containerView.height = dipHeight;
+
+            // workaround for layout issue that appeared in ios 11 beta
+            if (layer.webView && layer.webView.ios) {
+                const wkwebView:WKWebView = layer.webView.ios;
+                wkwebView.setNeedsLayout();
+            }
         });
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -598,7 +617,7 @@ export class BrowserView extends GridLayout {
         }
 
         const visible  = this.realityLayer === layer || 
-            (layer.webView && layer.webView.isArgonApp) || 
+            (layer.webView && layer.webView.isArgonPage) || 
             this.focussedLayer === layer;
 
         if (layer.session) {
@@ -689,7 +708,7 @@ export class BrowserView extends GridLayout {
     private _countArgonApps() {
         var count = 0;
         this.layers.forEach((layer) => {
-            if (layer.webView && layer.webView.isArgonApp) count++;
+            if (layer.webView && layer.webView.isArgonPage) count++;
         });
         return count;
     }
@@ -703,16 +722,20 @@ export class BrowserView extends GridLayout {
         }
 
         if (this.focussedLayer && this.focussedLayer.webView) {
-            if (this.focussedLayer.webView.url === url) {
-                this.focussedLayer.webView.reload();
+
+            const webView = this.focussedLayer.webView;
+            
+            if (webView.url === url) {
+                webView.reload();
             } else {
-                if (this.focussedLayer.webView.src === url) {
-                    // webView.src does not update when the user clicks a link on a webpage
-                    // clear the src property to force a property update (note that notifyPropertyChange doesn't work here)
-                    this.focussedLayer.webView.src = "";
-                    this.focussedLayer.webView.src = url;
+                if (webView.src === url) {
+                    // The webview was probably navigated since the the last time the src property was set. 
+                    // Since the src does not update when the page navigates (as expected), we should
+                    // clear it first in order to force the property to notice a change.
+                    webView.src = "";
+                    webView.src = url;
                 } else {
-                    this.focussedLayer.webView.src = url;
+                    webView.src = url;
                 }
             }
         }
@@ -739,8 +762,6 @@ export class BrowserView extends GridLayout {
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
         }
-        
-        appViewModel.set('currentPermissionSession', layer.session);
     }
 
     get focussedLayer() {
@@ -750,5 +771,5 @@ export class BrowserView extends GridLayout {
 
 
 function getHost(uri?:string) {
-    return uri ? URI.parse(uri).hostname : '';
+    return uri ? URI.parse(uri).hostname : undefined;
 }

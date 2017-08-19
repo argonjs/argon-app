@@ -1,11 +1,11 @@
 {
   "nativescript": {
     "id": "edu.gatech.ael.argon4",
-    "tns-android": {
-      "version": "3.1.1"
-    },
     "tns-ios": {
       "version": "3.1.0"
+    },
+    "tns-android": {
+      "version": "3.1.1"
     }
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^3.1.0",
+    "tns-core-modules": "^3.1.1",
     "urijs": "^1.17.1"
   },
   "devDependencies": {

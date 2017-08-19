@@ -48,7 +48,7 @@
 }
 
 .material-icon {
-    font-family: "MaterialIcons-Regular";
+    font-family: "Material Icons";
     font-size: 22px;
 }
 
@@ -65,7 +65,7 @@
 }
 
 .search-bar {
-    
+    height: 30;
 }
 
 #overviewButton {
@@ -82,4 +82,9 @@
 
 #menuButtons {
     height: 44;
+}
+
+.progress {
+    color: #EEAA00;
+    background-color: #545454;
 }

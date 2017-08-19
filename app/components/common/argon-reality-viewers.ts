@@ -1,7 +1,7 @@
 import * as Argon from '@argonjs/argon';
 import * as vuforia from 'nativescript-vuforia';
 
-import {ArgonWebView, SessionEventData} from 'argon-web-view';
+import {ArgonWebView} from 'argon-web-view';
 import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
 
 import {
@@ -202,8 +202,10 @@ export class NativescriptHostedRealityViewer extends Argon.HostedRealityViewer {
             (this.webView.ios as WKWebView).allowsBackForwardNavigationGestures = false;
         }
 
-        this.webView.on('session', (data:SessionEventData)=>{
-            const session = data.session;
+        this.webView.on('sessionChange', ()=>{
+            const session = this.webView.session;
+            if (!session) return;
+
             session.connectEvent.addEventListener(() => {
                 this.connectEvent.raiseEvent(session);
             });

@@ -69,7 +69,6 @@ export class AppViewModel extends Observable {  //observable creates data bindin
     permissionDescriptions = PermissionDescriptions;
     permissionMenuOpen = false;
 
-    // currentPermissionSession: SessionPort;  //the focused session
     selectedPermission: Permission;  //type, name, state
     locIcon;    // Stores location icons
 

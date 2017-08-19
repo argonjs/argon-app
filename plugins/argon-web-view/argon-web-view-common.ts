@@ -2,25 +2,47 @@ import * as def from '.'
 import {WebView} from 'ui/web-view'
 import * as Argon from '@argonjs/argon'
 import {ObservableArray} from 'data/observable-array';    
+import {Property} from 'ui/core/properties'
+
+export const urlProperty = new Property<ArgonWebView, string>({
+    name: 'url',
+    defaultValue: ''
+})
+urlProperty.set = (v) => { throw new Error('Use the src property to load another page'); };
+
+export const titleProperty = new Property<ArgonWebView, string>({
+    name: 'title',
+    defaultValue: ''
+})
+titleProperty.set = undefined;
+
+export const progressProperty = new Property<ArgonWebView, number>({
+    name: 'progress',
+    defaultValue: 0
+})
+progressProperty.set = undefined;
+
+export const sessionProperty = new Property<ArgonWebView, Argon.SessionPort>({
+    name: 'session',
+    defaultValue: undefined,
+})
+sessionProperty.set = undefined;
+
+export const isArgonPageProperty = new Property<ArgonWebView, boolean>({
+    name: 'isArgonPage',
+    defaultValue: false,
+})
+isArgonPageProperty.set = undefined;
 
 export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     
-    public static sessionEvent = 'session';
-    public static logEvent = 'log';
+    public readonly url : string;
+    public readonly title : string;
+    public readonly progress : number; // range is 0 to 1.0
+    public readonly isArgonPage:boolean;
+    public readonly log = new ObservableArray<def.LogItem>();
+    public readonly session?:Argon.SessionPort;
 
-    public isArgonApp = false;
-
-    private _url: string|undefined;
-    get url() { return this._url };
-    set url(url) { this._url = url };
-
-    public title : string;
-    public progress : number; // range is 0 to 1.0
-
-    private _log = new ObservableArray<def.LogItem>();
-    public get log() {return this._log};
-
-    public session?:Argon.SessionPort;
     private _outputPort?:Argon.MessagePortLike;
 
     constructor() {
@@ -30,7 +52,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     public _didCommitNavigation() {
         if (this.session) this.session.close();
         this.log.length = 0;
-        this.session = undefined;
+        
+        sessionProperty.nativeValueChange(this, undefined);
         this._outputPort = undefined;
     }
 
@@ -52,15 +75,8 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
                 const injectedMessage = "typeof __ARGON_PORT__ !== 'undefined' && __ARGON_PORT__.postMessage("+msg.data+")";
                 this.evaluateJavascriptWithoutPromise(injectedMessage);
             }
-                 
-            const args:def.SessionEventData = {
-                eventName: ArgonWebView.sessionEvent,
-                object: this,
-                session: session
-            }
-            this.notify(args);
 
-            this.session = session;
+            sessionProperty.nativeValueChange(this, session);
             this._outputPort = port;
 
             session.open(messageChannel.port1, manager.session.configuration)
@@ -86,3 +102,9 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
     }
 
 }
+
+urlProperty.register(ArgonWebView);
+titleProperty.register(ArgonWebView);
+progressProperty.register(ArgonWebView);
+sessionProperty.register(ArgonWebView);
+isArgonPageProperty.register(ArgonWebView);

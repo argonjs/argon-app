@@ -2,17 +2,15 @@ import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
 import dialogs = require("ui/dialogs");
+import * as Argon from '@argonjs/argon'
 //import {Color} from "color";
 
 const AndroidWebInterface = io.argonjs.AndroidWebInterface;
 
 export class ArgonWebView extends common.ArgonWebView {
 
-    /*
-    private static layersById: {
-        [id: string]: ArgonWebView,
-    } = {};
-    */
+    private static _count:number = 1;
+    private _instanceId:string = ++ArgonWebView._count + "";
 
     constructor() {
         super();
@@ -26,18 +24,12 @@ export class ArgonWebView extends common.ArgonWebView {
 
             const settings = <android.webkit.WebSettings> this.android.getSettings();
             const userAgent = settings.getUserAgentString();
-            settings.setUserAgentString(userAgent + " Argon");
+            settings.setUserAgentString(userAgent + " Argon/" + Argon.version);
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
 
-            // Remember a particular id for each webview
-            if (!this.id) {
-                this.id = Date.now().toString();
-            }
-            //ArgonWebView.layersById[this.id] = this;
-
             // Create a unique class name for 'extend' to bind the object to this particular webview
-            var classname = "io_argonjs_AndroidWebInterface_ArgonWebView_" + this.id;
+            var classname = "io_argonjs_AndroidWebInterface_ArgonWebView_" + this._instanceId;
 
             // Inject Javascript Interface
             this.android.addJavascriptInterface(new ((<any>AndroidWebInterface).extend(classname, {
@@ -48,12 +40,12 @@ export class ArgonWebView extends common.ArgonWebView {
                             // just in case we thought below that the page was not an
                             // argon page, perhaps because argon.js loaded asyncronously 
                             // and the programmer didn't set up an argon meta tag
-                            this._setIsArgonApp(true);
+                            this._setIsArgonPage(true);
                             this._handleArgonMessage(data);
                         }
                     //}
                 },
-            }))(new java.lang.String(this.id)), "__argon_android__");
+            }))(new java.lang.String(this._instanceId)), "__argon_android__");
 
             // Create a unique class name for 'extend' to bind the object to this particular webview
             classname = "android_webkit_WebChromeClient_ArgonWebView_" + this.id;
@@ -85,24 +77,25 @@ export class ArgonWebView extends common.ArgonWebView {
                     });
                 },
                 onProgressChanged: (view: android.webkit.WebView, newProgress: number): void => {
-                    this.set('progress', newProgress / 100.0);
+                    common.progressProperty.nativeValueChange(this, newProgress / 100);
                 }
             })));
         });
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
             this._didCommitNavigation();
-            this.set('url', args.url)
-            this.set('title', this.android.getTitle());
+            common.titleProperty.nativeValueChange(this, args.url);
+            common.titleProperty.nativeValueChange(this, this.android.getTitle());
         });
 
         this.on(ArgonWebView.loadFinishedEvent, (args:LoadEventData) => {
             this.evaluateJavascript("(document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined')", ).then((result:string) => {
                 var boolResult = (result === "true");
-                this._setIsArgonApp(boolResult);
+                this._setIsArgonPage(boolResult);
             });
             const webview = (this.android as android.webkit.WebView);
             const url = webview.getUrl();
+            
             if (url != this.url) {
                 // the page did not successfully load
                 if (url.startsWith("https")) {
@@ -111,20 +104,21 @@ export class ArgonWebView extends common.ArgonWebView {
                         // do nothing for now
                     });
                 }
-                this.set('url', url);
             }
-            this.set('title', this.android.getTitle());
+
+            common.titleProperty.nativeValueChange(this, url);
+            common.titleProperty.nativeValueChange(this, this.android.getTitle());
         });
     }
 
-    _setIsArgonApp(flag:boolean) {
+    _setIsArgonPage(flag:boolean) {
         //console.log("_setIsArgonApp: " + flag);
-        if (!this.isArgonApp && flag) {
+        if (!this.isArgonPage && flag) {
             this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            this.set("isArgonApp", true);
-        } else if (this.isArgonApp && !flag) {
+            common.isArgonPageProperty.nativeValueChange(this, true);
+        } else if (this.isArgonPage && !flag) {
             this.android.setBackgroundColor(android.graphics.Color.WHITE);
-            this.set("isArgonApp", false);
+            common.isArgonPageProperty.nativeValueChange(this, false);
         }
     }
 

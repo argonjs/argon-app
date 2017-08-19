@@ -2,6 +2,17 @@ import {WebView} from 'ui/web-view'
 import {EventData} from 'data/observable'
 import {SessionPort} from '@argonjs/argon';
 import {ObservableArray} from 'data/observable-array';
+import {Property} from 'ui/core/properties'
+
+export const urlProperty : Property<ArgonWebView, string>;
+
+export const titleProperty : Property<ArgonWebView, string>
+
+export const progressProperty : Property<ArgonWebView, number>;
+
+export const sessionProperty : Property<ArgonWebView, Argon.SessionPort|undefined>;
+
+export const isArgonPageProperty : Property<ArgonWebView, boolean>;
 
 export interface LogItem {
     type: 'log'|'warn'|'error',
@@ -10,32 +21,15 @@ export interface LogItem {
 }
 
 export class ArgonWebView extends WebView {
-    static sessionConnectEvent:string;
-    static logEvent:string;
+    readonly static logEvent:string;
     
-    session?: SessionPort;
-    log: ObservableArray<LogItem>;
-    
-    readonly url?: string;
-    readonly title?: string;
+    readonly url: string;
+    readonly title: string;
     readonly progress: number;
+    readonly session?: SessionPort;
+    readonly isArgonPage: boolean;
 
-    isArgonApp: boolean;
+    readonly log: ObservableArray<LogItem>;
 
     public evaluateJavascriptWithoutPromise(source:string) : void;
-
-    /**
-     * Raised when a session event occurs.
-     */
-    on(event: "session", callback: (args: SessionEventData) => void, thisArg?: any);
-
-    on(event: string, callback: (args: EventData) => void, thisArg?: any);
-}
-
-export interface SessionEventData extends EventData {
-    session: SessionPort;
-}
-
-export interface LogEventData extends EventData {
-    log: LogItem;
 }
