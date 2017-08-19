@@ -4,6 +4,7 @@ import common = require('./vuforia-common');
 import def = require('nativescript-vuforia');
 import application = require('application');
 import placeholder = require('ui/placeholder');
+import {GridLayout} from 'ui/layouts/grid-layout';
 import vuforia = com.vuforia;
 import plugin = io.argonjs.vuforia;
 
@@ -12,26 +13,35 @@ global.moduleMerge(common, exports);
 const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
 
 var androidVideoView: plugin.VuforiaGLView|undefined = undefined;
-var vuforiaRenderer: plugin.VuforiaRenderer;
+var vuforiaRenderer: plugin.VuforiaRenderer|undefined = undefined;
 var initialized = false;
 
-export const videoView = new placeholder.Placeholder();
-videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
-    androidVideoView = <plugin.VuforiaGLView> (VUFORIA_AVAILABLE ? new plugin.VuforiaGLView(application.android.context) : undefined);
-    evt.view = androidVideoView;
+export const videoView = new GridLayout();
 
-    androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
+// on Android, we need to wait for Vuforia to be initialized before creating the glView and renderer
+function initVideoView() {
+    const videoViewPlaceholder = new placeholder.Placeholder();
 
-    vuforiaRenderer = new plugin.VuforiaRenderer();
-    androidVideoView.setRenderer(vuforiaRenderer);
-})
+    videoViewPlaceholder.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
+        androidVideoView = <plugin.VuforiaGLView> (VUFORIA_AVAILABLE ? new plugin.VuforiaGLView(application.android.context) : undefined);
+        evt.view = androidVideoView;
 
-videoView.onLoaded = function() {
-    if (VUFORIA_AVAILABLE) vuforia.Vuforia.onSurfaceCreated();
-}
+        androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
 
-videoView.onLayout = function(left, top, right, bottom) {
-    if (VUFORIA_AVAILABLE) configureVuforiaSurface();
+        vuforiaRenderer = new plugin.VuforiaRenderer();
+        androidVideoView.setRenderer(vuforiaRenderer);
+        vuforiaRenderer.mIsActive = true
+    })
+
+    videoViewPlaceholder.onLoaded = function() {
+        if (VUFORIA_AVAILABLE) vuforia.Vuforia.onSurfaceCreated();
+    }
+
+    videoViewPlaceholder.onLayout = function(left, top, right, bottom) {
+        if (VUFORIA_AVAILABLE) configureVuforiaSurface();
+    }
+
+    videoView.addChild(videoViewPlaceholder);
 }
 
 application.on(application.suspendEvent, ()=> {
@@ -72,11 +82,9 @@ application.on(application.resumeEvent, ()=> {
 export function configureVuforiaSurface() {
     if (!api) throw new Error();
     if (androidVideoView === undefined) return;
-    //const contentScaleFactor = androidVideoView.contentScaleFactor;
-    const contentScaleFactor = 1.0; // todo: fix this
     api.onSurfaceChanged(
-        androidVideoView.getWidth() * contentScaleFactor,
-        androidVideoView.getHeight() * contentScaleFactor
+        androidVideoView.getWidth(),
+        androidVideoView.getHeight()
     );
     console.log("configureVuforiaSurface: " + androidVideoView.getWidth() + ", " + androidVideoView.getHeight());
 }
@@ -109,7 +117,10 @@ export class API extends common.APIBase {
                         if (api) {
                             api.getDevice().setMode(def.DeviceMode.AR)
                         }
-                        vuforiaRenderer.mIsActive = true;
+                        if (androidVideoView === undefined) {
+                            initVideoView();
+                        }
+                        vuforiaRenderer && (vuforiaRenderer.mIsActive = true);
 
                         vuforia.Vuforia.onSurfaceCreated();
                         configureVuforiaSurface();

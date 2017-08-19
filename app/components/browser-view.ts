@@ -15,8 +15,7 @@ import {
   GestureTypes
 } from 'ui/gestures';
 import {bringToFront} from './common/util';
-import {PropertyChangeData} from 'data/observable'
-import {Observable} from 'data/observable';
+import {Observable, PropertyChangeData, WrappedValue} from 'data/observable';
 import {AbsoluteLayout} from 'ui/layouts/absolute-layout';
 import dialogs = require("ui/dialogs");
 import applicationSettings = require('application-settings');
@@ -320,7 +319,7 @@ export class BrowserView extends GridLayout {
         closeButton.horizontalAlignment = 'stretch';
         closeButton.verticalAlignment = 'stretch';
         closeButton.text = 'close';
-        closeButton.className = 'material-icon';
+        closeButton.className = 'material-icon action-btn';
         closeButton.style.fontSize = application.android ? 16 : 22;
         closeButton.color = new Color('black');
         GridLayout.setRow(closeButton, 0);
@@ -731,9 +730,8 @@ export class BrowserView extends GridLayout {
                 if (webView.src === url) {
                     // The webview was probably navigated since the the last time the src property was set. 
                     // Since the src does not update when the page navigates (as expected), we should
-                    // clear it first in order to force the property to notice a change.
-                    webView.src = "";
-                    webView.src = url;
+                    // have to wrap the value in order to force the property to notice a change.
+                    webView.src = <any>new WrappedValue(url);
                 } else {
                     webView.src = url;
                 }
@@ -762,6 +760,8 @@ export class BrowserView extends GridLayout {
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
         }
+        
+        appViewModel.set('currentPermissionSession', layer.session);
     }
 
     get focussedLayer() {

@@ -120,7 +120,8 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         const subviews:Argon.SerializedSubviewList = [];
 
         const frameStateOptions = {
-            overrideUser: true
+            overrideUser: true,
+            userTracking: <'none'|'3DOF'|'6DOF'>'3DOF'
         }
 
         this._deviceService.suggestedGeolocationSubscriptionChangeEvent.addEventListener(()=>{
