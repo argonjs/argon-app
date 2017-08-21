@@ -35,7 +35,7 @@
 }
 
 .material-icon {
-    font-family: "MaterialIcons-Regular";
+    font-family: "Material Icons";
     font-size: 22px;
     white-space: nowrap;
     border-width: 0;
@@ -60,7 +60,7 @@
 
 .search-bar {
     horizontal-align: stretch;
-    height: 50;
+    height: 30;
 }
 
 #overviewButton {
@@ -81,6 +81,11 @@
 #menuButtons {
     height: 50;
     padding: 5px;
+}
+
+.progress {
+    color: #EEAA00;
+    background-color: #545454;
 }
 
 #permissionMenu {
