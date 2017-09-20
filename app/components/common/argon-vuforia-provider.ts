@@ -336,6 +336,11 @@ export class NativescriptVuforiaServiceProvider {
         return keyPromise.then<void>( key => {
 
             if (!key || !vuforia.api.setLicenseKey(key)) {
+                const resolveInitResult = sessionData.initResultResolver;
+                if (resolveInitResult) {
+                    resolveInitResult(vuforia.InitResult.LICENSE_ERROR_INVALID_KEY);
+                    sessionData.initResultResolver = undefined;
+                }
                 return Promise.reject(new Error('Vuforia: Unable to set the license key'));
             }
 
@@ -641,9 +646,13 @@ export class NativescriptVuforiaServiceProvider {
             const {key,origins} : {key:string,origins:string[]} = JSON.parse(json);
             if (!session.uri) throw new Error('Invalid origin');
 
+            if (!key) {
+                throw new Error("Vuforia License Data must include a license key!");
+            }
+            
             const origin = URI.parse(session.uri);
             if (!Array.isArray(<any>origins)) {
-                throw new Error("Vuforia License Data must specify allowed origins");
+                throw new Error("Vuforia License Data must specify allowed origins!");
             }
 
             const match = origins.find((o) => {
