@@ -3,7 +3,7 @@ import {ObservableArray} from 'data/observable-array'
 import * as bookmarks from './bookmarks'
 import * as Argon from '@argonjs/argon';
 import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider';
-import {NativescriptDeviceService, NativescriptDeviceServiceProvider} from './argon-device-provider';
+import {NativescriptDevice, NativescriptDeviceServiceProvider} from './argon-device-provider';
 import {NativescriptLiveRealityViewer, NativescriptHostedRealityViewer} from './argon-reality-viewers';
 import {getInternalVuforiaKey} from './util';
 import * as URI from 'urijs';
@@ -25,7 +25,7 @@ export class LayerDetails extends Observable {
 }
 
 @Argon.DI.inject(Argon.DI.Factory.of(NativescriptLiveRealityViewer), Argon.DI.Factory.of(NativescriptHostedRealityViewer))
-export abstract class NativescriptRealityViewerFactory {
+export abstract class NativescriptRealityFactory {
     constructor(
         private _createLiveReality, 
         private _createHostedReality) {
@@ -98,10 +98,10 @@ export class AppViewModel extends Observable {  //observable creates data bindin
         if (this.argon) return; // already initialized
 
         const container = new Argon.DI.Container;
-        container.registerSingleton(Argon.DeviceService, NativescriptDeviceService);
+        container.registerSingleton(Argon.Device, NativescriptDevice);
         container.registerSingleton(Argon.VuforiaServiceProvider, NativescriptVuforiaServiceProvider);
         container.registerSingleton(Argon.DeviceServiceProvider, NativescriptDeviceServiceProvider);
-        container.registerSingleton(Argon.RealityViewerFactory, NativescriptRealityViewerFactory);
+        container.registerSingleton(Argon.RealityFactory, NativescriptRealityFactory);
 
         let argon;
         try {
@@ -110,7 +110,8 @@ export class AppViewModel extends Observable {  //observable creates data bindin
                 title: 'ArgonApp'
             }, container);
         } catch (e) {
-            alert(e.message);
+            console.log(e.message);
+            setTimeout(() => alert('Error: ' + e.message));
         }
         if (!argon) return;
 

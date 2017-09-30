@@ -60,8 +60,6 @@ export class NativescriptVuforiaServiceProvider {
             private sessionService:Argon.SessionService,
             private focusServiceProvider:Argon.FocusServiceProvider,
             private contextService:Argon.ContextService,
-            // private deviceService:Argon.DeviceService,
-            private entityServiceProvider:Argon.EntityServiceProvider,
             realityService:Argon.RealityService) {
 
         // this.sessionService.connectEvent.addEventListener(()=>{
@@ -96,6 +94,9 @@ export class NativescriptVuforiaServiceProvider {
                     ({id}:{id:string}) => this._handleObjectTrackerDeactivateDataSet(session, id);
                 session.on['ar.vuforia.objectTrackerUnloadDataSet'] = 
                     ({id}:{id:string}) => this._handleObjectTrackerUnloadDataSet(session, id);
+                // session.on['ar.vuforia.trackableSetExtendedTracking'] = 
+                //     ({datasetId, trackableId, enable}:{datasetId:string,trackableId:string,enable:boolean}) => 
+                //         this._handleTrackableSetExtendedTracking(session, datasetId, trackableId, enable);
                 session.on['ar.vuforia.setHint'] =
                     options => this._setHint(session, options);
 
@@ -170,7 +171,6 @@ export class NativescriptVuforiaServiceProvider {
                     entityPosition.forwardExtrapolationDuration = 10/60;
                     entityOrientation.forwardExtrapolationDuration = 10/60;
                     contextService.entities.add(entity);
-                    this.entityServiceProvider.targetReferenceFrameMap.set(id, this.contextService.user.id);
                 }
                 
                 const trackableTime = JulianDate.clone(time); 
@@ -627,6 +627,18 @@ export class NativescriptVuforiaServiceProvider {
             return 'vuforia_trackable_' + trackable.getId();
         }
     }
+
+    // private _extendedTrackingEnabledMap = {};
+    // private _handleSetExtendedTracking(session:Argon.SessionPort, trackable:vuforia.Trackable, enable:boolean) : Promise<void> {
+    //     return this._getCommandQueueForSession(session).push(()=>{
+    //         this._extendedTrackingEnabledMap[trackable.getId()] = enable;
+    //         if (enable) {
+    //             !trackable.isExtendedTrackingStarted && trackable.startExtendedTracking();
+    //         } else {
+    //             trackable.isExtendedTrackingStarted && trackable.stopExtendedTracking();
+    //         }
+    //     });
+    // }
 
     private _setHint(session:Argon.SessionPort, options:{hint?:number, value?:number}) {
         return this._getCommandQueueForSession(session).push(()=>{

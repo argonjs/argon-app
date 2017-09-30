@@ -1,15 +1,16 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argon4",
-    "tns-ios": {
-      "version": "3.1.0"
-    },
+    "id": "edu.gatech.ael.argon4.gs",
     "tns-android": {
       "version": "3.1.1"
+    },
+    "tns-ios": {
+      "version": "3.2.0"
     }
   },
   "dependencies": {
-    "@argonjs/argon": "^1.4.0-9",
+    "@argonjs/argon": "^1.4.0-55",
+    "argon-private": "file:///Users/gspeiginer/Code/argon-project/argon-private",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.4",
     "nativescript-google-analytics": "^0.3.7",

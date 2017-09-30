@@ -164,7 +164,12 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             vuforia.api && (this._vuforiaServiceProvider as NativescriptVuforiaServiceProvider)
                 .configureVuforiaVideoBackground(viewport, this.isPresenting);
             
-            if (!this.isPresenting) return;
+            if (!this.isPresenting) {
+                vuforia.api.getCameraDevice().stop();
+                return;
+            } else {
+                vuforia.api.getCameraDevice().start();
+            }
 
             try {
                 const contextUser = this._contextService.user;

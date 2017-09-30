@@ -759,6 +759,7 @@ export class BrowserView extends GridLayout {
             }
 
             if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);
+            this._showLayerInStack(layer);
         }
         
         appViewModel.set('currentPermissionSession', layer.session);

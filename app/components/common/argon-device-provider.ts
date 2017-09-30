@@ -22,17 +22,16 @@ const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const ONE = new Cartesian3(1,1,1);
 
 @Argon.DI.autoinject
-export class NativescriptDeviceService extends Argon.DeviceService {
+export class NativescriptDevice extends Argon.Device {
 
     constructor(
         sessionService:Argon.SessionService, 
         entityService:Argon.EntityService, 
-        viewService:Argon.ViewService,
-        visibilityService:Argon.VisibilityService) {
-        super(sessionService, entityService, viewService, visibilityService);
+        viewItems:Argon.ViewItems) {
+        super(sessionService, entityService, viewItems);
     }
 
-    public executeReqeustAnimationFrameCallbacks() {
+    public _executeRequestAnimationFrameCallbacks() {
         const now = global.performance.now();
         // swap callback maps
         const callbacks = this._callbacks;
@@ -51,7 +50,6 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     };
 
     private _application = application;
-    private _scratchDisplayOrientation = new Quaternion;
     private _scratchDeviceOrientation = new Quaternion;
 
     private _id = 0;
@@ -67,20 +65,73 @@ export class NativescriptDeviceService extends Argon.DeviceService {
     cancelAnimationFrame = (id:number) => {
         delete this._callbacks[id];
     }
+
+    private locationWatchId?:number;
+    
+    private _scratchStageCartographic = new Argon.Cesium.Cartographic;
+    private _scratchScreenOrientation = new Argon.Cesium.Quaternion;
+
+    public startGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
+        if (typeof this.locationWatchId !== 'undefined') return Promise.resolve();;
+        
+        return new Promise<void>((resolve, reject)=>{
+
+            // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
+            // Casting the module as <any> here for now to hide annoying typescript errors...
+            this.locationWatchId = (<any>geolocation).watchLocation((location:geolocation.Location)=>{
+                // Note: iOS documentation states that the altitude value refers to height (meters) above sea level, but 
+                // if ios is reporting the standard gps defined altitude, then this theoretical "sea level" actually refers to 
+                // the WGS84 ellipsoid rather than traditional mean sea level (MSL) which is not a simple surface and varies 
+                // according to the local gravitational field. 
+                // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
+                // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
+                this.onGeolocationUpdate(
+                    Argon.Cesium.Cartographic.fromDegrees(location.longitude, location.latitude, location.altitude, this._scratchStageCartographic),
+                    location.horizontalAccuracy, 
+                    location.verticalAccuracy
+                );
+            }, 
+            (e)=>{
+                reject(e);
+            }, <geolocation.Options>{
+                desiredAccuracy: options && options.enableHighAccuracy ? 
+                    application.ios ? 
+                        kCLLocationAccuracyBest : 
+                        enums.Accuracy.high : 
+                    application.ios ? 
+                        kCLLocationAccuracyNearestTenMeters :
+                        10,
+                updateDistance: application.ios ? kCLDistanceFilterNone : 0,
+                minimumUpdateTime : options && options.enableHighAccuracy ?
+                    0 : 5000 // required on Android, ignored on iOS
+            });
+            
+            console.log("Creating location watcher. " + this.locationWatchId);
+        });
+    }
+    
+    public stopGeolocationUpdates() : void {
+        if (Argon.Cesium.defined(this.locationWatchId)) {
+            geolocation.clearWatch(this.locationWatchId);
+            this.locationWatchId = undefined;
+        }
+    }
     
     get screenOrientationDegrees() {
         return screenOrientation;
     }
 
-    onRequestPresentHMD() {
+    requestHeadDisplayMode() {
         const device = vuforia.api && vuforia.api.getDevice();
         device && device.setViewerActive(true);
+        this.displayModeChangeEvent.raiseEvent(undefined);
         return Promise.resolve();
     }
 
-    onExitPresentHMD() {
+    exitHeadDisplayMode() {
         const device = vuforia.api && vuforia.api.getDevice();
         device && device.setViewerActive(false);
+        this.displayModeChangeEvent.raiseEvent(undefined);
         return Promise.resolve();
     }
 
@@ -95,6 +146,29 @@ export class NativescriptDeviceService extends Argon.DeviceService {
         viewport.width = contentSize.width;
         viewport.height = contentSize.height;
 
+        const stage = this.stage;
+        (stage.position as Argon.Cesium.DynamicPositionProperty).setValue(
+            Cartesian3.fromElements(0,-this.suggestedUserHeight,0, this._scratchCartesian), 
+            this.deviceGeolocation
+        );
+        (stage.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
+        
+        const user = this.user;
+        (user.position as Argon.Cesium.DynamicPositionProperty).setValue(
+            Cartesian3.ZERO,
+            this.deviceOrientation
+        );
+        const screenOrientation = 
+            Quaternion.fromAxisAngle(
+                Cartesian3.UNIT_Z, 
+                this.screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
+                this._scratchScreenOrientation
+            );
+        (user.orientation as Argon.Cesium.DynamicProperty).setValue(
+            screenOrientation
+        );
+        
+        const deviceOrientation = this.deviceOrientation;
         if (this._application.ios) {
             const motionManager = this._getMotionManagerIOS();
             const motion = motionManager && motionManager.deviceMotion;
@@ -109,81 +183,27 @@ export class NativescriptDeviceService extends Argon.DeviceService {
                 // If the orientation (O) is on the right and the rotation (R) is on the left, 
                 // such that the multiplication order is R*O, then R is a global rotation being applied on O. 
                 // Likewise, the reverse, O*R, is a local rotation R applied to the orientation O. 
-                let deviceOrientation = Quaternion.multiply(z90, motionQuaternion, this._scratchDeviceOrientation);
+                let deviceOrientationValue = Quaternion.multiply(z90, motionQuaternion, this._scratchDeviceOrientation);
                 // And then... convert to EUS!
-                deviceOrientation = Quaternion.multiply(negX90, deviceOrientation, deviceOrientation);
+                deviceOrientationValue = Quaternion.multiply(negX90, deviceOrientationValue, deviceOrientationValue);
 
-                const screenOrientationDegrees = this.screenOrientationDegrees;
-
-                const deviceUser = this.user;
-                const deviceStage = this.stage;
-
-                if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
-                if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
-
-                (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,this.suggestedUserHeight,0, this._scratchCartesian),
-                    deviceStage
-                );
-
-                const screenOrientation = 
-                    Quaternion.fromAxisAngle(
-                        Cartesian3.UNIT_Z, 
-                        screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
-                        this._scratchDisplayOrientation
-                    );
-
-                const screenBasedDeviceOrientation = 
-                    Quaternion.multiply(
-                        deviceOrientation, 
-                        screenOrientation, 
-                        this._scratchDeviceOrientation
-                    );
-
-                (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
-                
+                (deviceOrientation.orientation as Argon.Cesium.ConstantProperty).setValue(deviceOrientationValue);
                 const locationManager = this._getLocationManagerIOS();
                 const heading = locationManager.heading;
-                deviceUser['meta'] = deviceUser['meta'] || {};
-                deviceUser['meta'].geoHeadingAccuracy = heading && heading.headingAccuracy;
+                deviceOrientation['meta'] = deviceOrientation['meta'] || {};
+                deviceOrientation['meta'].geoHeadingAccuracy = heading && heading.headingAccuracy;
             }
 
         } else if (this._application.android) {
 
             const motionManager = this._getMotionManagerAndroid();
             if (motionManager) {
-                let deviceOrientation = this._motionQuaternionAndroid;
+                let deviceOrientationValue = this._motionQuaternionAndroid;
                 // convert to EUS
-                deviceOrientation = Quaternion.multiply(negX90, deviceOrientation, deviceOrientation);
+                deviceOrientationValue = Quaternion.multiply(negX90, deviceOrientationValue, deviceOrientationValue);
 
-                const screenOrientationDegrees = this.screenOrientationDegrees;
-
-                const deviceUser = this.user;
-                const deviceStage = this.stage;
-
-                if (!deviceUser.position) deviceUser.position = new Argon.Cesium.ConstantPositionProperty();
-                if (!deviceUser.orientation) deviceUser.orientation = new Argon.Cesium.ConstantProperty();
-
-                (deviceUser.position as Argon.Cesium.ConstantPositionProperty).setValue(
-                    Cartesian3.fromElements(0,this.suggestedUserHeight,0, this._scratchCartesian),
-                    deviceStage
-                );
-
-                const screenOrientation = 
-                    Quaternion.fromAxisAngle(
-                        Cartesian3.UNIT_Z, 
-                        screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
-                        this._scratchDisplayOrientation
-                    );
-
-                const screenBasedDeviceOrientation = 
-                    Quaternion.multiply(
-                        deviceOrientation, 
-                        screenOrientation, 
-                        this._scratchDeviceOrientation
-                    );
-
-                (deviceUser.orientation as Argon.Cesium.ConstantProperty).setValue(screenBasedDeviceOrientation);
+                (deviceOrientation.orientation as Argon.Cesium.ConstantProperty).setValue(deviceOrientationValue);
+                
             }
         }
     }
@@ -280,6 +300,8 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         entityService:Argon.EntityService,
         entityServiceProvider:Argon.EntityServiceProvider,
         private focusServiceProvider:Argon.FocusServiceProvider,
+        visibilityServiceProvider:Argon.VisibilityServiceProvider,
+        device:Argon.Device,
         vuforiaServiceProvider:Argon.VuforiaServiceProvider) {
             
         super(
@@ -287,8 +309,20 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             deviceService,
             viewService,
             entityService, 
-            entityServiceProvider
+            entityServiceProvider,
+            visibilityServiceProvider,
+            device
         );
+
+        const d = <NativescriptDevice><any>device;
+        if (vuforia.api) {
+            const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
+            vsp.stateUpdateEvent.addEventListener(()=>{
+                d._executeRequestAnimationFrameCallbacks();
+            });
+        } else {
+            setInterval(() => d._executeRequestAnimationFrameCallbacks(), 34);            
+        }
 
         application.on(application.orientationChangedEvent, ()=>{
             setTimeout(()=>{
@@ -310,16 +344,6 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         application.on(application.resumeEvent, () => {
             this.publishStableState();
         });
-
-        const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
-
-        vsp.stateUpdateEvent.addEventListener(()=>{
-            (this.deviceService as NativescriptDeviceService).executeReqeustAnimationFrameCallbacks();
-        });
-
-        if (!vuforia.api) {
-            setInterval(() => vsp.stateUpdateEvent.raiseEvent(Argon.Cesium.JulianDate.now()), 34);
-        }
     }
 
     private _scratchPerspectiveFrustum = new Argon.Cesium.PerspectiveFrustum;
@@ -461,57 +485,6 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
             // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
             
             // TODO: use eye adjustment matrix to set subview poses (for eye separation). See commented out code above...
-        }
-    }
-
-    private locationWatchId?:number;
-
-    private _scratchStageCartographic = new Argon.Cesium.Cartographic;
-
-    public onStartGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
-        if (typeof this.locationWatchId !== 'undefined') return Promise.resolve();;
-        
-        return new Promise<void>((resolve, reject)=>{
-
-            // Note: the d.ts for nativescript-geolocation is wrong. This call is correct. 
-            // Casting the module as <any> here for now to hide annoying typescript errors...
-            this.locationWatchId = (<any>geolocation).watchLocation((location:geolocation.Location)=>{
-                // Note: iOS documentation states that the altitude value refers to height (meters) above sea level, but 
-                // if ios is reporting the standard gps defined altitude, then this theoretical "sea level" actually refers to 
-                // the WGS84 ellipsoid rather than traditional mean sea level (MSL) which is not a simple surface and varies 
-                // according to the local gravitational field. 
-                // In other words, my best guess is that the altitude value here is *probably* GPS defined altitude, which 
-                // is equivalent to the height above the WGS84 ellipsoid, which is exactly what Cesium expects...
-                this.configureStage(
-                    Argon.Cesium.Cartographic.fromDegrees(location.longitude, location.latitude, location.altitude, this._scratchStageCartographic),
-                    location.horizontalAccuracy, 
-                    location.verticalAccuracy
-                );
-            }, 
-            (e)=>{
-                reject(e);
-            }, <geolocation.Options>{
-                desiredAccuracy: options && options.enableHighAccuracy ? 
-                    application.ios ? 
-                        kCLLocationAccuracyBest : 
-                        enums.Accuracy.high : 
-                    application.ios ? 
-                        kCLLocationAccuracyNearestTenMeters :
-                        10,
-                updateDistance: application.ios ? kCLDistanceFilterNone : 0,
-                minimumUpdateTime : options && options.enableHighAccuracy ?
-                    0 : 5000 // required on Android, ignored on iOS
-            });
-            
-            console.log("Creating location watcher. " + this.locationWatchId);
-        });
-    }
-
-    
-    public onStopGeolocationUpdates() : void {
-        if (Argon.Cesium.defined(this.locationWatchId)) {
-            geolocation.clearWatch(this.locationWatchId);
-            this.locationWatchId = undefined;
         }
     }
 
