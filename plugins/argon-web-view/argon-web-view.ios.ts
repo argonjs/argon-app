@@ -124,7 +124,9 @@ export class ArgonWebView extends common.ArgonWebView  {
         this._ios.layer.masksToBounds = false;
     }
     
-    public _setIsArgonPage(flag:boolean) {
+    public _argonPages = {};
+    public _setIsArgonPage(flag:boolean, url:string) {
+        if (flag) this._argonPages[url] = true;
         if (!this.isArgonPage && flag) {
             this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
             this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
@@ -230,12 +232,13 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     userContentControllerDidReceiveScriptMessage(userContentController:WKUserContentController, message:WKScriptMessage) {
         const owner = this._owner.get();
         if (!owner) return;
+        const url = message.frameInfo.request.URL.absoluteString;
         if (message.name === 'argon') {
-            if (!owner.session) {
+            if (!owner.session) {  
                 // just in case we thought below that the page was not an
                 // argon page, perhaps because argon.js loaded asyncronously 
                 // and the programmer didn't set up an argon meta tag
-                owner._setIsArgonPage(true);
+                owner._setIsArgonPage(true, url);
             }
             owner._handleArgonMessage(message.body);
         } else if (message.name === 'log') {
@@ -243,9 +246,9 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
         } else if (message.name === 'argoncheck') {
             if (!owner.session) {
                 if (message.body === "true") {
-                    owner._setIsArgonPage(true);
+                    owner._setIsArgonPage(true, url);
                 } else {
-                    owner._setIsArgonPage(false);
+                    owner._setIsArgonPage(false, url);
                 }
             }
         }
@@ -276,8 +279,13 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
                     navType = 'formResubmitted';
                     break;
             }
+            
             const owner = this._owner.get();
-            if (owner) owner['_onLoadStarted'](navigationAction.request.URL.absoluteString, navType);
+            if (owner) {
+                const url = navigationAction.request.URL.absoluteString;
+                if (!owner._argonPages[url]) owner._setIsArgonPage(false, url);
+                owner['_onLoadStarted'](url, navType);
+            }
         }
 
         trace.write("ArgonWebView.webViewDecidePolicyForNavigationActionDecisionHandler(" + navigationAction.request.URL.absoluteString + ", " + navigationAction.navigationType + ")", trace.categories.Debug);
