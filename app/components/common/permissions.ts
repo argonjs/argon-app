@@ -36,11 +36,10 @@ class PermissionManager {
 
     handlePermissionRequest(session: SessionPort, id: string, options: any) {
         // Always allow when the request is about Vuforia subscriptions & manager subscriptions
-        if ((id !== 'ar.stage' && id !== 'camera' && id !=='world-structure') || session.uri === 'argon:manager')
+        if ((id !== 'ar.stage' && id !== 'ar.origin' && id !== 'camera' && id !=='world-structure') || session.uri === 'argon:manager')
             return Promise.resolve();
 
-        id = id === 'ar.stage' ? 'geolocation' : id;
-        let type: PermissionType = <PermissionType>id;
+        const type:PermissionType = (id === 'ar.stage' || id === 'ar.origin') ? 'geolocation' : id;
         
         console.log("Permission requested {Source: " + session.uri + ", Type: " + type + "}");
 
