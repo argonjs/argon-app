@@ -41,6 +41,12 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
         private _vuforiaServiceProvider: Argon.VuforiaServiceProvider,
         uri:string) {
             super(sessionService, viewService, _contextService, _deviceService, uri);
+
+            if (vuforia.api) {
+                this.presentChangeEvent.addEventListener(()=>{
+                    (_vuforiaServiceProvider as NativescriptVuforiaServiceProvider).enabled = this.isPresenting;
+                });
+            }
     }
 
     private _zoomFactor = 1;
@@ -164,13 +170,6 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             vuforia.api && (this._vuforiaServiceProvider as NativescriptVuforiaServiceProvider)
                 .configureVuforiaVideoBackground(viewport, this.isPresenting);
             
-            if (!this.isPresenting) {
-                vuforia.api.getCameraDevice().stop();
-                return;
-            } else {
-                vuforia.api.getCameraDevice().start();
-            }
-
             try {
                 const contextUser = this._contextService.user;
                 const deviceUser = this._deviceService.user;

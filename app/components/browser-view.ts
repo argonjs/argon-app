@@ -155,6 +155,7 @@ export class BrowserView extends GridLayout {
                 manager.reality.request(Argon.RealityViewer.LIVE);
             });
 
+            // TODO: add and use manager.provider.reality.presentingRealityViewerChangeEvent instead
             manager.reality.changeEvent.addEventListener(({current})=>{
                 const viewer = manager.provider.reality.getViewerByURI(current!)!;
                 const details = layer.details;

@@ -97,7 +97,7 @@ export class NativescriptVuforiaServiceProvider {
                 // session.on['ar.vuforia.trackableSetExtendedTracking'] = 
                 //     ({datasetId, trackableId, enable}:{datasetId:string,trackableId:string,enable:boolean}) => 
                 //         this._handleTrackableSetExtendedTracking(session, datasetId, trackableId, enable);
-                session.on['ar.vuforia.setHint'] =
+                 session.on['ar.vuforia.setHint'] =
                     options => this._setHint(session, options);
 
                 // backwards compatability
@@ -211,6 +211,25 @@ export class NativescriptVuforiaServiceProvider {
     //     vuforia.api.getDevice().setMode(deviceMode); 
     // } 
 
+    private _vuforiaIsInitialized = false;
+    private _enabled = false;
+
+    public set enabled(enabled:boolean) {
+        if (enabled !== this._enabled) {
+            this._enabled = enabled;
+            if (this._vuforiaIsInitialized) {
+                if (enabled) 
+                    vuforia.api.getCameraDevice().start();
+                else 
+                    vuforia.api.getCameraDevice().stop();
+            }
+        }
+    }
+
+    public get enabled() {
+        return this._enabled;
+    }
+    
     private _getSessionData(session:Argon.SessionPort) {
         const sessionData = this._sessionData.get(session);
         if (!sessionData) throw new Error('Vuforia must be initialized first')
@@ -312,6 +331,8 @@ export class NativescriptVuforiaServiceProvider {
             vuforia.api.deinitObjectTracker();
             vuforia.api.deinit();
 
+            this._vuforiaIsInitialized = false;
+
             if (permanent) {
                 this._sessionData.delete(session);
             }
@@ -359,6 +380,8 @@ export class NativescriptVuforiaServiceProvider {
                     throw new Error(vuforia.InitResult[result]);
                 }
 
+                this._vuforiaIsInitialized = true;
+
                  // must initialize trackers before initializing the camera device
                 if (!vuforia.api.initObjectTracker()) {
                     throw new Error("Vuforia: Unable to initialize ObjectTracker");
@@ -383,9 +406,11 @@ export class NativescriptVuforiaServiceProvider {
                 //     width:vuforia.videoView.getActualSize().width, //getMeasuredWidth(), 
                 //     height:vuforia.videoView.getActualSize().height //getMeasuredHeight()
                 // }, false);
-                    
-                if (!vuforia.api.getCameraDevice().start()) 
-                    throw new Error('Unable to start camera');
+                
+                if (this._enabled) {
+                    if (!vuforia.api.getCameraDevice().start()) 
+                        throw new Error('Unable to start camera');
+                }
 
                 if (sessionData.hintValues) {
                     sessionData.hintValues.forEach((value, hint, map) => {
