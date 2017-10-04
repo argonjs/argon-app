@@ -29,7 +29,7 @@ exports.isArgonPageProperty = new properties_1.Property({
     defaultValue: false,
 });
 exports.isArgonPageProperty.set = undefined;
-var ArgonWebView = (function (_super) {
+var ArgonWebView = /** @class */ (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
         var _this = _super.call(this) || this;

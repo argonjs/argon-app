@@ -6,7 +6,7 @@ var dialogs = require("ui/dialogs");
 var Argon = require("@argonjs/argon");
 //import {Color} from "color";
 var AndroidWebInterface = io.argonjs.AndroidWebInterface;
-var ArgonWebView = (function (_super) {
+var ArgonWebView = /** @class */ (function (_super) {
     __extends(ArgonWebView, _super);
     function ArgonWebView() {
         var _this = _super.call(this) || this;

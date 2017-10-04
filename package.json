@@ -28,8 +28,8 @@
     "babylon": "6.9.2",
     "lazy": "1.0.11",
     "nativescript-dev-typescript": "^0.5.0",
-    "tns-platform-declarations": "^2.4.4",
     "nativescript-hook-debug-production": "^1.0.4",
-    "typescript": "^2.4.1"
+    "tns-platform-declarations": "^2.4.4",
+    "typescript": "^2.5.3"
   }
 }

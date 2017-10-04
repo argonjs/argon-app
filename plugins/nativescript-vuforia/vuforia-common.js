@@ -111,7 +111,7 @@ var TrackableResultStatus;
     TrackableResultStatus[TrackableResultStatus["Tracked"] = 3] = "Tracked";
     TrackableResultStatus[TrackableResultStatus["ExtendedTracked"] = 4] = "ExtendedTracked";
 })(TrackableResultStatus = exports.TrackableResultStatus || (exports.TrackableResultStatus = {}));
-var APIBase = (function () {
+var APIBase = /** @class */ (function () {
     function APIBase() {
     }
     APIBase.prototype.setStateUpdateCallback = function (cb) {
