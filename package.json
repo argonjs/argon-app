@@ -9,7 +9,7 @@
     }
   },
   "dependencies": {
-    "@argonjs/argon": "^1.4.0-57",
+    "@argonjs/argon": "^1.4.0-58",
     "argon-web-view": "file:plugins/argon-web-view",
     "minimatch": "^3.0.4",
     "nativescript-google-analytics": "^0.3.7",
