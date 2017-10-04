@@ -146,10 +146,14 @@ export class NativescriptDevice extends Argon.Device {
         viewport.width = contentSize.width;
         viewport.height = contentSize.height;
 
+        const origin = this.origin;
+        (origin.position as Argon.Cesium.DynamicPositionProperty).setValue(Cartesian3.ZERO, this.deviceGeolocation);
+        (origin.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
+
         const stage = this.stage;
         (stage.position as Argon.Cesium.DynamicPositionProperty).setValue(
             Cartesian3.fromElements(0,-this.suggestedUserHeight,0, this._scratchCartesian), 
-            this.deviceGeolocation
+            this.origin
         );
         (stage.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
         
