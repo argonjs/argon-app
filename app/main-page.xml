@@ -13,12 +13,12 @@
                 <SearchBar col="3" class="search-bar" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
                 <Label col="4" width="10" />
                 <Label col="7" width="5%" />
-                <Button id="overviewButton" col="5" width="30" class="material-icon action-btn" tap="onOverview" />
-                <Button id="menuButton" col="6" width="30" class="material-icon action-btn" tap="onMenu" />
+                <Button id="overviewButton" col="5" class="material-icon action-btn" tap="onOverview" />
+                <Button id="menuButton" col="6" class="material-icon action-btn" tap="onMenu" />
                 <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
 
-                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" width="30" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon action-btn permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
-                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" width="30" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
+                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon action-btn permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
                 
                 <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
             </GridLayout>

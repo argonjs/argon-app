@@ -40,10 +40,12 @@
 }
 
 .permission-btn-granted {
+    width: 30;
     color: #FF0000;
 }
 
 .permission-btn-denied {
+    width: 30;
     color: #BBBBBB;
 }
 
