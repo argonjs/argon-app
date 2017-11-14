@@ -93,21 +93,23 @@ export class ArgonWebView extends common.ArgonWebView {
                 var boolResult = (result === "true");
                 this._setIsArgonPage(boolResult);
             });
+
             const webview = (this.android as android.webkit.WebView);
             const url = webview.getUrl();
-            
-            if (url != this.url) {
-                // the page did not successfully load
-                if (url.startsWith("https")) {
-                    // the certificate is likely invalid
-                    dialogs.alert("Argon cannot currently load https pages with invalid certificates.").then(()=> {
-                        // do nothing for now
-                    });
-                }
-            }
+            common.urlProperty.nativeValueChange(this, url);
+            common.titleProperty.nativeValueChange(this, webview.getTitle());
 
-            common.titleProperty.nativeValueChange(this, url);
-            common.titleProperty.nativeValueChange(this, this.android.getTitle());
+            if (args.error) {
+                // the page did not successfully load
+                // if (url.startsWith("https")) {
+                //     // the certificate is likely invalid
+                //     dialogs.alert("Argon cannot currently load https pages with invalid certificates.").then(()=> {
+                //         // do nothing for now
+                //     });
+                // }
+
+                dialogs.alert(args.error);
+            }
         });
     }
 
