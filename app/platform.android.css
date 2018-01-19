@@ -7,6 +7,22 @@
     background-color: #EEFAFAFA;
 }
 
+#permissionMenu {
+    background-color: #EEFAFAFA;
+}
+
+#permissionLabel {
+    padding: 15px 15px 5px 15px;
+    color: #545454;
+    text-align: center;
+}
+
+#changePermission {
+    padding: 5px 15px 15px 15px;
+    color: #545454;
+    text-align: center;
+}
+
 .action-btn {
     color: #545454;
     font-size: 10px;
@@ -27,10 +43,12 @@
 }
 
 .permission-btn-granted {
+    width: 50;
     color: #FF0000;
 }
 
 .permission-btn-denied {
+    width: 50;
     color: #BBBBBB;
 }
 
