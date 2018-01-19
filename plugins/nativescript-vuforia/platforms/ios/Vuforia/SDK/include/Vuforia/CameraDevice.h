@@ -16,9 +16,11 @@ countries.
 #define _VUFORIA_CAMERADEVICE_H_
 
 // Include files
+#include <Vuforia/System.h>
 #include <Vuforia/NonCopyable.h>
 #include <Vuforia/VideoMode.h>
 #include <Vuforia/CameraCalibration.h>
+#include <Vuforia/CameraField.h>
 
 
 namespace Vuforia
@@ -122,6 +124,33 @@ public:
      *  mode was set earlier.
      */
     virtual bool setFocusMode(int focusMode) = 0;
+        
+    
+    /// Write accessors for camera fields
+
+    // Setting to NULL removes the field
+    virtual bool setField(const char* key, const char* value) = 0;
+    virtual bool setField(const char* key, Vuforia::Int64 value) = 0;
+    virtual bool setField(const char* key, float value) = 0; 
+    virtual bool setField(const char* key, bool value) = 0; 
+    virtual bool setField(const char* key, Vuforia::Int64 intRange[2]) = 0;
+    
+    /// Get the number of camera fields
+    /**
+     *  Note this may not be the complete set of camera fields available on this
+     *  device and some keys may not be supported on every device
+     */
+    virtual int getNumFields() const = 0;
+
+    /// Get the CameraField and associated key for the given index
+    virtual bool getCameraField(int index, CameraField& field) const = 0; 
+
+    /// Read accessors for camera fields
+    virtual bool getFieldString(const char* key, char* value, size_t maxlength) const = 0; 
+    virtual bool getFieldInt64(const char* key, Vuforia::Int64& value) const = 0;
+    virtual bool getFieldFloat(const char* key, float& value) const = 0; 
+    virtual bool getFieldBool(const char* key, bool& value) const = 0;
+    virtual bool getFieldInt64Range(const char* key, Vuforia::Int64* intRange) const = 0;
 };
 
 } // namespace Vuforia

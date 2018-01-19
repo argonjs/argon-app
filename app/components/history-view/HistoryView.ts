@@ -68,7 +68,7 @@ export function onItemLoaded(args) {
             if (application.android) {
                 closeAllCells(cell);
                 editing = false;
-                tapTimerId = setTimeout(()=>{
+                tapTimerId = <number><any>setTimeout(()=>{
                     panStart = contentView.translateX + data.deltaX;
                     editing = true;
                 }, tapTimeout);

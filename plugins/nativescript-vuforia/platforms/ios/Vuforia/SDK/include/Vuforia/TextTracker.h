@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2013-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -25,10 +25,13 @@ namespace Vuforia
 {
 
 /// The TextTracker controls the text recognition and tracking sub-system 
-/// of Vuforia.
+/// of Vuforia (DEPRECATED).
 /**
  *  The TextTracker detects and tracks a single or multiple words in six
  *  degrees of freedom (6DOF).
+ *
+ *  Deprecated: The Text Recognition API has been deprecated. It will be removed
+ *  in an upcoming Vuforia release.
  */
 class VUFORIA_API TextTracker : public Tracker
 {

@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -18,6 +18,8 @@ countries.
 // Include files
 #include <Vuforia/System.h>
 #include <Vuforia/Frame.h>
+#include <Vuforia/CameraCalibration.h>
+#include <Vuforia/Illumination.h>
 
 namespace Vuforia
 {
@@ -59,6 +61,24 @@ public:
 
     /// Returns the Frame object that is stored in the State
     Frame getFrame() const;
+    
+    /// Returns the current camera calibration that is stored in the State
+    /// NULL will be returned if there is no camera calibration associated with
+    /// the current State
+    /**
+     *  The returned object is only valid as long as the State
+     *  object is valid. Do not keep a copy of the pointer!
+     */
+    const CameraCalibration* getCameraCalibration() const;
+
+    /// Returns a pointer to an Illumination object which describes
+    /// the current illumination for the current state. NULL will be
+    /// returned if there is no illumination information available
+    /**
+     *  The returned object is only valid as long as the State
+     *  object is valid. Do not keep a copy of the pointer!
+     */
+    const Illumination* getIllumination() const;
 
     /// Returns the number of Trackable objects currently known to the SDK
     int getNumTrackables() const;

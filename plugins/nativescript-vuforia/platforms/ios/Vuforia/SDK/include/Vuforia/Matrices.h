@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -20,13 +20,13 @@ namespace Vuforia
 
 /// Matrix with 3 rows and 4 columns of float items
 struct Matrix34F {
-    float data[3*4];   ///< Array of matrix items
+    float data[3 * 4] = {0};   ///< Array of matrix items
 };
 
 
 /// Matrix with 4 rows and 4 columns of float items
 struct Matrix44F {
-    float data[4*4];   ///< Array of matrix items
+    float data[4 * 4] = {0};   ///< Array of matrix items
 };
 
 } // namespace Vuforia

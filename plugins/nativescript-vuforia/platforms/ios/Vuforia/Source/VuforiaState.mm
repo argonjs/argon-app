@@ -148,27 +148,31 @@
     return self;
 }
 
+-(Vuforia::State*)state {
+    return (Vuforia::State*)self.cpp;
+}
+
 - (VuforiaFrame*) getFrame {
     static VuforiaFrame *frame = [[VuforiaFrame alloc] init];
-    frame.cpp = self.cpp;
+    frame.cpp = self.state;
     return frame;
 }
 
 - (int) getNumTrackables {
-    return self.cpp->getNumTrackables();
+    return self.state->getNumTrackables();
 }
 
 - (int) getNumTrackableResults {
-    return self.cpp->getNumTrackableResults();
+    return self.state->getNumTrackableResults();
 }
 
 - (VuforiaTrackable *)getTrackable:(int)idx {
-    const Vuforia::Trackable* trackable = self.cpp->getTrackable(idx);
+    const Vuforia::Trackable* trackable = self.state->getTrackable(idx);
     return [VuforiaTrackable trackableFromCpp:(void*)trackable asConst:true];
 }
 
 - (VuforiaTrackableResult *)getTrackableResult:(int)idx {
-    return [VuforiaTrackableResult trackableResultFromCpp:(void*)self.cpp->getTrackableResult(idx) asConst:YES];
+    return [VuforiaTrackableResult trackableResultFromCpp:(void*)self.state->getTrackableResult(idx) asConst:YES];
 }
 
 - (void)dealloc {

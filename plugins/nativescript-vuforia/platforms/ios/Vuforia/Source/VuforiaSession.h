@@ -40,20 +40,20 @@ typedef struct _VuforiaVec4I {
     int w;
 } VuforiaVec4I;
 
-//typedef struct _VuforiaMatrix34 {
-//    float _0;
-//    float _1;
-//    float _2;
-//    float _3;
-//    float _4;
-//    float _5;
-//    float _6;
-//    float _7;
-//    float _8;
-//    float _9;
-//    float _10;
-//    float _11;
-//} VuforiaMatrix34;
+typedef struct _VuforiaMatrix34 {
+    float _0;
+    float _1;
+    float _2;
+    float _3;
+    float _4;
+    float _5;
+    float _6;
+    float _7;
+    float _8;
+    float _9;
+    float _10;
+    float _11;
+} VuforiaMatrix34;
 
 typedef struct _VuforiaMatrix44 {
     float _0;

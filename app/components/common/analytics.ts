@@ -73,7 +73,7 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
         clearTimeout(pageLoadTimerId);
         const uri = appViewModel.currentUri;
         if (uri) {
-            pageLoadTimerId = setTimeout(()=>{
+            pageLoadTimerId = <number><any>setTimeout(()=>{
                 logPageLoad(uri);
             }, 3000);
         }

@@ -1,0 +1,111 @@
+.menuItem {
+    padding: 15px 15px 15px 15px;
+    color: #545454;
+}
+
+#menu {
+    background-color: #EEFAFAFA;
+}
+
+.action-btn {
+    color: #545454;
+    font-size: 10px;
+    padding: 5px 5px 5px 5px;
+    background-color: #FFFFFF;
+}
+
+.action-btn-disabled {
+    color: #BBBBBB;
+}
+
+.toggle-btn-on {
+    color: #EEAA00;
+}
+
+.toggle-btn-off {
+    color: #545454;
+}
+
+.permission-btn-granted {
+    color: #FF0000;
+}
+
+.permission-btn-denied {
+    color: #BBBBBB;
+}
+
+.material-icon {
+    font-family: "Material Icons";
+    font-size: 22px;
+    white-space: nowrap;
+    border-width: 0;
+    padding: 0px 0px 0px 0px;
+}
+
+.bookmark-title {
+    font-size: 18px;
+}
+
+.bookmark-subtitle {
+    font-size: 10px;
+}
+
+.bookmark-icon {
+    padding-top: 44px;
+}
+
+.delete-btn {
+    color: white;
+}
+
+.search-bar {
+    horizontal-align: stretch;
+    height: 30;
+}
+
+#overviewButton {
+    width: 50;
+    height: 50;
+}
+
+#menuButton {
+    width: 50;
+    height: 50;
+}
+
+#addButton {
+    width: 50;
+    height: 50;
+}
+
+#menuButtons {
+    height: 50;
+    padding: 5px;
+}
+
+.progress {
+    color: #EEAA00;
+    background-color: #545454;
+}
+
+#permissionMenu {
+    background-color: #EEFAFAFA;
+}
+
+#permissionLabel {
+    padding: 15px 15px 5px 15px;
+    color: #545454;
+    text-align: center;
+}
+
+#changePermission {
+    padding: 5px 15px 15px 15px;
+    color: #545454;
+    text-align: center;
+}
+
+Button {
+    /* background-color: rgba(255, 0, 0, 0.0); */
+    border-color:rgba(255, 0, 0, 0.0);
+    border-width: 1;
+}

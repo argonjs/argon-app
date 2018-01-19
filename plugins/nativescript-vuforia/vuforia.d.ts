@@ -121,14 +121,26 @@ declare module "nativescript-vuforia" {
     export class API {
         setLicenseKey(licenseKey:string) : boolean;
         setHint(hint:Hint,value:number) : boolean;
+        
         init() : Promise<InitResult>;
         deinit() : void;
+
         getCameraDevice() : CameraDevice;
         getDevice() : Device;
         getRenderer() : Renderer;
+
+        smartTerrain?:SmartTerrain;
+        initSmartTerrain() : boolean;
+        deinitSmartTerrain() : boolean;
+
+        positionalDeviceTracker?:PositionalDeviceTracker;
+        initPositionalDeviceTracker() : boolean;
+        deinitPositionalDeviceTracker() : boolean;
+
+        objectTracker?:ObjectTracker;
         initObjectTracker() : boolean;
-        getObjectTracker() : ObjectTracker|undefined;
         deinitObjectTracker() : boolean;
+
         setStateUpdateCallback(cb:(state:State)=>void);
         getViewerScaleFactor() : number;
         setScaleFactor(f:number) : void;
@@ -198,6 +210,18 @@ declare module "nativescript-vuforia" {
 
     export class WordResult extends TrackableResult {
         getTrackable(): Word;
+    }
+
+    export class DeviceTrackable extends Trackable {}
+
+    export class DeviceTrackableResult extends TrackableResult {
+        getTrackable(): DeviceTrackable;
+    }
+
+    export class Anchor extends Trackable {}
+
+    export class AnchorResult extends TrackableResult {
+        getTrackable(): Anchor;
     }
 
     export class ObjectTarget extends Trackable {
@@ -363,7 +387,10 @@ declare module "nativescript-vuforia" {
         getViewport(viewID: View): Vec4;
     }
     
-    export class Tracker {}
+    export class Tracker {
+        start() : boolean;
+        stop() : void;
+    }
     
     export class DataSet {
         createMultiTarget(name: string): MultiTarget|undefined;
@@ -377,15 +404,36 @@ declare module "nativescript-vuforia" {
     }
     
     export class ObjectTracker extends Tracker {
-        start() : boolean;
-        stop() : void;
         createDataSet() : DataSet|undefined;
 		destroyDataSet(dataSet: DataSet) : boolean;
         activateDataSet(dataSet:DataSet) : boolean;
         deactivateDataSet(dataSet:DataSet) : boolean;
     }
     
+    export class SmartTerrain extends Tracker {
+        hitTest(state:State, point:Vec2, defaultDeviceHeight:number,hint:HitTestHint);
+        getHitTestResultCount():number;
+        getHitTestResult(idx:number):HitTestResult;
+    }
+
+    export class HitTestResult {
+        getPose() : Matrix44;
+    }
+
+    export enum HitTestHint {
+        None = 0,
+        HorizontalPlane = 1,
+        VerticalPlane = 2
+    }
     
+    export class PositionalDeviceTracker extends Tracker {
+        createAnchorFromPose(name:string, pose:Matrix44) : Anchor?;
+        createAnchorFromHitTestResult(name:string, hitTestResult:HitTestResult) : Anchor?;
+        destroyAnchor(anchor:Anchor):bool;
+        getNumAnchors():number;
+        getAnchor(idx:number):Anchor?;
+    }
+
     // util
     
     export function getInterfaceOrientation() : number;

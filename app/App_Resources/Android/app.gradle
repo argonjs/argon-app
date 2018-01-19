@@ -1,12 +1,22 @@
 
 android {  
-  defaultConfig {  
-    minSdkVersion 23
-  }
-  buildTypes {
+    defaultConfig {  
+        minSdkVersion 23
+    }
+    buildTypes {
         debug {
             minifyEnabled false
             proguardFile 'src/main/res/proguard-rules.pro'
+        }
+    }
+    android {
+        splits {
+            abi {
+                enable true //enables the ABIs split mechanism
+                reset() //reset the list of ABIs to be included to an empty string
+                include 'arm64-v8a', 'armeabi-v7a', 'x86'
+                universalApk true
+            }
         }
     }
 } 

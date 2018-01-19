@@ -310,31 +310,7 @@ declare const enum VuforiaInitResult {
 	EXTERNAL_DEVICE_NOT_DETECTED = -10
 }
 
-declare class VuforiaMarker extends VuforiaTrackable {
-}
-
-declare class VuforiaMarkerResult extends VuforiaTrackableResult {
-
-	getTrackable(): VuforiaMarker;
-}
-
-// interface VuforiaMatrix34 {
-// 	_0: number;
-// 	_1: number;
-// 	_2: number;
-// 	_3: number;
-// 	_4: number;
-// 	_5: number;
-// 	_6: number;
-// 	_7: number;
-// 	_8: number;
-// 	_9: number;
-// 	_10: number;
-// 	_11: number;
-// }
-// declare var VuforiaMatrix34: interop.StructType<VuforiaMatrix34>;
-
-interface VuforiaMatrix44 {
+interface VuforiaMatrix34 {
 	_0: number;
 	_1: number;
 	_2: number;
@@ -347,12 +323,28 @@ interface VuforiaMatrix44 {
 	_9: number;
 	_10: number;
 	_11: number;
-	_12: number;
-	_13: number;
-	_14: number;
-	_15: number;
 }
-declare var VuforiaMatrix44: interop.StructType<VuforiaMatrix44>;
+declare var VuforiaMatrix34: interop.StructType<VuforiaMatrix34>;
+
+// interface VuforiaMatrix44 {
+// 	_0: number;
+// 	_1: number;
+// 	_2: number;
+// 	_3: number;
+// 	_4: number;
+// 	_5: number;
+// 	_6: number;
+// 	_7: number;
+// 	_8: number;
+// 	_9: number;
+// 	_10: number;
+// 	_11: number;
+// 	_12: number;
+// 	_13: number;
+// 	_14: number;
+// 	_15: number;
+// }
+// declare var VuforiaMatrix44: interop.StructType<VuforiaMatrix44>;
 
 declare class VuforiaMesh extends NSObject {
 
@@ -397,13 +389,55 @@ declare class VuforiaMultiTargetResult extends VuforiaObjectTargetResult {
 	getTrackable(): VuforiaMultiTarget;
 }
 
+declare const enum VuforiaHitTestHint {
+	None = 0,
+	HorizontalPlane = 1,
+	VerticalPlane = 2
+}
+
+declare class VuforiaHitTestResult {
+	getPose(): VuforiaMatrix34
+}
+
+declare class VuforiaSmartTerrain extends VuforiaTracker {
+	static initTracker(): boolean;
+	static getInstance(): VuforiaSmartTerrain;
+	static deinitTracker(): boolean;
+	hitTestWithStatePointDeviceHeightHint(state:VuforiaState,point:VuforiaVec2F,deviceHeight:number,hint:VuforiaHitTestHint):void;
+	hitTestResultCount():number;
+	getHitTestResultAtIndex(idx:number):VuforiaHitTestResult
+}
+
+declare class VuforiaDeviceTrackable extends VuforiaTrackable {}
+
+declare class VuforiaDeviceTrackableResult extends VuforiaTrackableResult {
+	getTrackable(): VuforiaDeviceTrackable;
+}
+
+declare class VuforiaAnchor extends VuforiaTrackable {}
+
+declare class VuforiaAnchorResult extends VuforiaTrackableResult {
+	getTrackable(): VuforiaAnchor;
+}
+
+declare class VuforiaPositionalDeviceTracker extends VuforiaTracker {
+	static initTracker(): boolean;
+	static getInstance(): VuforiaPositionalDeviceTracker;
+	static deinitTracker(): boolean;
+	createAnchorWithNamePose(name:string, pose:VuforiaMatrix34):VuforiaAnchor?;
+	createAnchorWithNameHitTestResult(name:string, hitTestResult:VuforiaHitTestResult):VuforiaAnchor?;
+	destroyAnchor(anchor:VuforiaAnchor): boolean;
+	numAnchors():number;
+	getAnchorAtIndex(idx:number):VuforiaAnchor?;
+}
+
+
 declare class VuforiaObjectTarget extends VuforiaTrackable {
     getUniqueTargetId(): string;
 	getSize(): VuforiaVec3F;
 }
 
 declare class VuforiaObjectTargetResult extends VuforiaTrackableResult {
-
 	getTrackable(): VuforiaObjectTarget;
 }
 
@@ -482,17 +516,17 @@ declare class VuforiaRenderingPrimitives extends NSObject {
 
 	getDistortionTextureViewport(viewID: VuforiaView): VuforiaVec4I;
 
-	getEyeDisplayAdjustmentMatrix(viewID: VuforiaView): VuforiaMatrix44;
+	getEyeDisplayAdjustmentMatrix(viewID: VuforiaView): VuforiaMatrix34;
 
 	getNormalizedViewport(viewID: VuforiaView): VuforiaVec4F;
 
-	getProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix44;
+	getProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
 
 	getRenderingViews(): VuforiaViewList;
 
 	getVideoBackgroundMesh(viewID: VuforiaView): VuforiaMesh;
 
-	getVideoBackgroundProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix44;
+	getVideoBackgroundProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
 
 	getViewport(viewID: VuforiaView): VuforiaVec4I;
 
@@ -651,7 +685,7 @@ declare class VuforiaTrackableResult extends NSObject {
 
 	constructor(); // inherited from NSObject
 
-	getPose(): VuforiaMatrix44;
+	getPose(): VuforiaMatrix34;
     
     getTimeStamp(): number;
 

@@ -10,6 +10,8 @@
 
 #import <Foundation/Foundation.h>
 #import "VuforiaSession.h"
+#import "VuforiaCameraDevice.h"
+
 
 /// Possible viewer button types
 typedef NS_ENUM (NSInteger, VuforiaViewerParamtersButtonType) {
@@ -174,7 +176,13 @@ typedef NS_ENUM (NSInteger, VuforiaView)
 -(VuforiaVec4F)getNormalizedViewport:(VuforiaView)viewID;
 
 /// Returns the projection matrix to use for the given view and the specified coordinate system
--(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+
+/// Returns the projection matrix to use for the given view and the specified coordinate system
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
+                     coordinateSystem:(VuforiaCoordinateSystemType)csType
+                    cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
+     adjustForViewportCentreToEyeAxis:(BOOL)adjust;
 
 /// Returns an adjustment matrix needed to correct for the different position of display relative to the eye
 /**
@@ -182,10 +190,10 @@ typedef NS_ENUM (NSInteger, VuforiaView)
  * The adjustment matrix is in meters, if your scene is defined in another unit
  * you will need to adjust the matrix before use.
  */
--(VuforiaMatrix44)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID;
+-(VuforiaMatrix34)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID;
 
 /// Returns the projection matrix to use when projecting the video background
--(VuforiaMatrix44)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+-(VuforiaMatrix34)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
 
 /// Returns a simple mesh suitable for rendering a video background texture
 -(VuforiaMesh*)getVideoBackgroundMesh:(VuforiaView)viewID;

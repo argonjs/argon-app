@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -26,6 +26,7 @@ namespace Vuforia
 class VUFORIA_API CameraCalibration : private NonCopyable
 {
 public:
+
     /// Returns the resolution of the camera as 2D vector.
     virtual Vec2F getSize() const = 0;
 
@@ -40,10 +41,8 @@ public:
 
     /// Returns the field of view in x- and y-direction as 2D vector.
     virtual Vec2F getFieldOfViewRads() const = 0;
-
-protected:
-
-    virtual ~CameraCalibration() {}
+    
+    
 };
 
 } // namespace Vuforia

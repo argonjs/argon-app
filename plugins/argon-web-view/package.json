@@ -4,6 +4,7 @@
     "description": "",
     "main": "argon-web-view.js",
     "scripts": {
+        "build-jar": "jar cvf platforms/android/ArgonWebInterface.jar -C android/ArgonWebInterface/src/ .",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "nativescript": {

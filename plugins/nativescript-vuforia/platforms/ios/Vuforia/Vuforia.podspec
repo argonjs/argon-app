@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = "Vuforia"
-  s.version          = "5.5.9"
+  s.version          = "7.0.43"
   s.summary          = "An Obj-C wrapper for the VuforiaSDK"
 
 # This description is used to generate tags and improve search results.

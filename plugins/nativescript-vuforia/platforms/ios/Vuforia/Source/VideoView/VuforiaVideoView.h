@@ -44,7 +44,7 @@
     
 }
 
-// -(float) getSceneScaleFactor;
+- (void) renderFrame;
 
 @end
 

@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -82,7 +82,7 @@ public:
 
     /// Returns the idx-th active dataset. Returns NULL if no DataSet has
     /// been activated or if idx is out of range.
-    virtual DataSet* getActiveDataSet(const int idx = 0) = 0;
+    virtual DataSet* getActiveDataSet(const int idx) = 0;
 
     /// Returns the number of currently activated dataset. 
     virtual int getActiveDataSetCount() const = 0;
@@ -107,8 +107,6 @@ public:
  
     /// Resets environment map for Extended Tracking
     /**
-     *  Environment map can only be reset by the developer if persistent
-     *  extended tracking is enabled.
      *  This function will return true if environment map was reset
      *  successfully and false otherwise.
      */

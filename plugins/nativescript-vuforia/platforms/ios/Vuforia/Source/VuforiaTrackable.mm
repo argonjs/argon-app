@@ -11,6 +11,10 @@
 #import "VuforiaTrackable.h"
 #import <Vuforia/Trackable.h>
 #import <Vuforia/TrackableResult.h>
+#import <Vuforia/DeviceTrackable.h>
+#import <Vuforia/DeviceTrackableResult.h>
+#import <Vuforia/Anchor.h>
+#import <Vuforia/AnchorResult.h>
 #import <Vuforia/ObjectTarget.h>
 #import <Vuforia/ObjectTargetResult.h>
 #import <Vuforia/ImageTarget.h>
@@ -19,8 +23,6 @@
 #import <Vuforia/CylinderTargetResult.h>
 #import <Vuforia/MultiTarget.h>
 #import <Vuforia/MultiTargetResult.h>
-#import <Vuforia/Marker.h>
-#import <Vuforia/MarkerResult.h>
 #import <Vuforia/Word.h>
 #import <Vuforia/WordResult.h>
 #import <Vuforia/Tool.h>
@@ -39,10 +41,10 @@
 +(VuforiaTrackable*)trackableFromCpp:(void*)trackable asConst:(BOOL)asConst {
     Vuforia::Trackable *cpp = (Vuforia::Trackable*)trackable;
     VuforiaTrackable *wrapped;
-    if (cpp->isOfType(Vuforia::Marker::getClassType())){
-        wrapped = [[VuforiaMarker alloc] initWithCpp:cpp asConst:asConst];
-    } else if (cpp->isOfType(Vuforia::Word::getClassType())){
-        wrapped = [[VuforiaWord alloc] initWithCpp:cpp asConst:asConst];
+    if (cpp->isOfType(Vuforia::Anchor::getClassType())){
+        wrapped = [[VuforiaAnchor alloc] initWithCpp:cpp asConst:asConst];
+    } else if (cpp->isOfType(Vuforia::DeviceTrackable::getClassType())){
+        wrapped = [[VuforiaDeviceTrackable alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::ImageTarget::getClassType())){
         wrapped = [[VuforiaImageTarget alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::CylinderTarget::getClassType())){
@@ -51,6 +53,8 @@
         wrapped = [[VuforiaMultiTarget alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::ObjectTarget::getClassType())) {
         wrapped = [[VuforiaObjectTarget alloc] initWithCpp:cpp asConst:asConst];
+    } else if (cpp->isOfType(Vuforia::Word::getClassType())){
+        wrapped = [[VuforiaWord alloc] initWithCpp:cpp asConst:asConst];
     } else {
         wrapped = [[VuforiaTrackable alloc] initWithCpp:cpp asConst:asConst];
     }
@@ -125,17 +129,7 @@
 }
 @end
 
-@implementation VuforiaMarker
 
-+(int) getClassType {
-    return Vuforia::Marker::getClassType().getData();
-}
-
-- (Vuforia::Marker*)marker {
-    return (Vuforia::Marker*)self.cpp;
-}
-
-@end
 
 @implementation VuforiaWord
 
@@ -147,6 +141,18 @@
     return (Vuforia::Word*)self.cpp;
 }
 
+@end
+
+@implementation VuforiaDeviceTrackable
++(int) getClassType {
+    return Vuforia::DeviceTrackable::getClassType().getData();
+}
+@end
+
+@implementation VuforiaAnchor
++(int) getClassType {
+    return Vuforia::Anchor::getClassType().getData();
+}
 @end
 
 @implementation VuforiaObjectTarget
@@ -223,18 +229,20 @@
 +(VuforiaTrackableResult*)trackableResultFromCpp:(void*)result asConst:(BOOL)asConst {
     Vuforia::TrackableResult *cpp = (Vuforia::TrackableResult*)result;
     VuforiaTrackableResult *wrapped;
-    if (cpp->isOfType(Vuforia::MarkerResult::getClassType())){
-        wrapped = [[VuforiaMarkerResult alloc] initWithCpp:cpp asConst:asConst];
-    } else if (cpp->isOfType(Vuforia::WordResult::getClassType())){
-        wrapped = [[VuforiaWordResult alloc] initWithCpp:cpp asConst:asConst];
+    if (cpp->isOfType(Vuforia::AnchorResult::getClassType())) {
+        wrapped = [[VuforiaAnchorResult alloc] initWithCpp:cpp asConst:asConst];
+    } else if (cpp->isOfType(Vuforia::DeviceTrackableResult::getClassType())) {
+        wrapped = [[VuforiaDeviceTrackableResult alloc] initWithCpp:cpp asConst:asConst];
+    } else if (cpp->isOfType(Vuforia::ObjectTargetResult::getClassType())) {
+        wrapped = [[VuforiaObjectTargetResult alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::ImageTargetResult::getClassType())){
         wrapped = [[VuforiaImageTargetResult alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::CylinderTargetResult::getClassType())){
         wrapped = [[VuforiaCylinderTargetResult alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::MultiTargetResult::getClassType())){
         wrapped = [[VuforiaMultiTargetResult alloc] initWithCpp:cpp asConst:asConst];
-    } else if (cpp->isOfType(Vuforia::ObjectTargetResult::getClassType())) {
-        wrapped = [[VuforiaObjectTargetResult alloc] initWithCpp:cpp asConst:asConst];
+    } else if (cpp->isOfType(Vuforia::WordResult::getClassType())){
+        wrapped = [[VuforiaWordResult alloc] initWithCpp:cpp asConst:asConst];
     } else {
         wrapped = [[VuforiaTrackableResult alloc] initWithCpp:cpp asConst:asConst];
     }
@@ -270,9 +278,9 @@
 };
 
 /// Returns the current pose matrix in row-major order
--(VuforiaMatrix44) getPose {
-    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getPose());
-    return (VuforiaMatrix44&)m;
+-(VuforiaMatrix34) getPose {
+//    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getPose());
+    return (VuforiaMatrix34&)self.cpp->getPose();
 };
 
 -(double)getTimeStamp {
@@ -283,23 +291,6 @@
 - (void)dealloc {
     self.cpp = nil;
 }
-@end
-
-
-@implementation VuforiaMarkerResult
-
-+(int) getClassType {
-    return Vuforia::MarkerResult::getClassType().getData();
-}
-
-- (Vuforia::MarkerResult*)result {
-    return (Vuforia::MarkerResult*)self.cpp;
-}
-
-- (VuforiaMarker*)getTrackable {
-    return (VuforiaMarker*) [VuforiaTrackable trackableFromCpp:(void*)&self.cpp->getTrackable() asConst:true];
-}
-
 @end
 
 @implementation VuforiaWordResult
@@ -314,6 +305,39 @@
 
 - (VuforiaWord*)getTrackable {
     return (VuforiaWord*) [VuforiaTrackable trackableFromCpp:(void*)&self.cpp->getTrackable() asConst:true];
+}
+
+@end
+
+
+@implementation VuforiaDeviceTrackableResult
+
++(int) getClassType {
+    return Vuforia::DeviceTrackableResult::getClassType().getData();
+}
+
+- (Vuforia::DeviceTrackableResult*)result {
+    return (Vuforia::DeviceTrackableResult*)self.cpp;
+}
+
+- (VuforiaAnchorResult*)getTrackable {
+    return (VuforiaAnchorResult*) [VuforiaTrackable trackableFromCpp:(void*)&self.cpp->getTrackable() asConst:true];
+}
+
+@end
+
+@implementation VuforiaAnchorResult
+
++(int) getClassType {
+    return Vuforia::AnchorResult::getClassType().getData();
+}
+
+- (Vuforia::AnchorResult*)result {
+    return (Vuforia::AnchorResult*)self.cpp;
+}
+
+- (VuforiaAnchorResult*)getTrackable {
+    return (VuforiaAnchorResult*) [VuforiaTrackable trackableFromCpp:(void*)&self.cpp->getTrackable() asConst:true];
 }
 
 @end

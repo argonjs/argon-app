@@ -156,22 +156,6 @@ public:
     
     /// Returns a pointer to an ImageTarget object.
     virtual ImageTarget* getImageTarget(int idx) = 0;
-
-    /// Sets the base color of the scanline in the scanning UI
-    /**
-     * The parameters allow you to set the Red, Green and Blue colors 
-     * for the Scanline. They should be normalized values between 0 and 1.
-     */
-    virtual void setUIScanlineColor(float r, float g, float b) = 0; 
-
-    /// Sets the base color of the points in the scanning UI
-    /**
-     * The parameters allow you to set the Red, Green and Blue colors 
-     * for the Points. They should be normalized values between 0 and 1.
-     * Note that this call triggers the keypoint texture to be recreated and
-     * it should thus be avoided to called this every frame.
-     */
-    virtual void setUIPointColor(float r, float g, float b) = 0; 
 };
 
 } // namespace Vuforia

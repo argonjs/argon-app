@@ -13,39 +13,39 @@
 #import <Vuforia/CameraDevice.h>
 
 
-@interface VuforiaCameraCalibration ()
-@property (nonatomic, assign) const Vuforia::CameraCalibration *cpp;
-@end
-
 @implementation VuforiaCameraCalibration : NSObject
+
+-(const Vuforia::CameraCalibration*)calibration {
+    return (const Vuforia::CameraCalibration*)self.cpp;
+}
 
 /// Returns the resolution of the camera as 2D vector.
 -(VuforiaVec2F)getSize {
-    Vuforia::Vec2F v = self.cpp->getSize();
+    Vuforia::Vec2F v = self.calibration->getSize();
     return (VuforiaVec2F&)v;
 }
 
 /// Returns the focal length in x- and y-direction as 2D vector.
 -(VuforiaVec2F)getFocalLength {
-    Vuforia::Vec2F v = self.cpp->getFocalLength();
+    Vuforia::Vec2F v = self.calibration->getFocalLength();
     return (VuforiaVec2F&)v;
 }
 
 /// Returns the principal point as 2D vector.
 -(VuforiaVec2F)getPrincipalPoint {
-    Vuforia::Vec2F v = self.cpp->getPrincipalPoint();
+    Vuforia::Vec2F v = self.calibration->getPrincipalPoint();
     return (VuforiaVec2F&)v;
 }
 
 /// Returns the radial distortion as 4D vector.
 -(VuforiaVec4F)getDistortionParameters {
-    Vuforia::Vec4F v = self.cpp->getDistortionParameters();
+    Vuforia::Vec4F v = self.calibration->getDistortionParameters();
     return (VuforiaVec4F&)v;
 }
 
 /// Returns the field of view in x- and y-direction as 2D vector.
 -(VuforiaVec2F)getFieldOfViewRads {
-    Vuforia::Vec2F v = self.cpp->getFieldOfViewRads();
+    Vuforia::Vec2F v = self.calibration->getFieldOfViewRads();
     return (VuforiaVec2F&)v;
 }
 

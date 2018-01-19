@@ -86,6 +86,7 @@
 
 @interface VuforiaState : NSObject
 - (id) initWithCpp:(void*)cpp;
+- (void*) cpp;
 /// Returns the Frame object that is stored in the State
 - (VuforiaFrame*) getFrame;
 /// Returns the number of Trackable objects currently known to the SDK

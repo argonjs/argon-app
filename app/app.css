@@ -1,4 +1,6 @@
-﻿.menuItem {
+﻿@import url('~/platform.css');
+
+.menuItem {
     padding: 15px 15px 15px 15px;
     color: #545454;
 }

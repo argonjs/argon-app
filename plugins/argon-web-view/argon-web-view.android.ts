@@ -2,10 +2,29 @@ import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
 import dialogs = require("ui/dialogs");
-import * as Argon from '@argonjs/argon'
+import * as Argon from '@argonjs/argon';
+import {WEBXR_API} from './webxr';
 //import {Color} from "color";
 
-const AndroidWebInterface = io.argonjs.AndroidWebInterface;
+console.log(io.argonjs)
+
+class ArgonWebInterface extends io.argonjs.ArgonWebInterface {
+    constructor(public callback:(event:string, data:string)=>void) {
+        super();
+        return global.__native(this);
+    }
+    onArgonEvent(event:string, data:string) {
+        this.callback(event, data);
+    }
+}
+
+// webkit cookie manager handles cookeis for android webviews
+const webkitCookieManager = android.webkit.CookieManager.getInstance();
+
+// set a default cookie handler for http requests
+// (nativescript currently sets a default CookieHandler
+// after a request is made, but this might change)
+java.net.CookieHandler.setDefault(new java.net.CookieManager);
 
 export class ArgonWebView extends common.ArgonWebView {
 
@@ -22,33 +41,27 @@ export class ArgonWebView extends common.ArgonWebView {
             //this.backgroundColor = new Color(0, 255, 255, 255);
             //this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
 
-            const settings = <android.webkit.WebSettings> this.android.getSettings();
+            const webView = <android.webkit.WebView>this.android;
+            const settings = webView.getSettings();
             const userAgent = settings.getUserAgentString();
             settings.setUserAgentString(userAgent + " Argon/" + Argon.version);
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
 
-            // Create a unique class name for 'extend' to bind the object to this particular webview
-            var classname = "io_argonjs_AndroidWebInterface_ArgonWebView_" + this._instanceId;
-
-            // Inject Javascript Interface
-            this.android.addJavascriptInterface(new ((<any>AndroidWebInterface).extend(classname, {
-                onArgonEvent: (id: string, event: string, data: string) => {
-                    //const self = ArgonWebView.layersById[id];
-                    //if (self) {
-                        if (event === "argon") {
-                            // just in case we thought below that the page was not an
-                            // argon page, perhaps because argon.js loaded asyncronously 
-                            // and the programmer didn't set up an argon meta tag
-                            this._setIsArgonPage(true);
-                            this._handleArgonMessage(data);
-                        }
-                    //}
-                },
-            }))(new java.lang.String(this._instanceId)), "__argon_android__");
+            webView.addJavascriptInterface(new ArgonWebInterface((event, data)=>{
+                if (event === "argon") {
+                    // just in case we thought below that the page was not an
+                    // argon page, perhaps because argon.js loaded asyncronously 
+                    // and the programmer didn't set up an argon meta tag
+                    this._setIsArgonPage(true);
+                    this._handleArgonMessage(data);
+                } else if (event === "webxr") {
+                    this._handleWebXRMessage(data);
+                }
+            }), "__argon_android__");
 
             // Create a unique class name for 'extend' to bind the object to this particular webview
-            classname = "android_webkit_WebChromeClient_ArgonWebView_" + this.id;
+            var classname = "android_webkit_WebChromeClient_ArgonWebView_" + this._instanceId;
 
             // Extend WebChromeClient to capture log output
             this.android.setWebChromeClient(new ((<any>android.webkit.WebChromeClient).extend(classname, {
@@ -80,6 +93,17 @@ export class ArgonWebView extends common.ArgonWebView {
                     common.progressProperty.nativeValueChange(this, newProgress / 100);
                 }
             })));
+
+            classname = "android_webkit_WebViewClient_ArgonWebView_" + this._instanceId;
+            this.android.setWebViewClient(new ((<any>android.webkit.WebViewClient).extend(classname, {
+                shouldOverrideUrlLoading: (webView:android.webkit.WebView, urlOrResponse:string|any) => {
+                    const url = typeof urlOrResponse === 'string' ? urlOrResponse : urlOrResponse.getUrl().toString();
+
+                    console.log("Loading url" + url);
+                    this._loadUrlWithInjectedScript(url);
+                    return true;
+                }
+            })));
         });
 
         this.on(ArgonWebView.loadStartedEvent, (args:LoadEventData) => {
@@ -108,6 +132,79 @@ export class ArgonWebView extends common.ArgonWebView {
 
             common.titleProperty.nativeValueChange(this, url);
             common.titleProperty.nativeValueChange(this, this.android.getTitle());
+        });
+    }
+
+    private _loadingPromise?:Promise<void>;
+
+    private _loadUrlWithInjectedScript(url:string) {
+        const webView = <android.webkit.WebView>this.android;
+        const cookieManager = <java.net.CookieManager>java.net.CookieHandler.getDefault();
+        const cookieStore = cookieManager.getCookieStore();
+
+        console.log('url' + url);
+
+        const cookieList = webkitCookieManager.getCookie(url);
+
+        const uri = new java.net.URI(url);
+
+        if (cookieList) {
+            const cookieArray = cookieList.split(';');
+            for (const cookie of cookieArray) {
+                const cookieKeyValue = cookie.split('=');
+                cookieStore.add(uri, new java.net.HttpCookie(cookieKeyValue[0], cookieKeyValue[1]));
+            }
+        } else {
+            const cookies = cookieStore.get(uri);
+            const numCookies = cookies.size();
+            for (let i=0; i < numCookies; i++) {
+                const cookie = cookies.get(i);
+                cookieStore.remove(uri, cookie);
+            }
+        }
+        
+        const loading = this._loadingPromise = fetch(url, {method: 'get'}).then((data)=>{
+            return data.text() 
+        }).then((text)=>{
+            if (loading === this._loadingPromise) {
+                // const $ = cheerio.load(text);
+                // $('*').first().before(`<script>(${function() {
+                //     window['ARGON_BROWSER'] = {
+                //         postMessage(message:string) {
+                //             window['__argon_android__'].emit('webxr', message);
+                //         },
+                //         onmessage: null
+                //     }
+                // }.toString()}());
+                // ARGON_BROWSER.version = ${Argon.version};
+                // (${WEBXR_API}());</script>`);
+                // webView.loadDataWithBaseURL(
+                //     url,
+                //     $.html(),
+                //     'text/html',
+                //     'utf8',
+                //     url
+                // );
+
+                var injectedScript = `<script>(${function() {
+                    window['ARGON_BROWSER'] = {
+                        postMessage(message:string) {
+                            window['__argon_android__'].emit('webxr', message);
+                        },
+                        onmessage: null
+                    }
+                }.toString()}());
+                ARGON_BROWSER.version = ${Argon.version};
+                (${WEBXR_API}());</script>`;
+
+                webView.loadDataWithBaseURL(
+                    url,
+                    injectedScript + text,
+                    'text/html',
+                    'utf8',
+                    url
+                );
+            }
         });
     }
 

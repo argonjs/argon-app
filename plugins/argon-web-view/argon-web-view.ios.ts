@@ -4,6 +4,7 @@ import {NavigationType} from 'ui/web-view';
 import * as trace from 'trace';
 import * as utils from 'utils/utils';
 import * as dialogs from 'ui/dialogs';
+import {WEBXR_API} from './webxr';
 
 const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon/' + Argon.version;
 
@@ -45,7 +46,7 @@ export class ArgonWebView extends common.ArgonWebView  {
         super();
 
         const configuration = WKWebViewConfiguration.alloc().init();
-
+        
         configuration.allowsInlineMediaPlayback = true;
         configuration.allowsAirPlayForMediaPlayback = true;
         configuration.allowsPictureInPictureMediaPlayback = true;
@@ -105,8 +106,18 @@ export class ArgonWebView extends common.ArgonWebView  {
                     if (name === 'Object') name = o.constructor.name;
                     return name;
                 }
+
+                window['ARGON_BROWSER'] = {
+                    postMessage(message:string) {
+                        webkit.messageHandlers.argon_webxr(message);
+                    },
+                    onmessage: null
+                }
             }.toString()
-        }())`, WKUserScriptInjectionTime.AtDocumentStart, true));
+        }());
+        ARGON_BROWSER.version = ${Argon.version};
+        (${WEBXR_API}());
+        `, WKUserScriptInjectionTime.AtDocumentStart, true));
 
         // We want to replace the UIWebView created by superclass with WKWebView instance
         this.nativeView = this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
@@ -115,9 +126,10 @@ export class ArgonWebView extends common.ArgonWebView  {
         configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
         configuration.userContentController.addScriptMessageHandlerName(delegate, "argoncheck");
         configuration.userContentController.addScriptMessageHandlerName(delegate, "log");
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true;
 
 	    this._ios.allowsBackForwardNavigationGestures = true;
-		this._ios['customUserAgent'] = ARGON_USER_AGENT;
+        this._ios.customUserAgent = ARGON_USER_AGENT;
 
         // style appropriately
         this._ios.scrollView.layer.masksToBounds = false;
@@ -370,6 +382,11 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
             ) {
                 dialogs.alert("Host is not responding. Please check if the host suppots HTTPS.");
         }
+    }
+
+    webViewWebContentProcessDidTerminate(webView:WKWebView) {
+        const owner = this._owner.get();
+        if (owner) owner.reload();
     }
 
     // comment out until https://github.com/NativeScript/ios-runtime/issues/742 is fixed

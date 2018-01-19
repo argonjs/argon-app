@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -47,9 +47,9 @@ public:
 
     /// A time stamp that defines when the trackable result was generated
     /**
-    *  Value in seconds representing the offset to application startup time.
-    *  The timestamp can be used to compare trackable results.
-    */
+     *  Value in seconds representing the offset to application startup time.
+     *  The timestamp can be used to compare trackable results.
+     */
     virtual double getTimeStamp() const = 0;
 
 
@@ -60,7 +60,10 @@ public:
                             ///< (this TrackableResult does not have a state)
         DETECTED,           ///< The TrackableResult was detected
         TRACKED,            ///< The TrackableResult was tracked
-        EXTENDED_TRACKED    ///< The Trackable Result was extended tracked
+        EXTENDED_TRACKED,   ///< The Trackable Result was extended tracked
+        DEGRADED            ///< The Trackable Result has a pose of degraded
+                            ///< quality (i.e. pose is 3DOF but Tracker is
+                            ///< expected to deliver 6DOF)
     };
 
     /// Returns the tracking status
@@ -71,9 +74,9 @@ public:
 
     /// Returns the current pose matrix in row-major order
     /**
-    *  A pose is defined in a base coordinate system and defines a transformation
-    *  from a target coordinate system to a base coordinate system.
-    */
+     *  A pose is defined in a base coordinate system and defines a transformation
+     *  from a target coordinate system to a base coordinate system.
+     */
     virtual const Matrix34F& getPose() const = 0;
 
     /// Returns the base coordinate system defined for the pose

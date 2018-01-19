@@ -111,17 +111,35 @@ export enum TrackableResultStatus {
     ExtendedTracked = 4
 }
 
+export enum HitTestHint {
+    None = 0,
+    HorizontalPlane = 1,
+    VerticalPlane = 2
+}
+
 export abstract class APIBase implements def.API {
     abstract setLicenseKey(licenseKey:string) : boolean;
     abstract setHint(hint:def.Hint,value:number) : boolean;
+
     abstract init() : Promise<def.InitResult>;
     abstract deinit() : void;
+
     abstract getCameraDevice() : def.CameraDevice;
     abstract getDevice() : def.Device;
     abstract getRenderer() : def.Renderer;
+
+    smartTerrain? : def.SmartTerrain;
+    abstract initSmartTerrain() : boolean;
+    abstract deinitSmartTerrain() : boolean;
+
+    positionalDeviceTracker? : def.PositionalDeviceTracker;
+    abstract initPositionalDeviceTracker() : boolean;
+    abstract deinitPositionalDeviceTracker() : boolean;
+    
+    objectTracker? : def.ObjectTracker;
     abstract initObjectTracker() : boolean;
-    abstract getObjectTracker() : def.ObjectTracker|undefined;
     abstract deinitObjectTracker() : boolean;
+
     abstract setScaleFactor(f:number);
     abstract getScaleFactor() : number; 
     abstract onSurfaceChanged(width:number, height:number) : void;

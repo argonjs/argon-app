@@ -1,6 +1,5 @@
 /*==============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
-
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -24,17 +23,17 @@ namespace Vuforia
 
 /// HeadTransformModel class.
 /**
-*  The HeadTransformModel define a head model that can be mainly
-*  used for 3DOF tracker (rotation only) while used in a head tracking
-*  context. It supports a pivot model, representing the neck pivot 
-*  point in reference to the tracked pose that can be use to correct 
-*  the pose provided by the tracker.
-*  The pivot point (3d vector) will be used to correct the current 
-*  estimated rotation, to take in consideration current rotation point.
-*  For a head model this corresponds to the neck pivot.
-*  The default value used is based on average anthropomorphic
-*  measurements.
-*/
+ *  The HeadTransformModel defines a head model that can be used for
+ *  a 3DOF tracker (rotation only) while used in a head tracking
+ *  context. It supports a pivot model, representing the neck pivot 
+ *  point in reference to the tracked pose that can be use to correct 
+ *  the pose provided by the tracker.
+ *  The pivot point (3d vector) will be used to correct the current 
+ *  estimated rotation, to take in consideration current rotation point.
+ *  For a head model this corresponds to the neck pivot.
+ *  The default value used is based on average anthropomorphic
+ *  measurements.
+ */
 class VUFORIA_API HeadTransformModel : public TransformModel
 {
 public:

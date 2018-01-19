@@ -37,11 +37,22 @@
 -(bool)isExtendedTrackingStarted;
 @end
 
-@interface VuforiaMarker : VuforiaTrackable
+@interface VuforiaWord : VuforiaTrackable
 +(int)getClassType;
 @end
 
-@interface VuforiaWord : VuforiaTrackable
+@interface VuforiaDeviceTrackable : VuforiaTrackable
++(int)getClassType;
+@end
+
+
+/// A target representing a spatial anchor
+/**
+ *  An instance of the Anchor class represents a spatial anchor, which is a
+ *  real-world pose that can be used for accurate positioning of objects in AR.
+ *  Anchors can be created and destroyed via the DeviceTracker.
+ */
+@interface VuforiaAnchor : VuforiaTrackable
 +(int)getClassType;
 @end
 
@@ -86,20 +97,25 @@ typedef NS_ENUM (NSInteger, VuforiaTrackableResultStatus) {
 -(VuforiaTrackableResultStatus)getStatus;
 /// Returns the corresponding Trackable that this result represents
 -(VuforiaTrackable*)getTrackable;
-/// Returns the current pose matrix in row-major order
--(const VuforiaMatrix44)getPose;
+/// Returns the current pose matrix in col-major order
+-(const VuforiaMatrix34)getPose;
 /// A time stamp that defines when the trackable result was generated
 -(double)getTimeStamp;
-@end
-
-@interface VuforiaMarkerResult : VuforiaTrackableResult
-+(int)getClassType;
--(VuforiaMarker*)getTrackable;
 @end
 
 @interface VuforiaWordResult : VuforiaTrackableResult
 +(int)getClassType;
 -(VuforiaWord*)getTrackable;
+@end
+
+@interface VuforiaDeviceTrackableResult : VuforiaTrackableResult
++(int)getClassType;
+-(VuforiaDeviceTrackable*)getTrackable;
+@end
+
+@interface VuforiaAnchorResult : VuforiaTrackableResult
++(int)getClassType;
+-(VuforiaAnchor*)getTrackable;
 @end
 
 @interface VuforiaObjectTargetResult : VuforiaTrackableResult

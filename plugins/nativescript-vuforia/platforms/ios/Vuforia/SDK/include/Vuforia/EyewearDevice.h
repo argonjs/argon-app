@@ -48,8 +48,8 @@ public:
 
     /// Switch between 2D (duplication/mono) and 3D (extended/stereo) modes on eyewear device.
     /**
-     * \param enable set to true to switch to 3D (stereo) mode or false for 2D (mono) mode
-     * \return true if successful or false if the device doesn't support this operation.
+     *  \param enable set to true to switch to 3D (stereo) mode or false for 2D (mono) mode
+     *  \return true if successful or false if the device doesn't support this operation.
      */
     virtual bool setDisplayExtended(bool enable) = 0;
 
@@ -58,10 +58,10 @@ public:
 
     /// Returns true if the Eyewear device dual display mode is only for OpenGL content.
     /**
-     * Some Eyewear devices don't support stereo for 2D (typically Android widget)
-     * content. On these devices 2D content is rendered to each eye automatically
-     * without the need for the app to create a split screen view. On such devices
-     * this method will return true.
+     *  Some Eyewear devices don't support stereo for 2D (typically Android widget)
+     *  content. On these devices 2D content is rendered to each eye automatically
+     *  without the need for the app to create a split screen view. On such devices
+     *  this method will return true.
      */
     virtual bool isDisplayExtendedGLOnly() const = 0;
 
@@ -70,10 +70,10 @@ public:
 
     /// Turn predictive tracking on or off
     /**
-     * Predictive tracking uses device sensors to predict user motion and reduce perceived latency.
-     * By default predictive tracking is enabled on devices that support this enhancement.
-     * \param enable set to true to enable predictive tracking or false to disable predictive tracking.
-     * \return true if successful or false if the device doesn't support this operation.
+     *  Predictive tracking uses device sensors to predict user motion and reduce perceived latency.
+     *  By default predictive tracking is enabled on devices that support this enhancement.
+     *  \param enable set to true to enable predictive tracking or false to disable predictive tracking.
+     *  \return true if successful or false if the device doesn't support this operation.
      */
     virtual bool setPredictiveTracking(bool enable) = 0;
 
@@ -82,14 +82,14 @@ public:
 
     /// Get the calibration profile manager.
     /**
-     * Note: Calibration profiles are only relevant to see-through Eyewear devices.
-     * \return A reference to the calibration profile manager.
+     *  Note: Calibration profiles are only relevant to see-through Eyewear devices.
+     *  \return A reference to the calibration profile manager.
      */
     virtual EyewearCalibrationProfileManager& getCalibrationProfileManager() = 0;
 
     /// Gets the calibrator used for creating custom user calibration experiences for see-thru eyewear.
     /**
-     * \return A reference to the calibrator object
+     *  \return A reference to the calibrator object
      */
     virtual EyewearUserCalibrator& getUserCalibrator() = 0;
 

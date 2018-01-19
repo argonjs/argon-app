@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -40,25 +40,22 @@ namespace Tool
 
     /// Returns a 4x4 col-major OpenGL matrix from a 3x4 Vuforia matrix.
     /**
-    *  Vuforia uses 3x4 row-major matrices.
-    *  convert2GLMatrix() takes such a matrix and returns an OpenGL compatible matrix.
-    */
+     *  Vuforia uses 3x4 row-major matrices.
+     *  convert2GLMatrix() takes such a matrix and returns an OpenGL compatible matrix.
+     */
     VUFORIA_API Matrix44F convert2GLMatrix(const Matrix34F& matrix34F);
 
     /// Returns a 4x4 col-major OpenGL perspective projection matrix from a 3x4 Vuforia perspective projection
     /// matrix.
     /**
-    *  Vuforia uses 3x4 row-major matrices for perspective projection data. convertPerspectiveProjection2GLMatrix()
-    *  takes such a perspective projection matrix and returns an OpenGL compatible perspective projection matrix.
-    */
+     *  Vuforia uses 3x4 row-major matrices for perspective projection data. convertPerspectiveProjection2GLMatrix()
+     *  takes such a perspective projection matrix and returns an OpenGL compatible perspective projection matrix.
+     */
     VUFORIA_API Matrix44F convertPerspectiveProjection2GLMatrix(const Matrix34F& projection, float nearPlane, float farPlane);
 
     /// Returns an OpenGL style projection matrix.
     VUFORIA_API Matrix44F getProjectionGL(const CameraCalibration& calib,
                                        float nearPlane, float farPlane);
-
-    /// Returns a projection matrix
-    VUFORIA_API Matrix34F getProjection(const CameraCalibration& calib);
 
     /// Projects a 3D scene point into the camera image(device coordinates)
     /// given a pose in form of a 3x4 matrix.
@@ -117,6 +114,14 @@ namespace Tool
      */
     VUFORIA_API void setRotation(Matrix34F& pose,
                               const Vec3F& axis, float angle);
+
+    /// Sets the rotation part of a 3x4 pose matrix using quaternion as input
+    /**
+     * Quaternion is represented in Vec4F as (x, y, z, w)
+     */
+    VUFORIA_API void setRotationFromQuaternion(Matrix34F& pose, const Vec4F& quaternion);
+
+
 
 } // namespace Tool
 

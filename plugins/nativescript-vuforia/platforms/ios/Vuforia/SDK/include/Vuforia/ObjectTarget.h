@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -53,6 +53,7 @@ public:
      *  Returns true if the size was set successfully, false otherwise.
      */
     virtual bool setSize(const Vec3F& size) = 0;
+
 };
 
 } // namespace Vuforia

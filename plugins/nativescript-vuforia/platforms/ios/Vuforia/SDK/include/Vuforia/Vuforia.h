@@ -30,13 +30,14 @@ class VideoSource;
  *  Use when calling init()
  */
 enum INIT_FLAGS {
-    GL_11 = 1,          ///< Deprecated: OpenGL ES 1.1 rendering; not supported.
-    GL_20 = 2,          ///< Enables OpenGL ES 2.0 rendering
-    METAL = 4,          ///< Enables Metal rendering, available on Apple platforms
+    GL_20 = 1,          ///< Enables OpenGL ES 2.x rendering (not available on UWP platforms)
+    METAL = 2,          ///< Enables Metal rendering (available only on Apple platforms)
+    DX_11 = 4,          ///< Enables DirectX 11 rendering (available only on UWP platforms)
+    GL_30 = 8,          ///< Enables OpenGL ES 3.x rendering (not available on UWP platforms)
 };
 
 /// Return codes for init() function
-enum {
+enum INIT_ERRORCODE {
     INIT_ERROR = -1,                                ///< Error during initialization
     INIT_DEVICE_NOT_SUPPORTED = -2,                 ///< The device is not supported
     INIT_NO_CAMERA_ACCESS = -3,                     ///< Cannot access the camera
@@ -48,7 +49,6 @@ enum {
     INIT_LICENSE_ERROR_PRODUCT_TYPE_MISMATCH = -9,  ///< Provided key is not valid for this product
     INIT_EXTERNAL_DEVICE_NOT_DETECTED = -10         ///< Dependent external device not detected/plugged in
 };
-
 
 /// Pixel encoding types
 enum PIXEL_FORMAT {
@@ -68,7 +68,6 @@ enum PIXEL_FORMAT {
                                 ///< a domain-specific range.
 };
 
-
 /// Use when calling setHint()
 enum HINT {
     /// How many image targets to detect and track at the same time
@@ -82,25 +81,25 @@ enum HINT {
 
     /// How many object targets to detect and track at the same time
     /**
-    *  This hint tells the tracker how many 3D objects shall be processed
-    *  at most at the same time. E.g. if an app will never require
-    *  tracking more than 1 target, this value should be set to 1.
-    *  Default is: 1.
-    */
+     *  This hint tells the tracker how many 3D objects shall be processed
+     *  at most at the same time. E.g. if an app will never require
+     *  tracking more than 1 target, this value should be set to 1.
+     *  Default is: 1.
+     */
     HINT_MAX_SIMULTANEOUS_OBJECT_TARGETS = 1,
 
     /// Force delayed loading for object target Dataset
     /**
-    *  This hint tells the tracker to enable/disable delayed loading 
-    *  of object target datasets upon first detection. 
-    *  Loading time of large object dataset will be reduced 
-    *  but the initial detection time of targets will increase.
-    *  Please note that the hint should be set before loading 
-    *  any object target dataset to be effective.
-    *  To enable delayed loading set the hint value to 1.
-    *  To disable delayed loading set the hint value to 0.
-    *  Default is: 0.
-    */
+     *  This hint tells the tracker to enable/disable delayed loading 
+     *  of object target datasets upon first detection. 
+     *  Loading time of large object dataset will be reduced 
+     *  but the initial detection time of targets will increase.
+     *  Please note that the hint should be set before loading 
+     *  any object target dataset to be effective.
+     *  To enable delayed loading set the hint value to 1.
+     *  To disable delayed loading set the hint value to 0.
+     *  Default is: 0.
+     */
     HINT_DELAYED_LOADING_OBJECT_DATASETS = 2,
 };
 
@@ -119,9 +118,14 @@ enum COORDINATE_SYSTEM_TYPE {
     COORDINATE_SYSTEM_WORLD = 2,   ///< Pose will be relative to the world frame of reference
 };
 
+/// Initializes Vuforia
+int VUFORIA_API init();
+
+/// Checks whether Vuforia has been already successfully initialized
+bool VUFORIA_API isInitialized();
+
 /// Deinitializes Vuforia
 void VUFORIA_API deinit();
-
 
 /// Sets a hint for the Vuforia SDK
 /**
@@ -133,10 +137,8 @@ void VUFORIA_API deinit();
  */
 bool VUFORIA_API setHint(unsigned int hint, int value);
 
-
 /// Registers an object to be called when new tracking data is available
 void VUFORIA_API registerCallback(UpdateCallback* object);
-
 
 /// Enables the delivery of certain pixel formats via the State object
 /**
@@ -148,18 +150,15 @@ void VUFORIA_API registerCallback(UpdateCallback* object);
  */
 bool VUFORIA_API setFrameFormat(PIXEL_FORMAT format, bool enabled);
 
-
 /// Returns the number of bits used to store a single pixel of a given format
 /**
  *  Returns 0 if the format is unknown.
  */
 int VUFORIA_API getBitsPerPixel(PIXEL_FORMAT format);
 
-
 /// Indicates whether the rendering surface needs to support an alpha channel
 /// for transparency
 bool VUFORIA_API requiresAlpha();
-
 
 /// Returns the number of bytes for a buffer with a given size and format
 /**
@@ -167,21 +166,60 @@ bool VUFORIA_API requiresAlpha();
  */
 int VUFORIA_API getBufferSize(int width, int height, PIXEL_FORMAT format);
 
-
-/// Executes AR-specific tasks upon the onResume activity event
+/// Executes Vuforia-specific lifecycle management tasks upon resuming the app
+/**
+ * - Has an effect only if Vuforia has been initialized
+ * - Call when
+ *     - an application has been started or just come back from the background
+ *     - an application is already active and Vuforia has just been initialized with init()
+ * - Executes the following internal tasks:
+ *     - enables rendering
+ *     - applies device-specific internal AR settings (e.g. camera resolution, sensor rate)
+ *     - restarts all motion sensors used by Vuforia if previously running
+ *     - resumes a previously active EyewearDevice (e.g. activates last display mode, starts
+ *       pose prediction)
+ */
 void VUFORIA_API onResume();
 
-
-/// Executes AR-specific tasks upon the onResume activity event
+/// Executes Vuforia-specific lifecycle management tasks upon pausing the app
+/**
+ * - Has an effect only if Vuforia has been initialized
+ * - Call when
+ *     - an application is about to become inactive (e.g. going to background)
+ *     - an application is still active (won't go to background or be stopped) and Vuforia 
+ *       is about to be deinitialized with deinit()
+ * - Executes the following internal tasks:
+ *     - disables rendering
+ *     - stops all currently running motion sensors used by Vuforia
+ *     - pauses an active EyewearDevice (e.g. switches display mode to mono, pauses pose prediction)
+ */
 void VUFORIA_API onPause();
 
-
-/// Executes AR-specific tasks upon the onSurfaceCreated render surface event
+/// Executes Vuforia-specific render resource management tasks when the 
+/// rendering environment has been initialized
+/**
+ * - Has an effect only if Vuforia has been initialized, call on the render thread
+ * - Call whenever the render surface / context has become available
+ * - Executes the following internal tasks:
+ *     - creates some Vuforia-internal rendering resources
+ *     - applies target rendering frame rate to the value previously set by Renderer::setTargetFps
+ *       or default value
+ */
 void VUFORIA_API onSurfaceCreated();
 
-
-/// Executes AR-specific tasks upon the onSurfaceChanged render surface event
+/// Executes Vuforia-specific render resource management tasks when the 
+/// rendering surface has changed
+/**
+ * - Has effect only if Vuforia is initialized, call on the render thread
+ * - Call whenever the render surface changes size (e.g. app orientation change, resizing window)
+ * - Executes the following internal tasks:
+ *     - releases any previously created Vuforia-internal rendering resources
+ *     - triggers a configuration change in the Vuforia Device
+ */
 void VUFORIA_API onSurfaceChanged(int width, int height);
+
+/// Returns the version of the Vuforia SDK
+VUFORIA_API const char* getLibraryVersion();
 
 } // namespace Vuforia
 

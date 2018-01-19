@@ -85,6 +85,10 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
         this._outputPort && this._outputPort.postMessage(JSON.parse(message));
     }
 
+    public _handleWebXRMessage(message:string) {
+        
+    }
+
     public _handleLogMessage(message:string) {
         const log:def.LogItem = JSON.parse(message);
         log.lines = log.message.split(/\r\n|\r|\n/);

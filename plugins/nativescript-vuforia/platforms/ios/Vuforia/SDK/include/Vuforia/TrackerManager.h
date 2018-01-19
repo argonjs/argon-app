@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2015 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -42,7 +42,8 @@ public:
     /**
      *  Initializing a tracker must not be done when the CameraDevice
      *  is initialized or started. This function will return NULL if the
-     *  tracker of the given type has already been initialized or if the
+     *  tracker of the given type has already been initialized, if the
+     *  tracker is not supported on the current device, or if the
      *  CameraDevice is currently initialized.
      */
     virtual Tracker* initTracker(Type type) = 0;

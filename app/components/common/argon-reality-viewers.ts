@@ -45,6 +45,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
             if (vuforia.api) {
                 this.presentChangeEvent.addEventListener(()=>{
                     (_vuforiaServiceProvider as NativescriptVuforiaServiceProvider).enabled = this.isPresenting;
+                    vuforia.configureVuforiaSurface();
                 });
             }
     }
@@ -127,7 +128,7 @@ export class NativescriptLiveRealityViewer extends Argon.LiveRealityViewer {
 
         const frameStateOptions = {
             overrideUser: true,
-            userTracking: <'none'|'3DOF'|'6DOF'>'3DOF'
+            userTracking: <'none'|'3DOF'|'6DOF'>'6DOF'
         }
 
         this._deviceService.suggestedGeolocationSubscriptionChangeEvent.addEventListener(()=>{

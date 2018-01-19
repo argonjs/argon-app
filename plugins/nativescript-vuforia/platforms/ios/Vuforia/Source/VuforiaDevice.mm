@@ -9,7 +9,7 @@
 #if !(TARGET_IPHONE_SIMULATOR)
 
 #import "VuforiaDevice.h"
-#import <Vuforia/ViewerParameters.h>
+#import <Vuforia/CameraCalibration.h>
 #import <Vuforia/ViewerParametersList.h>
 #import <Vuforia/View.h>
 #import <Vuforia/ViewList.h>
@@ -17,6 +17,7 @@
 #import <Vuforia/RenderingPrimitives.h>
 #import <Vuforia/Device.h>
 #import <Vuforia/Tool.h>
+
 
 @interface VuforiaViewerParameters ()
 @property (nonatomic, assign) const Vuforia::ViewerParameters *cpp;
@@ -251,7 +252,7 @@
 
 
 @interface VuforiaRenderingPrimitives ()
-@property (nonatomic, assign) const Vuforia::RenderingPrimitives *cpp;
+@property (nonatomic, assign) Vuforia::RenderingPrimitives *cpp;
 @end
 
 @implementation VuforiaRenderingPrimitives
@@ -276,10 +277,28 @@
 }
 
 /// Returns the projection matrix to use for the given view and the specified coordinate system
--(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType {
-    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,(Vuforia::COORDINATE_SYSTEM_TYPE)csType);
-    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000);
-    return (VuforiaMatrix44&)m44;
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
+                     coordinateSystem:(VuforiaCoordinateSystemType)csType {
+    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,
+                                                         (Vuforia::COORDINATE_SYSTEM_TYPE)csType,
+                                                         NULL);
+//    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000);
+//    return (VuforiaMatrix44&)m44;
+    return (VuforiaMatrix34&)m;
+}
+
+/// Returns the projection matrix to use for the given view and the specified coordinate system
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
+                     coordinateSystem:(VuforiaCoordinateSystemType)csType
+                    cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
+     adjustForViewportCentreToEyeAxis:(BOOL)adjust{
+    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,
+                                                         (Vuforia::COORDINATE_SYSTEM_TYPE)csType,
+                                                         (const Vuforia::CameraCalibration*)cameraCalibration.cpp,
+                                                         adjust);
+//    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000);
+//    return (VuforiaMatrix44&)m44;
+    return (VuforiaMatrix34&)m;
 }
 
 /// Returns an adjustment matrix needed to correct for the different position of display relative to the eye
@@ -288,16 +307,19 @@
  * The adjustment matrix is in meters, if your scene is defined in another unit
  * you will need to adjust the matrix before use.
  */
--(VuforiaMatrix44)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID {
-    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID));
-    return (VuforiaMatrix44&)m;
+-(VuforiaMatrix34)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID {
+//    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID));
+//    return (VuforiaMatrix44&)m;
+    Vuforia::Matrix34F m = self.cpp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID);
+    return (VuforiaMatrix34&)m;
 }
 
 /// Returns the projection matrix to use when projecting the video background
--(VuforiaMatrix44)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType {
+-(VuforiaMatrix34)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType {
     Vuforia::Matrix34F m = self.cpp->getVideoBackgroundProjectionMatrix((Vuforia::VIEW)viewID,(Vuforia::COORDINATE_SYSTEM_TYPE)csType);
-    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000000);
-    return (VuforiaMatrix44&)m44;
+//    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000000);
+//    return (VuforiaMatrix44&)m44;
+    return (VuforiaMatrix34&)m;
 }
 
 /// Returns a simple mesh suitable for rendering a video background texture
@@ -423,7 +445,7 @@
  */
 -(VuforiaRenderingPrimitives*)getRenderingPrimitives {
     VuforiaRenderingPrimitives *renderingPrimitives = [[VuforiaRenderingPrimitives alloc] init];
-    const Vuforia::RenderingPrimitives *rp = new Vuforia::RenderingPrimitives(Vuforia::Device::getInstance().getRenderingPrimitives());
+    Vuforia::RenderingPrimitives *rp = new Vuforia::RenderingPrimitives(Vuforia::Device::getInstance().getRenderingPrimitives());
     renderingPrimitives.cpp = rp;
     return renderingPrimitives;
 }

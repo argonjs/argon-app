@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2013-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -22,7 +22,7 @@ countries.
 namespace Vuforia
 {
 
-/// A list of words that the TextTracker can detect and track
+/// A list of words that the TextTracker can detect and track (DEPRECATED).
 /**
  *  The WordList represents the set of detectable Words. This list is
  *  loaded from a binary data file using loadWordList.
@@ -35,19 +35,13 @@ namespace Vuforia
  *  query the contents of the WordList at run-time.
  *  Note that the TextTracker needs to be stopped prior to making modifications
  *  to the WordList.
+ *
+ *  Deprecated: The Text Recognition API has been deprecated. It will be removed
+ *  in an upcoming Vuforia release.
  */
 class VUFORIA_API WordList : public NonCopyable
 {
 public:
-
-    /// Deprecated enum.  Use Vuforia::STORAGE_TYPE instead.
-    /// Types of storage locations
-    enum STORAGE_TYPE {
-        STORAGE_APP,            ///< Storage private to the application
-        STORAGE_APPRESOURCE,    ///< Storage for assets bundled with the
-                                ///< application
-        STORAGE_ABSOLUTE        ///< Helper type for specifying an absolute path
-    };
 
     /// Types of filter modes
     enum FILTER_MODE {
@@ -62,17 +56,6 @@ public:
      *  Loads the word list from the given input file.
      *  Returns false if the path is NULL.
      */
-    virtual bool loadWordList(const char* path, Vuforia::STORAGE_TYPE storageType) = 0;
-
-    /// Loads the word list from a binary file at the specified path 
-    /// and storage location.
-    /**
-     *  Loads the word list from the given input file.
-     *  Returns false if the path is NULL.
-     *  
-     *  This version is now deprecated, please use Vuforia::STORAGE_TYPE based 
-     *  method instead.
-     */
     virtual bool loadWordList(const char* path, STORAGE_TYPE storageType) = 0;
 
     /// Loads a set of custom words from a plain text file
@@ -81,18 +64,6 @@ public:
      *  Each word must be between 2-45 characters in length. Returns the
      *  number of loaded custom words. The text file shall be encoded in UTF-8.
      *  If path is NULL the return value is -1.
-     */
-    virtual int addWordsFromFile(const char* path, Vuforia::STORAGE_TYPE storageType) = 0;
-
-    /// Loads a set of custom words from a plain text file
-    /**
-     *  The word list is extended with the custom words in the plain text file.
-     *  Each word must be between 2-45 characters in length. Returns the
-     *  number of loaded custom words. The text file shall be encoded in UTF-8.
-     *  If path is NULL the return value is -1.
-     *  
-     *  This version is now deprecated, please use Vuforia::STORAGE_TYPE based 
-     *  method instead.
      */
     virtual int addWordsFromFile(const char* path, STORAGE_TYPE storageType) = 0;
 
@@ -165,22 +136,8 @@ public:
      *  may be necessary to call getFilterListWordCount to find
      *  out what, if any, words have been loaded by this routine
      *  if it fails.
-     *  
-     *  This version is now deprecated, please use Vuforia::STORAGE_TYPE based 
-     *  method instead.
      */
     virtual bool loadFilterList(const char* path, STORAGE_TYPE storageType) = 0;
-
-    /// Loads the filter list from a plain text file.
-    /**
-     *  The text file shall be encoded in UTF-8.
-     *  Returns false if the filter list cannot be loaded.  Note
-     *  some words may have been added to the filter list so it
-     *  may be necessary to call getFilterListWordCount to find
-     *  out what, if any, words have been loaded by this routine
-     *  if it fails.
-     */
-    virtual bool loadFilterList(const char* path, Vuforia::STORAGE_TYPE storageType) = 0;
 
     /// Query the number of words in the filter list.
     virtual int getFilterListWordCount() = 0;

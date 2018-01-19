@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2013-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -23,7 +23,11 @@ countries.
 namespace Vuforia
 {
 
-/// Trackable result for a Word.
+/// Trackable result for a Word (DEPRECATED).
+/**
+ *  Deprecated: The Text Recognition API has been deprecated. It will be removed
+ *  in an upcoming Vuforia release.
+ */
 class VUFORIA_API WordResult : public TrackableResult
 {
 public:

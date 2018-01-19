@@ -16,7 +16,7 @@ countries.
 #define _VUFORIA_SYSTEM_H_
 
 // Include files
-#if defined(_WIN32_WCE) || defined(WIN32)
+#if defined(_WIN32_WCE) || defined(WIN32) || defined(_WIN32)
 #  define VUFORIA_IS_WINDOWS
 #endif
 
@@ -52,6 +52,7 @@ countries.
 namespace Vuforia
 {
     typedef unsigned __int16 UInt16;
+    typedef __int64 Int64;
 }
 
 #else // !VUFORIA_IS_WINDOWS
@@ -61,6 +62,7 @@ namespace Vuforia
 namespace Vuforia
 {
     typedef __uint16_t UInt16;
+    typedef __int64_t Int64;
 }
 
 #endif

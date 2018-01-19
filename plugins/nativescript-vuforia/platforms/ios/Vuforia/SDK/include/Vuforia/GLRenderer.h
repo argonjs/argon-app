@@ -24,19 +24,19 @@ namespace Vuforia
 /// GL-specific classes
 
 /**
-*  GLTextureData object passed to Vuforia to set the GL texture ID of the video
-*  background texture created by the app.
-*
-*  Use with Vuforia::Renderer::setVideoBackgroundTexture and in conjunction
-*  with Vuforia::Renderer::updateVideoBackgroundTexture
-*/
+ *  GLTextureData object passed to Vuforia to set the GL texture ID of the video
+ *  background texture created by the app.
+ *
+ *  Use with Vuforia::Renderer::setVideoBackgroundTexture and in conjunction
+ *  with Vuforia::Renderer::updateVideoBackgroundTexture
+ */
 class VUFORIA_API GLTextureData : public TextureData
 {
 public:
     /**
-    *  videoBackgroundTextureID is a convenience that allows
-    *  mVideoBackgroundTextureID to be set when the object is constructed.
-    */
+     *  videoBackgroundTextureID is a convenience that allows
+     *  mVideoBackgroundTextureID to be set when the object is constructed.
+     */
     GLTextureData(int videoBackgroundTextureID = 0);
     ~GLTextureData();
 
@@ -47,18 +47,18 @@ public:
 
 
 /**
-*  GLTextureUnit object passed to Vuforia which binds the texture to the
-*  mTextureUnit value.
-*
+ *  GLTextureUnit object passed to Vuforia which binds the texture to the
+ *  mTextureUnit value.
+ *
  *  Use with Vuforia::Renderer::updateVideoBackgroundTexture
-*/
+ */
 class VUFORIA_API GLTextureUnit : public TextureUnit
 {
 public:
     /**
-    *  unit is a convenience that allows mTextureUnit to be
-    *  set when the object is constructed.
-    */
+     *  unit is a convenience that allows mTextureUnit to be
+     *  set when the object is constructed.
+     */
     GLTextureUnit(int unit = 0);
     ~GLTextureUnit();
 

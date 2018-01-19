@@ -36,8 +36,8 @@ application.on(application.suspendEvent, ()=> {
 application.on(application.orientationChangedEvent, () => {
     if (VUFORIA_AVAILABLE) {
         Promise.resolve().then(configureVuforiaSurface); // delay until the interface orientation actually changes
+        setTimeout(configureVuforiaSurface, 500);
     }
-    setTimeout(configureVuforiaSurface, 500);
 });
 
 application.on(application.resumeEvent, ()=> {
@@ -63,8 +63,6 @@ export class API extends common.APIBase {
     private cameraDevice = new CameraDevice();
     private device = new Device();
     private renderer = new Renderer();
-    
-    private objectTracker:ObjectTracker|undefined;
     
     setLicenseKey(licenseKey:string) : boolean {
         return VuforiaSession.setLicenseKey(licenseKey) === 0;
@@ -108,6 +106,38 @@ export class API extends common.APIBase {
     getRenderer() : Renderer {
         return this.renderer;
     }
+
+    initSmartTerrain() : boolean {
+        if (VuforiaSmartTerrain.initTracker()) {
+            this.smartTerrain = new SmartTerrain();
+            return true;
+        };
+        return false;
+    }
+
+    deinitSmartTerrain() : boolean {
+        if (VuforiaObjectTracker.deinitTracker()) {
+            this.objectTracker = undefined;
+            return true;
+        }
+        return false;
+    }
+
+    initPositionalDeviceTracker() : boolean {
+        if (VuforiaPositionalDeviceTracker.initTracker()) {
+            this.positionalDeviceTracker = new PositionalDeviceTracker();
+            return true;
+        };
+        return false;
+    }
+
+    deinitPositionalDeviceTracker() : boolean {
+        if (VuforiaPositionalDeviceTracker.deinitTracker()) {
+            this.positionalDeviceTracker = undefined;
+            return true;
+        }
+        return false;
+    }
     
     initObjectTracker() : boolean {
         if (VuforiaObjectTracker.initTracker()) {
@@ -115,10 +145,6 @@ export class API extends common.APIBase {
             return true;
         };
         return false;
-    }
-    
-    getObjectTracker() {
-        return this.objectTracker;
     }
     
     deinitObjectTracker() : boolean {
@@ -159,38 +185,80 @@ export class API extends common.APIBase {
     }
 }
 
-function createMatrix44(mat:VuforiaMatrix44) : def.Matrix44 {
+function convert2GLMatrix(mat:VuforiaMatrix34) : def.Matrix44 {
     return  [
-                mat._0, 
-                mat._1,
-                mat._2,
-                mat._3,
+                mat._0,
                 mat._4,
-                mat._5,
-                mat._6,
-                mat._7,
                 mat._8,
+                0,
+                mat._1,
+                mat._5,
                 mat._9,
+                0,
+                mat._2,
+                mat._6,
                 mat._10,
+                0,
+                mat._3,
+                mat._7,
                 mat._11,
-                mat._12,
-                mat._13,
-                mat._14,
-                mat._15
+                1
             ];
 }
+
+function convert2VuforiaMatrix(mat:def.Matrix44) : VuforiaMatrix34 {
+    return  {
+        _0: mat[0],
+        _1: mat[4],
+        _2: mat[8],
+        _3: mat[12],
+        _4: mat[1],
+        _5: mat[5],
+        _6: mat[9],
+        _7: mat[13],
+        _8: mat[2],
+        _9: mat[6],
+        _10: mat[10],
+        _11: mat[14]
+    };
+}
+
+// https://library.vuforia.com/articles/Solution/How-To-Access-Camera-Parameters
+function convertPerspectiveProjection2GLMatrix(mat:VuforiaMatrix34, near:number, far:number) : def.Matrix44 {
+    return  [
+                mat._0,
+                mat._4,
+                mat._8,
+                0,
+                mat._1,
+                mat._5,
+                mat._9,
+                0,
+                mat._2,
+                mat._6,
+                (far + near) / (far - near),
+                1,
+                mat._3,
+                mat._7,
+                -near * (1 + (far + near) / (far - near)),
+                0
+            ];
+}
+
 
 export class Trackable {
     
     static createTrackable(ios:VuforiaTrackable) {
-        if (ios instanceof VuforiaMarker) {
-            return new Marker(ios)
+        if (ios instanceof VuforiaAnchor) {
+            return new Anchor(ios);
+        } if (ios instanceof VuforiaDeviceTrackable) {
+            return new DeviceTrackable(ios);
         } else if (ios instanceof VuforiaWord) {
-            return new Word(ios)
+            return new Word(ios);
         } else if (ios instanceof VuforiaImageTarget) {
-            return new ImageTarget(ios)
+            return new ImageTarget(ios);
         } else if (ios instanceof VuforiaCylinderTarget) {
-            return new CylinderTarget(ios)
+            return new CylinderTarget(ios);
         } else if (ios instanceof VuforiaObjectTarget) {
             return new ObjectTarget(ios);
         } else if (ios instanceof VuforiaTrackable) {
@@ -221,8 +289,10 @@ export class Trackable {
 export class TrackableResult {
     
     static createTrackableResult(ios:VuforiaTrackableResult) {
-        if (ios instanceof VuforiaMarkerResult) {
-            return new MarkerResult(ios)
+        if (ios instanceof VuforiaAnchorResult) {
+            return new AnchorResult(ios);
+        } else if (ios instanceof VuforiaDeviceTrackableResult) {
+            return new DeviceTrackableResult(ios)
         } else if (ios instanceof VuforiaWordResult) {
             return new WordResult(ios)
         } else if (ios instanceof VuforiaImageTargetResult) {
@@ -240,7 +310,7 @@ export class TrackableResult {
     constructor(public ios:VuforiaTrackableResult) {}
     
     getPose(): def.Matrix44 {
-        return createMatrix44(this.ios.getPose());
+        return convert2GLMatrix(this.ios.getPose());
     }
     
     getTimeStamp() : number {
@@ -256,20 +326,28 @@ export class TrackableResult {
     }
 }
 
-export class Marker extends Trackable {
-    constructor(public ios:VuforiaMarker) {super(ios)}
-}
-
-export class MarkerResult extends TrackableResult {
-    constructor(public ios:VuforiaMarkerResult) {super(ios)}
-}
-
 export class Word extends Trackable {
     constructor(public ios:VuforiaWord) {super(ios)}
 }
 
 export class WordResult extends TrackableResult {    
     constructor(public ios:VuforiaWordResult) {super(ios)}
+}
+
+export class DeviceTrackable extends Trackable implements def.DeviceTrackable {
+    constructor(public ios:VuforiaDeviceTrackable) {super(ios)}
+}
+
+export class DeviceTrackableResult extends TrackableResult implements def.DeviceTrackableResult {
+    constructor(public ios:VuforiaDeviceTrackableResult) {super(ios)}
+}
+
+export class Anchor extends Trackable implements def.Anchor {
+    constructor(public ios:VuforiaAnchor) {super(ios)}
+}
+
+export class AnchorResult extends TrackableResult implements def.AnchorResult {
+    constructor(public ios:VuforiaAnchorResult) {super(ios)}
 }
 
 export class ObjectTarget extends Trackable {    
@@ -649,7 +727,7 @@ export class RenderingPrimitives {
     }
     
     getEyeDisplayAdjustmentMatrix(viewID: def.View): def.Matrix44 {
-        return createMatrix44(this.ios.getEyeDisplayAdjustmentMatrix(<number>viewID));
+        return convert2GLMatrix(this.ios.getEyeDisplayAdjustmentMatrix(<number>viewID));
     }
     
     getNormalizedViewport(viewID: def.View): def.Vec4 {
@@ -657,7 +735,7 @@ export class RenderingPrimitives {
     }
     
     getProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        return createMatrix44(this.ios.getProjectionMatrixCoordinateSystem(<number>viewID, <number>csType));
+        return convertPerspectiveProjection2GLMatrix(this.ios.getProjectionMatrixCoordinateSystem(<number>viewID, <number>csType), 0.01, 100000);
     }
     
     getRenderingViews(): ViewList {
@@ -670,7 +748,7 @@ export class RenderingPrimitives {
     }
     
     getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        return createMatrix44(this.ios.getVideoBackgroundProjectionMatrixCoordinateSystem(<number>viewID, <number>csType));
+        return convertPerspectiveProjection2GLMatrix(this.ios.getVideoBackgroundProjectionMatrixCoordinateSystem(<number>viewID, <number>csType),  0.01, 100000);
     }
     
     getViewport(viewID: def.View): def.Vec4 {
@@ -679,9 +757,7 @@ export class RenderingPrimitives {
     
 }
 
-export class Tracker {}
-
-class DataSet {
+class DataSet implements def.DataSet {
     constructor(public ios:VuforiaDataSet){}
     createMultiTarget(name: string): MultiTarget|undefined {
         const mt = this.ios.createMultiTarget(name);
@@ -713,13 +789,70 @@ class DataSet {
     }
 }
 
-export class ObjectTracker extends Tracker {
+export abstract class Tracker {
+    abstract nativeClass : typeof VuforiaTracker & {getInstance():VuforiaTracker};
     start() : boolean {
-        return VuforiaObjectTracker.getInstance().start();
+        return this.nativeClass.getInstance().start();
     }
     stop() : void {
-        VuforiaObjectTracker.getInstance().stop();
+        this.nativeClass.getInstance().stop();
     }
+}
+
+export class HitTestResult implements def.HitTestResult {
+    constructor(public ios:VuforiaHitTestResult) {};
+    getPose() {
+        return convert2GLMatrix(this.ios.getPose());
+    }
+}
+
+export class PositionalDeviceTracker extends Tracker implements def.PositionalDeviceTracker {
+    nativeClass = VuforiaPositionalDeviceTracker;
+    createAnchorFromPose(name: string, pose: def.Matrix44): def.Anchor | null {
+        const vuforiaPose = convert2VuforiaMatrix(pose);
+        const vuforiaAnchor = VuforiaPositionalDeviceTracker.getInstance().createAnchorWithNamePose(name, vuforiaPose);
+        return vuforiaAnchor ? new Anchor(vuforiaAnchor) : null;
+    }
+    createAnchorFromHitTestResult(name: string, hitTestResult: HitTestResult): def.Anchor | null {
+        const vuforiaAnchor = VuforiaPositionalDeviceTracker.getInstance().createAnchorWithNameHitTestResult(name, hitTestResult.ios);
+        return vuforiaAnchor ? new Anchor(vuforiaAnchor) : null;
+    }
+    destroyAnchor(anchor: Anchor) {
+        return VuforiaPositionalDeviceTracker.getInstance().destroyAnchor(anchor.ios);
+    }
+    getNumAnchors(): number {
+        return VuforiaPositionalDeviceTracker.getInstance().numAnchors();
+    }
+    getAnchor(idx: number): def.Anchor | null {
+        const vuforiaAnchor = VuforiaPositionalDeviceTracker.getInstance().getAnchorAtIndex(idx);
+        return vuforiaAnchor ? new Anchor(vuforiaAnchor) : null;
+    }
+}
+
+export class SmartTerrain extends Tracker implements def.SmartTerrain {
+    nativeClass = VuforiaSmartTerrain;
+   
+    hitTest(state:State, point:def.Vec2, defaultDeviceHeight:number,hint:def.HitTestHint) : void {
+        VuforiaSmartTerrain.getInstance().hitTestWithStatePointDeviceHeightHint(
+            state.ios,
+            point,
+            defaultDeviceHeight,
+            <number>hint
+        );
+    }
+
+    getHitTestResultCount() {
+        return VuforiaSmartTerrain.getInstance().hitTestResultCount();
+    }
+
+    getHitTestResult(idx:number) {
+        const r = VuforiaSmartTerrain.getInstance().getHitTestResultAtIndex(idx);
+        return new HitTestResult(r);
+    }
+}
+
+export class ObjectTracker extends Tracker implements def.ObjectTracker {
+    nativeClass = VuforiaObjectTracker;
     createDataSet() : DataSet|undefined {
         const ds = VuforiaObjectTracker.getInstance().createDataSet();
         if (ds) return new DataSet(ds);

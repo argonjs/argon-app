@@ -106,6 +106,8 @@ namespace{
             matrixC[i] = aTmp[i];
         }
     }
+    
+    VuforiaVideoView *videoView;
 
 }
 
@@ -124,7 +126,6 @@ namespace{
 
 @end
 
-
 @implementation VuforiaVideoView
 
 // You must implement this method, which ensures the view's underlying layer is
@@ -140,6 +141,8 @@ namespace{
 
 - (id)initWithFrame:(CGRect)frame
 {
+    if (videoView) return videoView;
+    
     self = [super initWithFrame:frame];
 
     if (self) {
@@ -157,6 +160,8 @@ namespace{
         
         [self initShaders];
     }
+    
+    videoView = self;
 
     return self;
 }
@@ -222,8 +227,13 @@ namespace{
 // the screen.
 //
 // *** Vuforia will call this method periodically on a background thread ***
-- (void)renderFrameVuforia
-{
+//- (void)renderFrameVuforia
+//{
+//    [self renderFrame];
+//}
+
+-(void) renderFrame {
+    
     if (![[VuforiaCameraDevice getInstance] isStarted]) return;
     
     // test if the layout has changed
@@ -231,17 +241,17 @@ namespace{
         [self doLayoutSubviews];
         self.mDoLayoutSubviews = NO;
     }
-
+    
     Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
     
     // [framebufferLock lock];
     [self setFramebuffer];
     
     mRenderer.begin();
-
+    
     // Clear colour and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    
     glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
     
@@ -249,7 +259,7 @@ namespace{
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     
-    const Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
+    Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
     Vuforia::ViewList& viewList = renderingPrimitives.getRenderingViews();
     
     // Iterate over the ViewList
@@ -273,7 +283,8 @@ namespace{
         Vuforia::Matrix44F projectionMatrix;
         
         Vuforia::Matrix34F projMatrix = renderingPrimitives.getProjectionMatrix(vw,
-                                                                                Vuforia::COORDINATE_SYSTEM_CAMERA);
+                                                                                Vuforia::COORDINATE_SYSTEM_CAMERA,
+                                                                                NULL);
         
         Vuforia::Matrix44F rawProjectionMatrixGL = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(
                                                                                                         projMatrix,
@@ -306,12 +317,11 @@ namespace{
         glDisable(GL_SCISSOR_TEST);
         
     }
-
+    
     mRenderer.end();
-
+    
     [self presentFramebuffer];
     //[framebufferLock unlock];
-
 }
 
 - (void) renderVideoBackgroundWithViewId:(Vuforia::VIEW) viewId textureUnit:(int) vbVideoTextureUnit viewPort:(Vuforia::Vec4I) viewport
@@ -365,37 +375,6 @@ namespace{
 
 //------------------------------------------------------------------------------
 #pragma mark - OpenGL ES management
-
-
-
-// -(float) getSceneScaleFactor
-// {
-// //    static const float VIRTUAL_FOV_Y_DEGS = 85.0f;
-    
-//     // Get the y-dimension of the physical camera field of view
-//     Vuforia::Vec2F fovVector = Vuforia::CameraDevice::getInstance().getCameraCalibration().getFieldOfViewRads();
-//     float cameraFovYRads = fovVector.data[1];
-    
-//     // Get the y-dimension of the virtual camera field of view
-//     Vuforia::ViewerParameters viewer = Vuforia::Device::getInstance().getSelectedViewer();
-//     float viewerFOVy = viewer.getFieldOfView().data[2] + viewer.getFieldOfView().data[3];
-//     float virtualFovYRads = viewerFOVy * M_PI / 180;
-//     //    float virtualFovYRads = VIRTUAL_FOV_Y_DEGS * M_PI / 180;
-    
-//     // The scene-scale factor represents the proportion of the viewport that is filled by
-//     // the video background when projected onto the same plane.
-//     // In order to calculate this, let 'd' be the distance between the cameras and the plane.
-//     // The height of the projected image 'h' on this plane can then be calculated:
-//     //   tan(fov/2) = h/2d
-//     // which rearranges to:
-//     //   2d = h/tan(fov/2)
-//     // Since 'd' is the same for both cameras, we can combine the equations for the two cameras:
-//     //   hPhysical/tan(fovPhysical/2) = hVirtual/tan(fovVirtual/2)
-//     // Which rearranges to:
-//     //   hPhysical/hVirtual = tan(fovPhysical/2)/tan(fovVirtual/2)
-//     // ... which is the scene-scale factor
-//     return tan(cameraFovYRads / 2) / tan(virtualFovYRads / 2);
-// }
 
 - (void)initShaders
 {

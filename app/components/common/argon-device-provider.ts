@@ -10,16 +10,29 @@ import * as frames from 'ui/frame';
 import {NativescriptVuforiaServiceProvider} from './argon-vuforia-provider'
 import * as Argon from "@argonjs/argon";
 
-import {screenOrientation} from './util'
+import * as util from './util'
 
 const Cartesian3 = Argon.Cesium.Cartesian3;
 const Quaternion = Argon.Cesium.Quaternion;
 const CesiumMath = Argon.Cesium.CesiumMath;
 const Matrix4    = Argon.Cesium.Matrix4;
+const JulianDate = Argon.Cesium.JulianDate;
 
 const negX90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -CesiumMath.PI_OVER_TWO);
 const z90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, CesiumMath.PI_OVER_TWO);
 const ONE = new Cartesian3(1,1,1);
+
+const x180 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, CesiumMath.PI);
+
+export const VIDEO_DELAY = -0.5/60;
+// const landscapeRightScreenOrientationRadians = -CesiumMath.PI_OVER_TWO;
+
+const scratchCartesian = new Argon.Cesium.Cartesian3();
+const scratchQuaternion = new Argon.Cesium.Quaternion();
+const scratchMatrix3 = new Argon.Cesium.Matrix3();
+const scratchMatrix4 = new Argon.Cesium.Matrix4();
+
+const GROUND_PLANE_ANCHOR_NAME = 'ground';
 
 @Argon.DI.autoinject
 export class NativescriptDevice extends Argon.Device {
@@ -31,7 +44,15 @@ export class NativescriptDevice extends Argon.Device {
         super(sessionService, entityService, viewItems);
     }
 
-    public _executeRequestAnimationFrameCallbacks() {
+    public vuforiaCameraEntity = new Argon.Cesium.Entity({
+        position: new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, this.user),
+        orientation: new Argon.Cesium.ConstantProperty(x180)
+    });
+
+    state?:vuforia.State;
+
+    public _executeRequestAnimationFrameCallbacks(state?:vuforia.State) {
+        this.state = state;
         const now = global.performance.now();
         // swap callback maps
         const callbacks = this._callbacks;
@@ -70,6 +91,9 @@ export class NativescriptDevice extends Argon.Device {
     
     private _scratchStageCartographic = new Argon.Cesium.Cartographic;
     private _scratchScreenOrientation = new Argon.Cesium.Quaternion;
+    private _scratchVideoOrientation = new Argon.Cesium.Quaternion;
+
+    private groundAnchor:vuforia.Anchor|null;
 
     public startGeolocationUpdates(options:Argon.GeolocationOptions) : Promise<void> {
         if (typeof this.locationWatchId !== 'undefined') return Promise.resolve();;
@@ -118,7 +142,7 @@ export class NativescriptDevice extends Argon.Device {
     }
     
     get screenOrientationDegrees() {
-        return screenOrientation;
+        return util.screenOrientation;
     }
 
     requestHeadDisplayMode() {
@@ -135,7 +159,134 @@ export class NativescriptDevice extends Argon.Device {
         return Promise.resolve();
     }
 
+    public getIdForTrackable(trackable:vuforia.Trackable) : string {
+        if (trackable instanceof vuforia.ObjectTarget) {
+            return 'vuforia_object_target_' + trackable.getUniqueTargetId();
+        } else {
+            return 'vuforia_trackable_' + trackable.getId();
+        }
+    }
+
+    private _userPosition = new Cartesian3;
+
+    public get userTracking() : 'none'|'6DOF'|'3DOF' {
+        return '6DOF';
+    }
+    public set userTracking(value) {}
+
     onUpdateFrameState() {
+
+        const time = JulianDate.now();
+        // subtract a few ms, since the video frame represents a time slightly in the past.
+        // TODO: if we are using an optical see-through display, like hololens,
+        // we want to do the opposite, and do forward prediction (though ideally not here, 
+        // but in each app itself to we are as close as possible to the actual render time when
+        // we start the render)
+        JulianDate.addSeconds(time, VIDEO_DELAY, time);
+
+        const screenOrientation = 
+            Quaternion.fromAxisAngle(
+                Cartesian3.UNIT_Z, 
+                this.screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
+                this._scratchScreenOrientation
+            );
+
+        const inverseVideoOrientation = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO + util.screenOrientation * Math.PI / 180), this._scratchVideoOrientation);
+        (this.vuforiaCameraEntity.orientation as Argon.Cesium.ConstantProperty).setValue(Quaternion.multiply(
+            x180,
+            inverseVideoOrientation,
+            scratchQuaternion
+        ));
+
+        const state = this.state!;
+        const vuforiaFrame = state.getFrame();
+        const frameTimeStamp = vuforiaFrame.getTimeStamp();
+
+        let hasUserPose = false;
+        let hasStagePose = false;
+                    
+        // update trackable results in context entity collection
+        const numTrackableResults = state.getNumTrackableResults();
+        for (let i=0; i < numTrackableResults; i++) {
+            const trackableResult = <vuforia.TrackableResult>state.getTrackableResult(i);
+            const trackable = trackableResult.getTrackable();
+            const name = trackable.getName();
+
+            const pose = <Argon.Cesium.Matrix4><any>trackableResult.getPose();
+            const position = Matrix4.getTranslation(pose, scratchCartesian);
+            const rotationMatrix = Matrix4.getRotation(pose, scratchMatrix3);
+            const orientation = Quaternion.fromRotationMatrix(rotationMatrix, scratchQuaternion);
+
+            if (trackable instanceof vuforia.DeviceTrackable) {
+                // Vuforia applies video rotation to device pose, so undo this
+                const deviceOrientationValue = Quaternion.multiply(orientation, inverseVideoOrientation, this._scratchDeviceOrientation);
+                // set user orientation
+                (this.user.position as Argon.Cesium.ConstantPositionProperty).setValue(position, this.origin);
+                (this.user.orientation as Argon.Cesium.ConstantProperty).setValue(deviceOrientationValue);
+                hasUserPose = true;
+                this._userPosition = Cartesian3.clone(position, this._userPosition);
+                // console.log('Updating user pose ' + JSON.stringify(orientation));
+                continue;
+            }
+
+            if (name === GROUND_PLANE_ANCHOR_NAME) {
+                (this.stage.position as Argon.Cesium.ConstantPositionProperty).setValue(position, this.origin);
+                (this.stage.orientation as Argon.Cesium.ConstantProperty).setValue(orientation);
+                hasStagePose = true;
+                continue;
+            }
+
+            if (trackable instanceof vuforia.ObjectTarget === false) {
+                continue;
+            }
+            
+            const id = this.getIdForTrackable(trackable);
+            let entity = this.entityService.collection.getById(id);
+            
+            if (!entity) {
+                entity = new Argon.Cesium.Entity({
+                    id,
+                    name,
+                    position: new Argon.Cesium.SampledPositionProperty(this.vuforiaCameraEntity),
+                    orientation: new Argon.Cesium.SampledProperty(Argon.Cesium.Quaternion)
+                });
+                const entityPosition = entity.position as Argon.Cesium.SampledPositionProperty;
+                const entityOrientation = entity.orientation as Argon.Cesium.SampledProperty;
+                entityPosition.maxNumSamples = 10;
+                entityOrientation.maxNumSamples = 10;
+                entityPosition.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                entityOrientation.forwardExtrapolationType = Argon.Cesium.ExtrapolationType.HOLD;
+                entityPosition.forwardExtrapolationDuration = 10/60;
+                entityOrientation.forwardExtrapolationDuration = 10/60;
+                this.entityService.collection.add(entity);
+            }
+            
+            const trackableTime = JulianDate.clone(time); 
+            
+            // add any time diff from vuforia
+            const trackableTimeDiff = trackableResult.getTimeStamp() - frameTimeStamp;
+            if (trackableTimeDiff !== 0) JulianDate.addSeconds(time, trackableTimeDiff, trackableTime);
+
+            (entity.position as Argon.Cesium.SampledPositionProperty).addSample(trackableTime, position);
+            (entity.orientation as Argon.Cesium.SampledProperty).addSample(trackableTime, orientation);
+        }
+
+        vuforia.api.smartTerrain!.hitTest(state, {x:0.5, y:0.5}, 1.4, vuforia.HitTestHint.HorizontalPlane);
+        
+        const hitTestResultCount = vuforia.api.smartTerrain!.getHitTestResultCount();
+        if (hitTestResultCount > 0) {
+            const result = vuforia.api.smartTerrain!.getHitTestResult(0);
+            const resultPose = result.getPose();
+
+            const position = Matrix4.getTranslation(<any>resultPose, scratchCartesian);
+
+            if (!this.groundAnchor && hasUserPose && position.y < this._userPosition.y) {
+                position.x = this._userPosition.x;
+                position.z = this._userPosition.z;
+                const groundPose = Matrix4.fromTranslation(position, scratchMatrix4);
+                this.groundAnchor = vuforia.api.positionalDeviceTracker!.createAnchorFromPose(GROUND_PLANE_ANCHOR_NAME, groundPose);
+            }
+        }
 
         const viewport = this.frameState.viewport;
         const contentView = frames.topmost().currentPage.content;
@@ -149,28 +300,6 @@ export class NativescriptDevice extends Argon.Device {
         const origin = this.origin;
         (origin.position as Argon.Cesium.DynamicPositionProperty).setValue(Cartesian3.ZERO, this.deviceGeolocation);
         (origin.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
-
-        const stage = this.stage;
-        (stage.position as Argon.Cesium.DynamicPositionProperty).setValue(
-            Cartesian3.fromElements(0,-this.suggestedUserHeight,0, this._scratchCartesian), 
-            this.origin
-        );
-        (stage.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
-        
-        const user = this.user;
-        (user.position as Argon.Cesium.DynamicPositionProperty).setValue(
-            Cartesian3.ZERO,
-            this.deviceOrientation
-        );
-        const screenOrientation = 
-            Quaternion.fromAxisAngle(
-                Cartesian3.UNIT_Z, 
-                this.screenOrientationDegrees * CesiumMath.RADIANS_PER_DEGREE, 
-                this._scratchScreenOrientation
-            );
-        (user.orientation as Argon.Cesium.DynamicProperty).setValue(
-            screenOrientation
-        );
         
         const deviceOrientation = this.deviceOrientation;
         if (this._application.ios) {
@@ -209,6 +338,30 @@ export class NativescriptDevice extends Argon.Device {
                 (deviceOrientation.orientation as Argon.Cesium.ConstantProperty).setValue(deviceOrientationValue);
                 
             }
+        }
+        
+        if (!hasStagePose) {
+            console.log('using custom stage pose!');
+
+            const stage = this.stage;
+            (stage.position as Argon.Cesium.DynamicPositionProperty).setValue(
+                Cartesian3.fromElements(0,-this.suggestedUserHeight,0, this._scratchCartesian), 
+                this.origin
+            );
+            (stage.orientation as Argon.Cesium.DynamicProperty).setValue(Quaternion.IDENTITY);
+        }
+
+        if (!hasUserPose) {
+            console.log('using custom user pose!')
+
+            const user = this.user;
+            (user.position as Argon.Cesium.DynamicPositionProperty).setValue(
+                Cartesian3.ZERO,
+                this.deviceOrientation
+            );
+            (user.orientation as Argon.Cesium.DynamicProperty).setValue(
+                screenOrientation
+            );
         }
     }
 
@@ -321,8 +474,8 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
         const d = <NativescriptDevice><any>device;
         if (vuforia.api) {
             const vsp = <NativescriptVuforiaServiceProvider>vuforiaServiceProvider;
-            vsp.stateUpdateEvent.addEventListener(()=>{
-                d._executeRequestAnimationFrameCallbacks();
+            vsp.stateUpdateEvent.addEventListener((state)=>{
+                d._executeRequestAnimationFrameCallbacks(state);
             });
         } else {
             setInterval(() => d._executeRequestAnimationFrameCallbacks(), 34);            
@@ -355,9 +508,10 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
     private _scratchVideoQuaternion = new Argon.Cesium.Quaternion;
 
     public onUpdateStableState(stableState:Argon.DeviceStableState) {
+
+        if (!vuforia.api) return super.onUpdateStableState(stableState);
         
         const viewport = this.deviceService.frameState.viewport;
-
         const subviews = this.deviceService.frameState.subviews;
         const device = vuforia.api.getDevice();
         const renderingPrimitives = device.getRenderingPrimitives();
@@ -435,7 +589,7 @@ export class NativescriptDeviceServiceProvider extends Argon.DeviceServiceProvid
                 // TODO: calculate this matrix only when we have to (when the interface orientation changes)
                 const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
                     Cartesian3.ZERO,
-                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
+                    Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - util.screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
                     ONE,
                     this._scratchVideoMatrix4
                 );

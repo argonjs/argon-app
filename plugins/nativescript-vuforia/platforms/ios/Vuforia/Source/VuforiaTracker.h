@@ -9,6 +9,8 @@
 #if !(TARGET_IPHONE_SIMULATOR)
 
 #import <Foundation/Foundation.h>
+#import "VuforiaSession.h"
+#import "VuforiaTrackable.h"
 
 @interface VuforiaTransformModel : NSObject
 
@@ -36,6 +38,7 @@
 +(VuforiaDeviceTracker*)getInstance;
 @end
 
+@class VuforiaAnchor;
 
 @interface VuforiaRotationalDeviceTracker : VuforiaDeviceTracker
 +(BOOL)initTracker;
@@ -105,6 +108,140 @@
  */
 -(VuforiaHandheldTransformModel*)getDefaultHandheldModel;
 @end
+
+
+
+typedef NS_ENUM (NSInteger, VuforiaHitTestHint) {
+    VuforiaHitTestHintNone = 0,   ///< no hint
+    VuforiaHitTestHintHorizontalPlane = 1, ///< hit test is performed on a horizontal plane
+    VuforiaHitTestHintVerticalPlane = 2, ///< hit test is performed on a vertical plane (not supported yet)
+};
+
+@class VuforiaState;
+
+@interface VuforiaHitTestResult : NSObject
+/// The position and orientation of the hit test result in the world coordinate system, represented as a pose matrix in col-major order.
+-(const VuforiaMatrix34)getPose;
+@end
+
+// SmartTerrain class
+@interface VuforiaSmartTerrain : VuforiaTracker
+/// Returns the tracker class' type
++(int)getClassType;
++(BOOL)initTracker;
++(BOOL)deinitTracker;
++(VuforiaSmartTerrain*)getInstance;
+
+/// Performs hit test
+/**
+ *  This function will perform a hit test with a plane based on provided input parameters.
+ *  A ray is defined by a (touch) point on screen and an expected approximate
+ *  deviceHeight above the ground plane. This ray is used to intersect plane(s) to
+ *  generate hit test result(s). Vuforia always returns at least one successful hit on
+ *  an assumed plane, defined by the developer provided deviceHeight above ground.
+ *
+ *  Recommended usage is to perform hitTest, get the number of hitTestResults generated
+ *  using getHitTestResultCount() and then access a specific result using getHitTestResult().
+ *  Hit test results are owned by SmartTerrain. Each call to hitTest() destroys and
+ *  rebuilds the internal list of HitTestResults.
+ *  Note that a hit test is bound to a specific State. If you want to have a preview
+ *  of your HitTestResult you should use the same State that the one you use for rendering
+ *  the current frame.
+ *
+ * \param state The state to use for doing the hit test.
+ * \param point Point in normalized image coordinate space (top left (0,0), bottom right (1,1)).
+ * \param deviceHeight Height of the device center above ground plane in meters.
+ * \param hint Give the implementation a hint about the orientation of the plane in the scene.
+ */
+-(void)hitTestWithState:(VuforiaState*)state point:(VuforiaVec2F)point deviceHeight:(float)deviceHeight hint:(VuforiaHitTestHint)hint;
+    
+/// Gets the number of HitTestResults resulting from the last hitTest() call
+-(int)hitTestResultCount;
+    
+/// Returns a pointer to a HitTestResult instance.
+/**
+ * \param idx The index of the result. Must be equal or larger than 0 and less than the number of results returned by getHitTestResult().
+ *
+ * \return The HitTestResult instance for the given index.
+ *
+ * NOTE: The returned HitTestResult pointer will be invalidated with the next call to 'hitTest'
+ *       or with a call to deinitailze the SmartTerrain instance. Accessing the pointer after
+ *       these calls results in undefined behavior.
+ */
+-(VuforiaHitTestResult*)getHitTestResultAtIndex:(int)idx;
+
+@end
+
+
+/// PositionalDeviceTracker class.
+/**
+ *  The PositionalDeviceTracker tracks a device in the world based
+ *  on the environment. It doesn't require target to estimate
+ *  the device's position. The position is returned as a 6DOF pose.
+ */
+@interface VuforiaPositionalDeviceTracker : VuforiaDeviceTracker
++(int)getClassType;
++(BOOL)initTracker;
++(BOOL)deinitTracker;
++(VuforiaPositionalDeviceTracker*)getInstance;
+
+/// Create a named Anchor at the given world pose.
+/**
+ * \param name The unique name of the Anchor.
+ * \param pose Matrix specifying the world pose of the Anchor.
+ *
+ * \return The created Anchor if successful or NULL on failure.
+ *
+ * NOTE: The returned Anchor will be managed internally by the PositionalDeviceTracker and should never
+ *       be explicitly deleted but can be destroyed with a call to 'destroyAnchor'. A call to 'stop'
+ *       will invalidate all Anchors. Accessing the pointer after these calls results in undefined
+ *       behavior.
+ *       On non-ARKit devices an Anchor from hit test result is required first to initialize
+ *       DeviceTracker. For platform independent behavior we recommend to always start with an Anchor
+ *       from hit test first.
+ */
+-(VuforiaAnchor*)createAnchorWithName:(NSString*)name pose:(const VuforiaMatrix34)pose;
+
+/// Create a named Anchor using the result of a hit test from SmartTerrain.
+/**
+ * \param name The unique name of the Anchor.
+ * \param hitTestResult The hit test result from SmartTerrain.
+ *
+ * \return The created Anchor if successful or NULL on failure.
+ *
+ * NOTE: The returned Anchor will be managed internally by the PositionalDeviceTracker and should never
+ *       be explicitly deleted but can be destroyed with a call to 'destroyAnchor'. A call to 'stop'
+ *       will invalidate all Anchors. Accessing the pointer after these calls results in undefined
+ *       behavior.
+ */
+-(VuforiaAnchor*)createAnchorWithName:(NSString*)name hitTestResult: (VuforiaHitTestResult*)hitTestResult;
+
+/// Destroys the specified Anchor.
+/**
+ * Destroys the given Anchor by deleting it and cleans up all internal resources associated to it.
+ * Accessing the pointer after this call results in undefined behavior.
+ *
+ * \param anchor The Anchor to destroy.
+ *
+ * \return True if destroyed successfully, false if the Anchor is invalid (e.g. null).
+ */
+-(bool)destroyAnchor:(VuforiaAnchor*)anchor;
+
+/// Get the number of Anchors currently managed by the PositionalDeviceTracker.
+/**
+ * \return The number of Anchors.
+ */
+-(int)numAnchors;
+
+/// Get the Anchor at the specified index.
+/**
+ * \param idx The index of the Anchor.
+ *
+ * \return The Anchor instance for the given index or nullptr if the index is invalid.
+ */
+-(VuforiaAnchor*)getAnchorAtIndex:(int)idx;
+@end
+
 
 @class VuforiaDataSet;
 @class VuforiaImageTargetBuilder;

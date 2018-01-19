@@ -23,6 +23,19 @@ namespace Vuforia
 /// Structure for an eyewear calibration reading to be used with EyewearUserCalibration
 struct EyewearCalibrationReading
 {
+    /// Type of calibration shape used during the calibration process
+    enum AlignmentType
+    {
+        /// The calibration shape is a rectangle
+        RECTANGLE = 0,
+
+        /// The calibration shape is a horizontal line
+        HORIZONTAL_LINE,
+
+        /// The calibration shape is a vertical line
+        VERTICAL_LINE
+    };
+
     /// Pose matrix from a TrackableResult
     Matrix34F mPose;
     /// A scale in the range 0.0 - 1.0 that should specify the amount of rendering surface height the calibration shape fills
@@ -31,6 +44,8 @@ struct EyewearCalibrationReading
     float mCenterX;
     /// A position in the range -1.0 to 1.0 that specifies the vertical center of the calibration shape on the rendering surface
     float mCenterY;
+    /// Type of calibration shape used to generate this reading
+    AlignmentType mType;
 };
 
 } // namespace Vuforia

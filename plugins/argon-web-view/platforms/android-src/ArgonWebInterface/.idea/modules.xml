@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/ArgonWebInterface.iml" filepath="$PROJECT_DIR$/ArgonWebInterface.iml" />
+      <module fileurl="file://$PROJECT_DIR$/argon-web-interface/argon-web-interface.iml" filepath="$PROJECT_DIR$/argon-web-interface/argon-web-interface.iml" />
+      <module fileurl="file://$PROJECT_DIR$/argon-web-interface/argon-webview.iml" filepath="$PROJECT_DIR$/argon-web-interface/argon-webview.iml" />
+    </modules>
+  </component>
+</project>

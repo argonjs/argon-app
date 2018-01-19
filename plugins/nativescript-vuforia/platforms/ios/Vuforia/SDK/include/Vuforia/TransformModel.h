@@ -25,10 +25,11 @@ namespace Vuforia
 
 /// TransformModel class.
 /**
-*  The TransformModel define a domain specific model
-*  that can be used by DeviceTracker. The Model defines 
-*  specific transformation, representation of a tracked scenario.
-*/
+ *  The TransformModel is a generic transformation class that can be
+ *  associated with a Tracker so that the reported tracked pose can
+ *  be adjusted to simulate various application usage scenarios such 
+ *  as running the app on a handheld device or in a head-worn viewer.
+ */
 class VUFORIA_API TransformModel
 {
 public:
@@ -46,7 +47,7 @@ public:
     virtual ~TransformModel();
 
 private:
-    /// Assignment Operator
+    /// Assignment operator
     TransformModel& operator=(const TransformModel& other);
 };
 

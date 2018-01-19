@@ -39,11 +39,8 @@
         if (result == VuforiaInitResultSUCCESS) {
             
             [VuforiaSession onSurfaceCreated];
-            VuforiaVec2I viewSize = {
-                .x = viewWidth * contentScaleFactor,
-                .y = viewHeight * contentScaleFactor,
-            };
-            [VuforiaSession onSurfaceChanged:viewSize];
+            
+            [VuforiaSession onSurfaceChangedWidth:viewWidth * contentScaleFactor height:viewHeight * contentScaleFactor];
             [VuforiaSession setRotation:VuforiaRotationIOS_90];
             
             VuforiaCameraDevice *camera = [VuforiaCameraDevice getInstance];
@@ -74,7 +71,7 @@
             };
             [VuforiaRenderer setVideoBackgroundConfig:videoConfig];
             
-            [[VuforiaDevice getInstance] setViewerActive:YES];
+//            [[VuforiaDevice getInstance] setViewerActive:YES];
             
             if (![camera start]) {
                 NSLog(@"Unable to start camera");

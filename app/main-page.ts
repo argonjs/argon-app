@@ -1,10 +1,12 @@
 import * as URI from 'urijs';
 import * as application from 'application';
 import * as utils from 'utils/utils';
+// import * as frame from 'ui/frame'
 import {SearchBar, textProperty} from 'ui/search-bar';
 import {Page} from 'ui/page';
 import {Button} from 'ui/button';
 import {View} from 'ui/core/view';
+import {GridLayout} from 'ui/layouts/grid-layout';
 import {HtmlView} from 'ui/html-view'
 import {Color} from 'color';
 import {PropertyChangeData, EventData} from 'data/observable';
@@ -16,13 +18,17 @@ import * as bookmarks from './components/common/bookmarks';
 import {appViewModel, AppViewModel, LoadUrlEventData} from './components/common/AppViewModel';
 import {screenOrientation} from './components/common/util';
 
+
+import * as statusBar from "nativescript-status-bar";
+
+
 // import {RealityViewer} from '@argonjs/argon'
 
 //import * as orientationModule from 'nativescript-screen-orientation';
 var orientationModule = require("nativescript-screen-orientation");
 
 export let page:Page;
-export let layout:View;
+export let layout:GridLayout;
 export let touchOverlayView:View;
 export let headerView:View;
 export let menuView:View;
@@ -268,10 +274,34 @@ appViewModel.on('propertyChange', (evt:PropertyChangeData)=>{
 
 const checkActionBar = () => {
     if (!page) return;
-    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) 
+    // page.actionBarHidden = true;
+    if (screenOrientation === 90 || screenOrientation === -90 || appViewModel.viewerEnabled) {
+        hideUI();
+    } else {
+        showUI();
+    }
+}
+
+export function showUI() {
+    page.actionBarHidden = false;
+    statusBar.show();
+    page.actionBar.animate({
+        opacity:1,
+        duration:300
+    });
+    page.requestLayout();
+}
+
+export function hideUI() {
+    page.actionBar.originY = 0;
+    page.actionBar.animate({
+        opacity:0,
+        duration:300
+    }).then(()=>{
         page.actionBarHidden = true;
-    else 
-        page.actionBarHidden = false;
+        statusBar.hide();
+        page.requestLayout();
+    })
 }
 
 const updateSystemUI = () => {
@@ -308,6 +338,17 @@ export function pageLoaded(args) {
     page = args.object;
     page.bindingContext = appViewModel;
 
+    
+    if (page.ios) {
+        // const navigationController = <UINavigationController>frame.topmost().ios.controller;
+        // const navBar = navigationController.navigationBar;
+        // navBar.barTintColor = UIColor.redColor();
+        // navBar.barStyle = UIBarStyle.Black;
+        (page.ios as UIView).clipsToBounds = false;
+        (page.content.ios as UIView).clipsToBounds = false;
+        checkActionBar();
+    }
+
     // Set the icon for the menu button
     const menuButton = <Button> page.getViewById("menuButton");
     menuButton.text = String.fromCharCode(0xe5d4);
@@ -325,14 +366,14 @@ export function pageLoaded(args) {
     cameraPermission.text = String.fromCharCode(0xe3b0);
     
     // workaround (see https://github.com/NativeScript/NativeScript/issues/659)
-    if (page.ios) {
-        setTimeout(()=>{
-            page.requestLayout();
-        }, 0)
-        application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, () => {
-            page.requestLayout();
-        });
-    }
+    // if (page.ios) {
+    //     setTimeout(()=>{
+    //         page.requestLayout();
+    //     }, 0)
+    //     application.ios.addNotificationObserver(UIApplicationDidBecomeActiveNotification, () => {
+    //         page.requestLayout();
+    //     });
+    // }
 
     application.on(application.orientationChangedEvent, ()=>{
         setTimeout(()=>{
@@ -340,6 +381,10 @@ export function pageLoaded(args) {
             updateSystemUI();
         }, 500);
     });
+
+    // application.on('iosPageViewDidLayoutSubviews', ()=> {
+    //     checkActionBar();
+    // })
 
     appViewModel.ready.then(()=>{
         
@@ -349,6 +394,10 @@ export function pageLoaded(args) {
         });
     
         appViewModel.showBookmarks();
+
+
+        // browserView.loadUrl("http://apple.com");
+        // appViewModel.loadUrl('http://apple.com');
     });
 
     if (application.android) {
@@ -380,9 +429,11 @@ application.on(application.resumeEvent, ()=> {
 
 export function layoutLoaded(args) {
     layout = args.object
-    if (layout.ios) {
-        layout.ios.layer.masksToBounds = false;
-    }
+    // if (layout.ios) {
+    //     layout.ios.layer.masksToBounds = false;
+    // }
+    layout.clipToBounds = false;
+    // layout.backgroundColor = "blue";
     appViewModel.setReady();
 }
 
@@ -532,6 +583,7 @@ export function onAddChannel(args) {
     browserView.addLayer();
     appViewModel.hideMenu();
     appViewModel.hidePermissionMenu();
+    appViewModel.hideOverview();
 }
 
 export function onReload(args) {

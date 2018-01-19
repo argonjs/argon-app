@@ -27,7 +27,6 @@ enum IOS_INIT_FLAGS {
     ROTATE_IOS_0   = 1024  ///< <b>iOS:</b> Rotates rendering 0 degrees
 };
 
-
 /// Sets Vuforia initialization parameters
 /**
  <b>iOS:</b> Called to set the Vuforia initialization parameters prior to calling Vuforia::init().
@@ -36,7 +35,6 @@ enum IOS_INIT_FLAGS {
  Returns an integer (0 on success).
  */
 int VUFORIA_API setInitParameters(int flags, const char* licenseKey);
-   
 
 /// Sets the current rotation to be applied to the projection and background
 /**
@@ -46,15 +44,6 @@ int VUFORIA_API setInitParameters(int flags, const char* licenseKey);
  See sample apps for how to handle auto-rotation on non-Unity apps.
  */
 void VUFORIA_API setRotation(int rotation); 
-
-
-/// Initializes Vuforia
-/**
- <b>iOS:</b> Called to initialize Vuforia.  Initialization is progressive, so this function
- should be called repeatedly until it returns 100 or a negative value.
- Returns an integer representing the percentage complete (negative on error).
- */
-int VUFORIA_API init();
 
 } // namespace Vuforia
 

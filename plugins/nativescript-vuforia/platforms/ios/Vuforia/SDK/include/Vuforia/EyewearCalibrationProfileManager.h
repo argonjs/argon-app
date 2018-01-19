@@ -1,5 +1,5 @@
 /*==============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -50,7 +50,7 @@ public:
      * At present the SDK supports a maximum of 10 user profiles, this may
      * change in future SDK releases.
      */
-    virtual int getMaxCount() const = 0;
+    virtual size_t getMaxCount() const = 0;
 
     /// Get the number of user calibration profiles stored.
     /**
@@ -58,7 +58,7 @@ public:
      * profiles that the user can select from.
      * \return a number between 0 and \link getMaxCount() \endlink.
      */
-    virtual int getUsedCount() const = 0;
+    virtual size_t getUsedCount() const = 0;
 
     /// Returns true if the specified profile slot contains data.
     virtual bool isProfileUsed(const int profileID) const = 0;

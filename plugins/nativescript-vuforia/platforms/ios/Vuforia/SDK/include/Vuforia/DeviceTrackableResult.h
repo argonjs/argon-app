@@ -23,9 +23,9 @@ namespace Vuforia
 
 /// DeviceTrackableResult class.
 /**
-*  The DeviceTrackableResult defines trackable results returned
-*  by DeviceTrackers.
-*/
+ *  The DeviceTrackableResult defines trackable results returned
+ *  by DeviceTrackers.
+ */
 class VUFORIA_API DeviceTrackableResult : public TrackableResult
 {
 public:

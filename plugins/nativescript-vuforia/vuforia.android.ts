@@ -10,7 +10,9 @@ import plugin = io.argonjs.vuforia;
 
 global.moduleMerge(common, exports);
 
-const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
+const abis:string[] = android.os.Build['SUPPORTED_ABIS'];
+const VUFORIA_AVAILABLE = Array.prototype.includes.call(abis, 'armeabi-v7a')
+// const VUFORIA_AVAILABLE = typeof plugin.VuforiaSession !== 'undefined';
 
 var androidVideoView: plugin.VuforiaGLView|undefined = undefined;
 var vuforiaRenderer: plugin.VuforiaRenderer|undefined = undefined;
@@ -95,8 +97,6 @@ export class API extends common.APIBase {
     private device = new Device();
     private renderer = new Renderer();
     
-    private objectTracker:ObjectTracker|undefined;
-    
     setLicenseKey(licenseKey:string) : boolean {
         if (application.android.foregroundActivity != null && licenseKey != null) {
             plugin.VuforiaSession.setLicenseKey(application.android.foregroundActivity, licenseKey);
@@ -159,6 +159,30 @@ export class API extends common.APIBase {
     getRenderer() : Renderer {
         return this.renderer;
     }
+
+    initSmartTerrain(): boolean {
+        throw new Error("Method not implemented.");
+    }
+
+    getSmartTerrain(): def.SmartTerrain | undefined {
+        throw new Error("Method not implemented.");
+    }
+
+    deinitSmartTerrain(): boolean {
+        throw new Error("Method not implemented.");
+    }
+
+    initPositionalDeviceTracker(): boolean {
+        throw new Error("Method not implemented.");
+    }
+
+    getPositionalDeviceTracker(): def.PositionalDeviceTracker | undefined {
+        throw new Error("Method not implemented.");
+    }
+
+    deinitPositionalDeviceTracker(): boolean {
+        throw new Error("Method not implemented.");
+    }
     
     initObjectTracker() : boolean {
         var tracker = <vuforia.ObjectTracker> vuforia.TrackerManager.getInstance().initTracker(vuforia.ObjectTracker.getClassType());
@@ -167,10 +191,6 @@ export class API extends common.APIBase {
             return true;
         }
         return false;
-    }
-    
-    getObjectTracker() {
-        return this.objectTracker;
     }
     
     deinitObjectTracker() : boolean {
@@ -806,7 +826,7 @@ export class RenderingPrimitives {
     
     getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
         var mat34 = this.android.getVideoBackgroundProjectionMatrix(<number>viewID, <number>csType);
-        return convert2GLMatrix(mat34);
+        return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000);
     }
     
     getViewport(viewID: def.View): def.Vec4 {

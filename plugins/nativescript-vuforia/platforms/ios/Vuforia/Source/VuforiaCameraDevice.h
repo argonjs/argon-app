@@ -39,6 +39,8 @@ typedef struct _VuforiaVideoMode {
 
 @interface VuforiaCameraCalibration : NSObject
 
+@property (nonatomic, assign) const void *cpp;
+
 /// Returns the resolution of the camera as 2D vector.
 -(VuforiaVec2F)getSize;
 

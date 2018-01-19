@@ -27,7 +27,7 @@ namespace Vuforia
 class VUFORIA_API VirtualButtonResult : private NonCopyable
 {
 public:
-    
+
     /// Returns the corresponding VirtualButton that this result represents
     virtual const VirtualButton& getVirtualButton() const = 0;
 
