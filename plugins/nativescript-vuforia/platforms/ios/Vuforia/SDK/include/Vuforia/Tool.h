@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -53,7 +53,12 @@ namespace Tool
      */
     VUFORIA_API Matrix44F convertPerspectiveProjection2GLMatrix(const Matrix34F& projection, float nearPlane, float farPlane);
 
-    /// Returns an OpenGL style projection matrix.
+    /// Returns an OpenGL style projection matrix (DEPRECATED).
+    /**
+     *  Deprecated: This API has been deprecated. It will be removed in an 
+     *  upcoming Vuforia release. To get a projection matrix for rendering your scene,
+     *  please use the RenderingPrimitives::getProjectionMatrix() API.
+     */
     VUFORIA_API Matrix44F getProjectionGL(const CameraCalibration& calib,
                                        float nearPlane, float farPlane);
 

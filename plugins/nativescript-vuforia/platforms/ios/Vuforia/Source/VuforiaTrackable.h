@@ -37,10 +37,6 @@
 -(bool)isExtendedTrackingStarted;
 @end
 
-@interface VuforiaWord : VuforiaTrackable
-+(int)getClassType;
-@end
-
 @interface VuforiaDeviceTrackable : VuforiaTrackable
 +(int)getClassType;
 @end
@@ -101,11 +97,6 @@ typedef NS_ENUM (NSInteger, VuforiaTrackableResultStatus) {
 -(const VuforiaMatrix34)getPose;
 /// A time stamp that defines when the trackable result was generated
 -(double)getTimeStamp;
-@end
-
-@interface VuforiaWordResult : VuforiaTrackableResult
-+(int)getClassType;
--(VuforiaWord*)getTrackable;
 @end
 
 @interface VuforiaDeviceTrackableResult : VuforiaTrackableResult

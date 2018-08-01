@@ -12,14 +12,12 @@ const VUFORIA_AVAILABLE = typeof VuforiaSession !== 'undefined';
 const iosVideoView = <VuforiaVideoView> (VUFORIA_AVAILABLE ? VuforiaVideoView.new() : undefined);
 
 export const videoView = new placeholder.Placeholder();
-videoView.on(placeholder.Placeholder.creatingViewEvent, (evt:placeholder.CreateViewEventData)=>{
+videoView.on('creatingView', (evt)=>{
     evt.view = iosVideoView;
 })
-
-videoView.onLoaded = function() {
+videoView.on('loaded', ()=>{
     if (VUFORIA_AVAILABLE) VuforiaSession.onSurfaceCreated();
-}
-
+})
 videoView.onLayout = function(left, top, right, bottom) {
     if (VUFORIA_AVAILABLE) configureVuforiaSurface();
 }
@@ -253,8 +251,6 @@ export class Trackable {
             return new Anchor(ios);
         } if (ios instanceof VuforiaDeviceTrackable) {
             return new DeviceTrackable(ios);
-        } else if (ios instanceof VuforiaWord) {
-            return new Word(ios);
         } else if (ios instanceof VuforiaImageTarget) {
             return new ImageTarget(ios);
         } else if (ios instanceof VuforiaCylinderTarget) {
@@ -293,8 +289,6 @@ export class TrackableResult {
             return new AnchorResult(ios);
         } else if (ios instanceof VuforiaDeviceTrackableResult) {
             return new DeviceTrackableResult(ios)
-        } else if (ios instanceof VuforiaWordResult) {
-            return new WordResult(ios)
         } else if (ios instanceof VuforiaImageTargetResult) {
             return new ImageTargetResult(ios)
         } else if (ios instanceof VuforiaCylinderTargetResult) {
@@ -324,14 +318,6 @@ export class TrackableResult {
     getTrackable(): Trackable {
         return Trackable.createTrackable(this.ios.getTrackable());
     }
-}
-
-export class Word extends Trackable {
-    constructor(public ios:VuforiaWord) {super(ios)}
-}
-
-export class WordResult extends TrackableResult {    
-    constructor(public ios:VuforiaWordResult) {super(ios)}
 }
 
 export class DeviceTrackable extends Trackable implements def.DeviceTrackable {

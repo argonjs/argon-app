@@ -30,6 +30,13 @@ namespace  {
     VuforiaVideoView *videoView = [[VuforiaVideoView alloc] init]; // hack: VuforiaVideoView is a singleton for now
     
     CADisplayLink* _displayLink;
+    
+    
+    // class used to support the callback mechanism
+    class VuforiaApplication_UpdateCallback : public Vuforia::UpdateCallback {
+        virtual void Vuforia_onUpdate(Vuforia::State& state);
+    } qcarUpdate;
+
 }
 
 @implementation VuforiaSession : NSObject
@@ -63,8 +70,10 @@ namespace  {
         });
     });
     
-    // After Vuforia 7, Vuforia pauses processing frames and rendering the camera
-    // any time that a UIScrollView is scrolling. So we setup our own render loop instead.
+//    Vuforia::registerCallback(&qcarUpdate);
+    // After Vuforia 7, the above method is buggy: e.g., Vuforia sometimes pauses processing frames
+    // and rendering the camera when a UIScrollView is scrolling.
+    // So we setup our own render loop instead.
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(_update)];
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes]; // make it work while scrolling
 }
@@ -74,13 +83,12 @@ namespace  {
 + (void) deinit {
     Vuforia::deinit();
     mCallback = nil;
-    [_displayLink invalidate];
-    _displayLink = nil;
+   [_displayLink invalidate];
+   _displayLink = nil;
 }
 
 /// Registers an callback to be called when new tracking data is available
 + (void) registerCallback: (void (^)(VuforiaState *))callback {
-//    Vuforia::registerCallback(&qcarUpdate);
     mCallback = callback;
 }
 
@@ -174,13 +182,24 @@ static float scaleFactorValue = 1;
 }
 
 + (void) _update {
-    [videoView renderFrame];
     Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
     Vuforia::State state = stateUpdater.updateState();
     if (mCallback) mCallback([[VuforiaState alloc] initWithCpp:&state]);
+    [videoView renderFrame];
 }
 
 @end
+
+////////////////////////////////////////////////////////////////////////////////
+// Callback function called by the tracker when each tracking cycle has finished
+void VuforiaApplication_UpdateCallback::Vuforia_onUpdate(Vuforia::State& state)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [VuforiaSession _update];
+    });
+}
+
+
 
 
 #endif

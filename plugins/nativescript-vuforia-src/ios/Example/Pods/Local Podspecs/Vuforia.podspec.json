@@ -1,0 +1,28 @@
+{
+  "name": "Vuforia",
+  "version": "5.5.9",
+  "summary": "An Obj-C wrapper for the VuforiaSDK",
+  "description": "A simple Obj-C wrapper for the VuforiaSDK",
+  "authors": {
+    "Gheric Speiginer": "gheric@gatech.edu"
+  },
+  "homepage": "https://github.com/<GITHUB_USERNAME>/Vuforia",
+  "source": {
+    "path": "."
+  },
+  "platforms": {
+    "ios": "8.0"
+  },
+  "requires_arc": true,
+  "source_files": [
+    "Source/**/*.{h,m,mm}",
+    "SDK/include/**/*"
+  ],
+  "resources": "Source/VideoView/shaders/*",
+  "header_dir": "Vuforia",
+  "vendored_libraries": "SDK/lib/arm/libVuforia.a",
+  "xcconfig": {
+    "ENABLE_BITCODE[sdk=iphoneos*]": "NO",
+    "OTHER_LDFLAGS[sdk=iphoneos*]": "$(inherited) -framework AVFoundation -framework CoreMotion -framework CoreMedia -framework CoreVideo -framework SystemConfiguration -framework Security -framework QuartzCore -framework OpenGLES"
+  }
+}

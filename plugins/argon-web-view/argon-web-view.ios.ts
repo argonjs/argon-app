@@ -1,12 +1,11 @@
-import * as Argon from '@argonjs/argon';
 import * as common from './argon-web-view-common';
 import {NavigationType} from 'ui/web-view';
 import * as trace from 'trace';
-import * as utils from 'utils/utils';
+// import * as utils from 'utils/utils';
 import * as dialogs from 'ui/dialogs';
 import {WEBXR_API} from './webxr';
 
-const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' Argon/' + Argon.version;
+const ARGON_USER_AGENT = UIWebView.alloc().init().stringByEvaluatingJavaScriptFromString('navigator.userAgent') + ' ArgonXR/' + common.PROTOCOL_VERSION_STRING;
 
 const processPool = WKProcessPool.new();
                         
@@ -43,8 +42,8 @@ export class ArgonWebView extends common.ArgonWebView  {
     private _argonDelegate:ArgonWebViewDelegate;
 
     constructor() {
-        super();
-
+        super()
+        
         const configuration = WKWebViewConfiguration.alloc().init();
         
         configuration.allowsInlineMediaPlayback = true;
@@ -73,9 +72,9 @@ export class ArgonWebView extends common.ArgonWebView  {
                     console.error('Unhandled Error: ' + e.message + ' (' + e.source + ':' + e.lineno + ')');
                 }, false);
                 function _sendArgonCheck(event) {
-                    if (document.head.querySelector('meta[name=argon]') !== null || typeof(Argon) !== 'undefined') {
-                        if (event.persisted) window.location.reload(false);
-                        else webkit.messageHandlers.argoncheck.postMessage("true");
+                    if (event.persisted) { window.location.reload(false); return }
+                    if (document.head.querySelector('meta[name=argon]') !== null || typeof(window['Argon']) !== 'undefined') {    
+                        webkit.messageHandlers.argoncheck.postMessage("true");
                     } else {
                         webkit.messageHandlers.argoncheck.postMessage("false");
                     }
@@ -108,19 +107,19 @@ export class ArgonWebView extends common.ArgonWebView  {
                 }
 
                 window['ARGON_BROWSER'] = {
+                    xr: true,
                     postMessage(message:string) {
-                        webkit.messageHandlers.argon_webxr(message);
+                        webkit.messageHandlers.argon(message);
                     },
                     onmessage: null
                 }
             }.toString()
         }());
-        ARGON_BROWSER.version = ${Argon.version};
-        (${WEBXR_API}());
+        ${WEBXR_API}
         `, WKUserScriptInjectionTime.AtDocumentStart, true));
 
         // We want to replace the UIWebView created by superclass with WKWebView instance
-        this.nativeView = this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
+        const webView = this.nativeView = this._ios = WKWebView.alloc().initWithFrameConfiguration(CGRectZero, configuration);
         delete this._delegate // remove reference to UIWebView delegate created by super class
         const delegate = this._argonDelegate = ArgonWebViewDelegate.initWithOwner(new WeakRef(this));
         configuration.userContentController.addScriptMessageHandlerName(delegate, "argon");
@@ -128,30 +127,31 @@ export class ArgonWebView extends common.ArgonWebView  {
         configuration.userContentController.addScriptMessageHandlerName(delegate, "log");
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true;
 
-	    this._ios.allowsBackForwardNavigationGestures = true;
-        this._ios.customUserAgent = ARGON_USER_AGENT;
+	    webView.allowsBackForwardNavigationGestures = true;
+        webView.customUserAgent = ARGON_USER_AGENT;
+        webView.contentMode = UIViewContentMode.ScaleAspectFill
 
         // style appropriately
-        this._ios.scrollView.layer.masksToBounds = false;
-        this._ios.layer.masksToBounds = false;
+        webView.scrollView.layer.masksToBounds = false;
+        webView.layer.masksToBounds = false;
     }
     
     public _argonPages = {};
     public _setIsArgonPage(flag:boolean, url:string) {
-        if (flag) this._argonPages[url] = true;
-        if (!this.isArgonPage && flag) {
-            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
-            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
-            this._ios.opaque = false;     
-            common.isArgonPageProperty.nativeValueChange(this, true);   
-            // this.set("isArgonPage", true);
-        } else if (this.isArgonPage && !flag) {
-            this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
-            this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
-            this._ios.opaque = true;        
-            // this.set("isArgonPage", false);
-            common.isArgonPageProperty.nativeValueChange(this, false);
-        }
+        // if (flag) this._argonPages[url] = true;
+        // if (!this.isArgonPage && flag) {
+        //     this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
+        //     this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.clearColor);
+        //     this._ios.opaque = false;     
+        //     common.isArgonPageProperty.nativeValueChange(this, true);   
+        //     // this.set("isArgonPage", true);
+        // } else if (this.isArgonPage && !flag) {
+        //     this._ios.scrollView.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
+        //     this._ios.backgroundColor = utils.ios.getter(UIColor, UIColor.whiteColor);
+        //     this._ios.opaque = true;        
+        //     // this.set("isArgonPage", false);
+        //     common.isArgonPageProperty.nativeValueChange(this, false);
+        // }
     }
 
     public evaluateJavascript(script:string) {
@@ -244,25 +244,25 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
     userContentControllerDidReceiveScriptMessage(userContentController:WKUserContentController, message:WKScriptMessage) {
         const owner = this._owner.get();
         if (!owner) return;
-        const url = message.frameInfo.request.URL.absoluteString;
+        // const url = message.frameInfo.request.URL.absoluteString;
         if (message.name === 'argon') {
-            if (!owner.session) {  
-                // just in case we thought below that the page was not an
-                // argon page, perhaps because argon.js loaded asyncronously 
-                // and the programmer didn't set up an argon meta tag
-                owner._setIsArgonPage(true, url);
-            }
+            // if (!owner.session) {  
+            //     // just in case we thought below that the page was not an
+            //     // argon page, perhaps because argon.js loaded asyncronously 
+            //     // and the programmer didn't set up an argon meta tag
+            //     owner._setIsArgonPage(true, url);
+            // }
             owner._handleArgonMessage(message.body);
         } else if (message.name === 'log') {
             owner._handleLogMessage(message.body);
         } else if (message.name === 'argoncheck') {
-            if (!owner.session) {
-                if (message.body === "true") {
-                    owner._setIsArgonPage(true, url);
-                } else {
-                    owner._setIsArgonPage(false, url);
-                }
-            }
+            // if (!owner.session) {
+            //     if (message.body === "true") {
+            //         owner._setIsArgonPage(true, url);
+            //     } else {
+            //         owner._setIsArgonPage(false, url);
+            //     }
+            // }
         }
     }
     
@@ -371,16 +371,16 @@ class ArgonWebViewDelegate extends NSObject implements WKScriptMessageHandler, W
                 //     }
                 // }).catch(()=>{});
 
-                dialogs.alert(error.localizedDescription + " A bug in Argon4 prevents us from continuing. Please use a site with a valid certificate.  We will fix this soon.");
+                dialogs.alert(error.localizedDescription + " A bug in Argon prevents us from continuing. Please use a site with a valid certificate.  We will fix this soon.");
         } else if (url && url.host &&
             error.code === NSURLErrorCannotFindHost ||
             error.code === NSURLErrorCannotConnectToHost) {
-                dialogs.alert("Cannot connect to host. Please check the URL or the server connection.");
+                dialogs.alert(error.localizedDescription);
         } else if (url && url.host &&
             error.code === NSURLErrorTimedOut
             //|| error.code === NSURLErrorCancelled
             ) {
-                dialogs.alert("Host is not responding. Please check if the host suppots HTTPS.");
+                dialogs.alert(error.localizedDescription);
         }
     }
 

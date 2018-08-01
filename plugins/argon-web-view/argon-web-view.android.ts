@@ -2,7 +2,6 @@ import * as common from "./argon-web-view-common";
 import {LoadEventData} from "ui/web-view";
 import {View} from "ui/core/view";
 import dialogs = require("ui/dialogs");
-import * as Argon from '@argonjs/argon';
 import {WEBXR_API} from './webxr';
 //import {Color} from "color";
 
@@ -32,9 +31,9 @@ export class ArgonWebView extends common.ArgonWebView {
     private _instanceId:string = ++ArgonWebView._count + "";
 
     constructor() {
-        super();
+        super()
 
-        (<any>android.webkit.WebView).setWebContentsDebuggingEnabled(true);
+        ;(<any>android.webkit.WebView).setWebContentsDebuggingEnabled(true);
 
         this.on(View.loadedEvent, () => {
             // Make transparent
@@ -44,7 +43,7 @@ export class ArgonWebView extends common.ArgonWebView {
             const webView = <android.webkit.WebView>this.android;
             const settings = webView.getSettings();
             const userAgent = settings.getUserAgentString();
-            settings.setUserAgentString(userAgent + " Argon/" + Argon.version);
+            settings.setUserAgentString(userAgent + " ArgonXR/" + common.PROTOCOL_VERSION_STRING);
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
 
@@ -53,10 +52,8 @@ export class ArgonWebView extends common.ArgonWebView {
                     // just in case we thought below that the page was not an
                     // argon page, perhaps because argon.js loaded asyncronously 
                     // and the programmer didn't set up an argon meta tag
-                    this._setIsArgonPage(true);
+                    // this._setIsArgonPage(true);
                     this._handleArgonMessage(data);
-                } else if (event === "webxr") {
-                    this._handleWebXRMessage(data);
                 }
             }), "__argon_android__");
 
@@ -173,7 +170,7 @@ export class ArgonWebView extends common.ArgonWebView {
                 // $('*').first().before(`<script>(${function() {
                 //     window['ARGON_BROWSER'] = {
                 //         postMessage(message:string) {
-                //             window['__argon_android__'].emit('webxr', message);
+                //             window['__argon_android__'].emit('argon', message);
                 //         },
                 //         onmessage: null
                 //     }
@@ -190,13 +187,13 @@ export class ArgonWebView extends common.ArgonWebView {
 
                 var injectedScript = `<script>(${function() {
                     window['ARGON_BROWSER'] = {
+                        xr: true,
                         postMessage(message:string) {
-                            window['__argon_android__'].emit('webxr', message);
+                            window['__argon_android__'].emit('argon', message);
                         },
                         onmessage: null
                     }
                 }.toString()}());
-                ARGON_BROWSER.version = ${Argon.version};
                 (${WEBXR_API}());</script>`;
 
                 webView.loadDataWithBaseURL(
@@ -214,10 +211,10 @@ export class ArgonWebView extends common.ArgonWebView {
         //console.log("_setIsArgonApp: " + flag);
         if (!this.isArgonPage && flag) {
             this.android.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            common.isArgonPageProperty.nativeValueChange(this, true);
+            // common.isArgonPageProperty.nativeValueChange(this, true);
         } else if (this.isArgonPage && !flag) {
             this.android.setBackgroundColor(android.graphics.Color.WHITE);
-            common.isArgonPageProperty.nativeValueChange(this, false);
+            // common.isArgonPageProperty.nativeValueChange(this, false);
         }
     }
 

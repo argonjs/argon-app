@@ -1,5 +1,5 @@
 /*==============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2015 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -64,6 +64,8 @@ public:
      *       be explicitly deleted but can be destroyed with a call to 'destroyAnchor'. A call to 'stop'
      *       will invalidate all Anchors. Accessing the pointer after these calls results in undefined
      *       behavior.
+     *
+     * NOTE: Do only use a HitTestResult once to create an anchor.
      */
     virtual Anchor* createAnchor(const char* name, const HitTestResult& hitTestResult) = 0;
 

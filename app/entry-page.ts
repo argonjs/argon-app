@@ -1,5 +1,6 @@
-import frameModule = require("ui/frame");
 import permissions = require('nativescript-permissions');
+import * as application from 'application'
+import {AppRootView} from './app'
 
 export function pageLoaded(args) {
     return permissions.requestPermission("android.permission.CAMERA", "Your camera is used to provide an augmented reality experience")
@@ -20,10 +21,5 @@ export function pageLoaded(args) {
 }
 
 function startApp() {
-    var topmost = frameModule.topmost();
-    var navigationEntry = {
-        moduleName: "main-page",
-        backstackVisible: false
-    };
-    topmost.navigate(navigationEntry);
+    application._resetRootView(AppRootView)
 }

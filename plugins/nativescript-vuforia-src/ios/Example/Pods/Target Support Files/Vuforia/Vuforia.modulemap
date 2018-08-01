@@ -1,0 +1,6 @@
+framework module Vuforia {
+  umbrella header "Vuforia-umbrella.h"
+
+  export *
+  module * { export * }
+}

@@ -1,43 +1,38 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argon4.gs",
+    "id": "edu.gatech.ael.argonxr",
     "tns-android": {
-      "version": "3.4.0"
+      "version": "4.0.1"
     },
     "tns-ios": {
-      "version": "3.4.1"
+      "version": "4.2.0-2018-07-21-01"
     }
-  },
-  "scripts": {
-    "link-plugins": "npm run link-nativescript-vuforia && npm run link-argon-web-view",
-    "link-nativescript-vuforia": "cd plugins/nativescript-vuforia && npm link && cd ../.. && npm link nativescript-vuforia",
-    "link-argon-web-view": "cd plugins/argon-web-view && npm link && cd ../.. && npm link argon-web-view"
   },
   "dependencies": {
     "@argonjs/argon": "^1.4.0-58",
-    "argon-private": "file:///Users/gspeiginer/Code/argon-project/argon-private",
+    "argon-private": "file:../argon-private/src",
     "argon-web-view": "file:plugins/argon-web-view",
+    "domino": "^2.0.2",
     "minimatch": "^3.0.4",
-    "nativescript-google-analytics": "^0.3.7",
+    "nativescript-geolocation": "^4.2.6",
     "nativescript-gradient": "^2.0.1",
     "nativescript-permissions": "^1.2.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-status-bar": "^1.1.1",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
-    "speigg-nativescript-geolocation": "0.0.9-patch.0",
-    "tns-core-modules": "^3.4.0",
-    "urijs": "^1.17.1"
+    "nativescript-web-image-cache": "^4.2.6",
+    "page-metadata-parser": "^1.1.2",
+    "tns-core-modules": "^4.2.0-2018-07-13-03",
+    "urijs": "^1.17.1",
+    "url": "^0.11.0"
   },
   "devDependencies": {
     "@types/minimatch": "^2.0.29",
     "@types/urijs": "^1.15.31",
-    "babel-traverse": "6.15.0",
-    "babel-types": "6.15.0",
-    "babylon": "6.9.2",
-    "lazy": "1.0.11",
-    "nativescript-dev-typescript": "^0.6.0",
+    "nativescript-dev-typescript": "^0.7.2",
     "nativescript-hook-debug-production": "^1.0.4",
-    "tns-platform-declarations": "^3.4.0",
-    "typescript": "^2.6.0"
-  }
+    "tns-platform-declarations": "^4.1.0",
+    "typescript": "^2.9.2"
+  },
+  "description": "An experimental browser for the Immersive Web"
 }

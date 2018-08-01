@@ -3,4 +3,4 @@ function WebXR_DOM_SETUP() {
     
 }
 
-export const WEBXR_API = `(${WebXR_DOM_SETUP.toString()}())`;
+export const WEBXR_API = `((${WebXR_DOM_SETUP.toString()})())`;

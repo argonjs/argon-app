@@ -1,108 +1,22 @@
-import * as application from 'application';
-import * as page from 'ui/page';
-import * as frame from 'ui/frame';
-import * as color from 'color/color';
-// import {layout} from 'utils/utils';
-// import {View} from 'ui/core/view';
+import * as application from 'application'
+import * as builder from 'ui/builder'
+import * as view from 'ui/core/view'
+import {layout} from 'utils/utils'
+import {} from 'utils/types'
+
+import * as URI from 'urijs'
+
+import {debug} from './environment'
+import * as app from './app-root'
+import { PropertyChangeData } from 'ui/core/view';
+
+if (debug) {
+    global['app'] = app
+}
 
 global['__assign'] = global['__assign'] || Object.assign;
 
-if (frame.isIOS) {
-    const UIViewControllerImpl = new page.Page().ios.constructor as typeof UIViewController;
-    const MyCustumUIViewController = UIViewController['extend']({
-        ...UIViewControllerImpl.prototype,
-        // add instance method / property overrides here ...
-        preferredScreenEdgesDeferringSystemGestures() {
-            return UIRectEdge.All;
-        },
-        viewWillTransitionToSizeWithTransitionCoordinator(this: UIViewController, size:CGSize, coordinator:UIViewControllerTransitionCoordinator) {
-            UIViewControllerTransitionCoordinator.prototype.animateAlongsideTransitionCompletion.call(coordinator, ()=> {
-                console.log('viewWillTransition');
-                application.notify({eventName:'iosPageViewWillTransitionToSize'});
-            }, () => {
-                console.log('viewDidTransition');
-                application.notify({eventName:'iosPageViewDidTransitionToSize'});
-            });
-            UIViewControllerImpl.prototype.viewWillTransitionToSizeWithTransitionCoordinator.call(this, size, coordinator);
-        },
-        viewWillLayoutSubviews() {
-            console.log('viewWillLayout');
-            UIViewControllerImpl.prototype.viewWillLayoutSubviews.call(this);
-            application.notify({eventName:'iosPageViewWillLayoutSubviews'});
-        },
-        viewDidLayoutSubviews() {
-            console.log('viewDidLayout');            
-            UIViewControllerImpl.prototype.viewDidLayoutSubviews.call(this);
-            application.notify({eventName:'iosPageViewDidLayoutSubviews'});
-        }
-    });
-
-    // const UINavigationControllerImpl = new frame.Frame().ios.controller.constructor as typeof UINavigationController;
-    // UINavigationControllerImpl.prototype['_owner'] = new WeakRef({});
-    // const MyCustumUINavigationController = UINavigationController['extend']({
-    //     ...UINavigationControllerImpl.prototype,
-    //     // add instance method / property overrides here ...
-    //     prefersStatusBarHidden() {
-    //         console.log('Prefers Hidden');
-    //         return true;
-    //     }
-    // });
-    // console.log(MyCustumUINavigationController);
-
-    // const navigate = frame.Frame.prototype.navigate;
-    // frame.Frame.prototype.navigate = function(this:frame.Frame, pageModuleName) {
-    //     console.trace();
-    //     // change to custom uinavigationcontroller
-    //     const navController = MyCustumUINavigationController.new();
-    //     navController['_owner'] = new WeakRef(this);
-    //     Object.defineProperty(navController, 'owner', {get:function(){return this._owner.get()}});
-    //     this['viewController'] = this.ios['_controller'] = navController;
-    //     this.nativeViewProtected = navController.view;
-    //     navigate.call(this, pageModuleName)
-    // }
-
-    // workaround for https://github.com/NativeScript/NativeScript/issues/3264
-    const performNavigation = frame.Frame.prototype['performNavigation'];
-    frame.Frame.prototype['performNavigation'] = function(this:frame.Frame, navigationContext:{entry:frame.BackstackEntry}) {
-        // change to custom uiviewcontroller
-        const page = navigationContext.entry.resolvedPage;
-        const controller = (<typeof UIViewController>MyCustumUIViewController).new();
-        controller['_owner'] = new WeakRef(page);
-        controller.view.backgroundColor = new color.Color("white").ios;
-        page['_ios'] = controller;
-        page.setNativeView(controller.view);
-        // page.backgroundColor = new color.Color('red');
-        // delete page.constructor.prototype.onLayout; // full-screen page
-        // delete page.constructor.prototype.onMeasure; // full-screen page
-        performNavigation.call(this, navigationContext);
-    }
-
-    // frame.Frame.prototype.onMeasure = function(this:frame.Frame, widthMeasureSpec, heightMeasureSpec) {
-    //     const width = layout.getMeasureSpecSize(widthMeasureSpec);
-    //     const widthMode = layout.getMeasureSpecMode(widthMeasureSpec);
-
-    //     const height = layout.getMeasureSpecSize(heightMeasureSpec);
-    //     const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
-
-    //     const widthAndState = View.resolveSizeAndState(width, width, widthMode, 0);
-    //     const heightAndState = View.resolveSizeAndState(height, height, heightMode, 0);
-
-    //     this.setMeasuredDimension(widthAndState, heightAndState);
-    // }
-
-    // frame.Frame.prototype['layoutPage'] = function(this:frame.Frame, left, top, right, bottom) {
-    //     View.layoutChild(this, this.currentPage, left, top, right, bottom);
-    // };
-
-    // frame.topmost().
-
-}
-
-
-/***
- * Creates a performance.now() function
- */
-//Augment the NodeJS global type with our own extensions
+// Add performance.now() API 
 declare global {
     namespace NodeJS {
         interface Global {
@@ -126,58 +40,104 @@ if (!global.performance.now) {
     }
 }
 
-import { appViewModel } from './components/common/AppViewModel';
-import * as URI from 'urijs';
+
 function handleOpenURL(urlString: string) {
     if (!urlString) return;
-    const url = URI(urlString);
-    if (url.protocol() !== "http" && url.protocol() !== "https") {
-        url.protocol("https");
-    }
-    var urlValue = url.toString();
-    console.log('Received url request: ' + urlValue);
-    appViewModel.launchedFromUrl = true;
-    if (appViewModel.currentUri === '') {
-        appViewModel.loadUrl(urlValue);
-    } else {
-        appViewModel.openUrl(urlValue);
-    };
+    app.model.openURI(urlString);
 }
 
-import * as analytics from "./components/common/analytics";
 if (application.ios) {
-    // UITextField.appearance().keyboardAppearance = UIKeyboardAppearance.Dark;
-    
+    UITextField.appearance().keyboardAppearance = UIKeyboardAppearance.Dark;
     class MyDelegate extends UIResponder implements UIApplicationDelegate {
         public static ObjCProtocols = [UIApplicationDelegate];
-        applicationDidFinishLaunchingWithOptions(application: UIApplication, launchOptions: any): boolean {
-            analytics.initAnalytics();
-            return true;
-        }
         applicationOpenURLOptions(application: UIApplication, url: NSURL, options: any): boolean {
-            appViewModel.launchedFromUrl = true;
-            appViewModel.ready.then(()=>{
-                var urlValue = URI(url.absoluteString).query(true)['url'];
-                handleOpenURL(urlValue);
-            });
+            var urlValue = URI(url.absoluteString).query(true)['url'];
+            handleOpenURL(urlValue);
             return true;
         }
     }
     application.ios.delegate = MyDelegate;
-} else {
+} else if (application.android) {
     application.on(application.launchEvent, function (args) {
-        var extras = args.android.getExtras();
-        if (extras) {
-            // TODO: enable url-launch from background state
-            appViewModel.launchedFromUrl = true;
-            appViewModel.ready.then(()=>{
-                var url = extras.getString('url');
-                handleOpenURL(url);
-            });
-        }
-        analytics.initAnalytics();
+        const intent = args.android as android.content.Intent
+        const extras = intent.getExtras()
+        if (extras) handleOpenURL(extras.getString('url'))
     });
 }
 
+export namespace AppRootView {
+    export const create = () => {
+        const rootView = builder.load(__dirname + '/app-root.xml', app)
+        
+        if (application.ios) {
+
+            const UILayoutViewController = (<any>view.ios.UILayoutViewController) as typeof UIViewController
+            const RootViewController = <typeof UIViewController>UIViewController['extend']({
+                ...UILayoutViewController.prototype,
+                owner: new WeakRef(rootView),
+                preferredScreenEdgesDeferringSystemGestures() {
+                    return  app.model.uiMode !== 'hidden' || 
+                            app.model.layerPresentation !== 'stack' ? 
+                                UIRectEdge.None : UIRectEdge.Bottom
+                },
+                viewWillTransitionToSizeWithTransitionCoordinator(this: UIViewController, size:CGSize, coordinator:UIViewControllerTransitionCoordinator) {
+                    UIViewControllerTransitionCoordinator.prototype.animateAlongsideTransitionCompletion.call(coordinator, ()=> {
+                        // console.log('viewWillTransition');
+                        application.notify({eventName:'iosRootViewWillTransitionToSize'});
+                    }, () => {
+                    // console.log('viewDidTransition');
+                        application.notify({eventName:'iosRootViewDidTransitionToSize'});
+                    });
+                    UILayoutViewController.prototype.viewWillTransitionToSizeWithTransitionCoordinator.call(this, size, coordinator);
+                },
+                // full-screen layout
+                viewDidLayoutSubviews() {
+                    // console.log('viewDidLayout');
+                    UIViewController.prototype.viewDidLayoutSubviews.call(this);
+                                
+                    const owner = this.owner.get()
+                    if (!owner) return;
+
+                    const frame = this.view.frame;
+                    const fullscreenOrigin = frame.origin;  
+                    const fullscreenSize = frame.size;
+            
+                    const left = layout.toDevicePixels(fullscreenOrigin.x);
+                    const top = layout.toDevicePixels(fullscreenOrigin.y);
+                    const width = layout.toDevicePixels(fullscreenSize.width);
+                    const height = layout.toDevicePixels(fullscreenSize.height);
+            
+                    const widthSpec = layout.makeMeasureSpec(width, layout.EXACTLY);
+                    const heightSpec = layout.makeMeasureSpec(height, layout.EXACTLY);
+            
+                    view.View.measureChild(<any>null, owner, widthSpec, heightSpec);
+                    view.View.layoutChild(<any>null, owner, left, top, width + left, height + top);
+                }
+            })
+
+            const rootViewController = rootView.viewController = RootViewController.new()
+            const iosRootView = rootView.ios as UIView
+            iosRootView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight
+            rootViewController.view.addSubview(rootView.ios)
+
+            app.model.on('propertyChange', (evt:PropertyChangeData) => {
+                switch (evt.propertyName) {
+                    case 'uiMode':
+                    case 'layerPresentation':
+                        rootViewController.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+                        break
+                }
+            })
+        }
+        return rootView
+    }
+}
+
+var imageCache = require("nativescript-web-image-cache");
+application.on('launch', ()=>{
+    if (application.android) imageCache.initialize()
+})
+
 application.setCssFileName('./app.css');
-application.start(application.android ? 'entry-page' : 'main-page');
+application.run(application.android ? 'entry-page' : AppRootView);
+// application.run('app-root')

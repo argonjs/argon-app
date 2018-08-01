@@ -1,6 +1,6 @@
 import {WebView} from 'ui/web-view'
-import {EventData} from 'data/observable'
 import {SessionPort} from '@argonjs/argon';
+import {Observable, EventData} from 'data/observable';
 import {ObservableArray} from 'data/observable-array';
 import {Property} from 'ui/core/properties'
 
@@ -10,9 +10,8 @@ export const titleProperty : Property<ArgonWebView, string>
 
 export const progressProperty : Property<ArgonWebView, number>;
 
-export const sessionProperty : Property<ArgonWebView, Argon.SessionPort|undefined>;
-
-export const isArgonPageProperty : Property<ArgonWebView, boolean>;
+export const xrEnabledProperty : Property<ArgonWebView, boolean>;
+export const xrImmersiveTypeProperty : Property<ArgonWebView, XRImmersiveType>;
 
 export interface LogItem {
     type: 'log'|'warn'|'error',
@@ -26,10 +25,13 @@ export class ArgonWebView extends WebView {
     readonly url: string;
     readonly title: string;
     readonly progress: number;
-    readonly session?: SessionPort;
-    readonly isArgonPage: boolean;
-
     readonly log: ObservableArray<LogItem>;
 
+    readonly messageHandlers:{[topic:string]:(message:{})=>PromiseLike<any>|void};
+
     public evaluateJavascriptWithoutPromise(source:string) : void;
+
+	public send(topic:string, message:{}) : void;
+    
+    public request(topic:string, message:{}) : Promise<{}>;
 }

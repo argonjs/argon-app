@@ -1,0 +1,171 @@
+<GridLayout
+    loaded="onRootViewLoaded"
+    layoutChanged="onRootViewLayoutChanged"
+    xmlns:browserView="components/browser-view"
+    xmlns:logView="components/log-view"
+    xmlns:IC="nativescript-web-image-cache"
+    backgroundColor="gray"
+    touch="onRootViewTouch">
+        
+<!-- 
+        <GridLayout columns="auto, auto, auto, *, auto, auto, auto, auto" rows="auto" horizontalAlignment="stretch" loaded="headerLoaded">
+            <SearchBar col="3" class="search-bar" loaded="searchBarLoaded" hint="Enter a URL" tap="onSearchBarTap" />
+            <Label col="4" width="10" />
+            <Label col="7" width="5%" />
+            <Button id="overviewButton" col="5" class="material-icon action-btn" tap="onOverview" />
+            <Button id="menuButton" col="6" class="material-icon action-btn" tap="onMenu" />
+            <Button id="cancelButton" visibility="collapse" col="5" colspan="2" width="60" text="Cancel" class="action-btn" tap="onCancel" />
+
+            <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon action-btn permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
+            <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
+            
+            <Button id="addButton" visibility="collapse" horizontalAlignment="left" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
+        </GridLayout> -->
+    <!-- </ActionBar> -->
+
+<!-- 
+        <GridLayout id="top" visibility="collapsed" height="{{ safeAreaInsets, safeAreaInsets.top + 40 }}" verticalAlignment="top">
+
+            <FlexboxLayout width="100%" verticalAlignment="top" paddingTop="{{ safeAreaInsets.top }}" justifyContent="center">
+                <Button width="0"/>
+                <Button id="locationPermission" visibility="{{ (permissions['geolocation'] != 'not_required' && permissions['geolocation'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="0" class="{{ permissions['geolocation'] == 'granted' ? 'material-icon action-btn permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onLocationPermissionIcon" text="{{ permissions['geolocation'] == 'granted' ? locIcon[1] : locIcon[0] }}"/>
+                <Button id="cameraPermission" visibility="{{ (permissions['camera'] != 'not_required' && permissions['camera'] != 'prompt' && enablePermissions) ? 'visible' : 'collapsed' }}" col="1" class="{{ permissions['camera'] == 'granted' ? 'material-icon permission-btn-granted' : 'material-icon action-btn permission-btn-denied' }}" tap="onCameraPermissionIcon"/>
+            </FlexboxLayout>
+
+            <StackLayout orientation="horizontal" horizontalAlignment="right" paddingTop="{{ safeAreaInsets.top }}">
+                <Button id="overviewButton" verticalAlignment="bottom" width="40" class="material-icon action-btn" tap="onOverview" />
+                <Button id="menuButton" verticalAlignment="bottom" width="40" class="material-icon action-btn" tap="onMenu" />
+            </StackLayout>
+
+            <StackLayout orientation="horizontal" horizontalAlignment="left" paddingTop="{{ safeAreaInsets.top }}">
+                <Button id="addButton"  width="40" visibility="collapse" class="material-icon action-btn" text="add_box" tap="onAddChannel" />
+            </StackLayout>
+
+        </GridLayout> -->
+
+
+    <GridLayout id="main">
+
+        <browserView:BrowserView id="browser"/>
+
+        <logView:LogView id="debug" 
+            visibility="{{ debugEnabled ? 'visible' : 'collapsed' }}" 
+            paddingTop="{{ safeAreaInsets, safeAreaInsets.top }}" 
+            paddingBottom="{{ safeAreaInsets, safeAreaInsets.bottom }}"/>
+
+        <GridLayout id="top" height="{{ safeAreaInsets, safeAreaInsets.top }}" verticalAlignment="top" />
+
+    </GridLayout>
+
+
+    <StackLayout id="menu" paddingLeft="16" marginBottom="8" marginRight="{{ safeAreaInsets, safeAreaInsets.right + 8 }}" style.borderRadius="10" horizontalAlignment="right" verticalAlignment="bottom" orientation="vertical" >
+        <StackLayout tap="onDebugToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+            <Label text="Log" paddingRight="8"/>
+            <Label textAlignment="right" width="30" class="material-icon" text="bug_report"/>
+        </StackLayout>
+        <StackLayout tap="onViewerToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+            <Label text="Viewer" paddingRight="8"/>
+            <Image width="30" class="menu-item" tintColor="white" src="~/icons/icons8-virtual-reality-filled-100.png"/>
+        </StackLayout>
+        <StackLayout tap="onFlashToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+            <Label text="Flashlight"  paddingRight="8"/>
+            <Label textAlignment="right" width="30" class="{{ flashEnabled ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off' }}" text="highlight"/>
+        </StackLayout>
+        <StackLayout tap="onOverview" padding="8" orientation="horizontal" horizontalAlignment="right">
+            <Label text="Layers" paddingRight="8"/>
+            <Label textAlignment="right" width="30" id="overviewButton" class="material-icon" text="layers" tap="onOverview" />
+        </StackLayout>
+    </StackLayout>
+    
+
+    <GridLayout id="overlay" layoutChanged="onOverlayLayoutChanged">
+
+        <GridLayout id="overlay-inner" opacity="0">
+                        
+            <GridLayout id="drag-icon" padding="7" width="46" height="18" verticalAlignment="top" horizontalAlignment="center">
+                <GridLayout backgroundColor="rgba(255,255,255,0.5)" style.borderRadius="5" />
+            </GridLayout>
+
+            <FlexboxLayout verticalAlignment="top" flexDirection="column" >
+
+                <GridLayout id="search-bar-container" height="76" flexShrink="0">
+                    <GridLayout padding="18 8">
+                        <SearchBar verticalAlignment="bottom" id="search-bar" text="{{ focussedLayer.content.uri }}" hint="Enter a URL" 
+                            tap="onSearchBarTap" submit="onSearchBarSubmit" clear="onSearchBarClear" />
+                    </GridLayout>
+                    <GridLayout id="overlay-scroll-separator" height="1px" verticalAlignment="bottom" backgroundColor="#BBBBBB" opacity="0"/>
+                </GridLayout>
+
+                <ScrollView id="overlay-scroll" flexGrow="2">
+                    <FlexboxLayout paddingLeft="{{safeAreaInsets.left || 16}}" paddingRight="{{safeAreaInsets.right || 16}}" paddingBottom="{{safeAreaInsets.bottom + 160}}" flexDirection="column">
+
+                        <FlexboxLayout id="details" flexWrap="wrap">
+                            <GridLayout width="80" height="80" marginRight="16" marginBottom="16" flexShrink="0" borderRadius="5" backgroundColor="{{ focussedLayer.content.icon ? 'transparent' : 'rgba(238,170,0,1)' }}">
+                                <Label visibility="{{ focussedLayer.content.icon ? 'collapsed' : 'visible' }}" textAlignment="center" verticalAlignment="center" class="material-icon" fontSize="40" text="bookmark_border" />
+                                <IC:WebImage visibility="{{ focussedLayer.content.icon ? 'visible' : 'collapsed' }}" src="{{ focussedLayer.content.icon }}" stretch="aspectFill" backgroundColor="transparent" />
+                            </GridLayout>
+                            <!-- <IC:WebImage src="{{ focussedLayer.content.icon }}" width="80" height="80" backgroundColor="transparent" margin="0 8 16 8" borderRadius="3"/> -->
+                            <StackLayout height="80" orientation="vertical" width="50%" flexGrow="2">
+                                <Label id="current-title" text="{{ focussedLayer.content.title }}" textWrap="true" flexShrink="0" loaded="onBookmarkItemLabel"/>
+                                <Label id="current-domain" text="{{ focussedLayer.content.uri, getDomainFromURL(focussedLayer.content.uri) }}" flexShrink="0" />
+                            </StackLayout>
+                            <Button id="reload" class="material-icon action-btn overlay-button" marginBottom="16" text="refresh" tap="onReload" width="100" height="60" flexShrink="0" flexGrow="1"/>
+                            <GridLayout width="16" height="0"/>
+                            <Button id="favorite" tap="{{ onToggleFavorite }}" marginBottom="16" width="100" height="60" flexShrink="0" flexGrow="1"
+                                class="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'material-icon toggle-btn-on overlay-button' : 'material-icon toggle-btn-off overlay-button' }}" 
+                                text="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'star' : 'star_border' }}" />
+                            <GridLayout width="100%" height="{{safeAreaInsets, safeAreaInsets.bottom}}" />
+                        </FlexboxLayout>
+
+                        <GridLayout height="1px" opacity="{{ focussedLayer.content ? '1' : '0' }}" backgroundColor="#BBBBBB" flexShrink="0" />
+
+                        <Label text="Favorites" marginTop="16" marginBottom="16" fontWeight="bold" />
+                        <Repeater id="favorites" items="{{ favorites }}" flexShrink="0" flexGrow="2">
+                            <Repeater.itemsLayout>
+                                <FlexboxLayout flexWrap="wrap" margin="-8" horizontalAlignment="center"/>
+                            </Repeater.itemsLayout>
+                            <Repeater.itemTemplate>
+                                <FlexboxLayout class="bookmark-item" width="72" margin="8" flexShrink="0" onTap="onBookmarkItemTap" flexDirection="column">
+                                    <GridLayout height="72" flexShrink="0" flexGrow="0" borderRadius="5" backgroundColor="{{ icon ? 'transparent' : 'rgba(238,170,0,1)' }}">
+                                        <Label visibility="{{ icon ? 'collapsed' : 'visible' }}" textAlignment="center" verticalAlignment="center" class="material-icon" fontSize="30" text="bookmark_border" />
+                                        <IC:WebImage src="{{ icon }}" visibility="{{ icon ? 'visible' : 'collapsed' }}" stretch="aspectFill" backgroundColor="transparent" />
+                                    </GridLayout>
+                                    <Label text="{{ title }}" height="30" loaded="onBookmarkItemLabel" class="favorite-title" textWrap="true" textAlignment="center" flexShrink="0" flexGrow="0"/>
+                                </FlexboxLayout>
+                            </Repeater.itemTemplate>
+                        </Repeater>
+                        
+                        <!-- <GridLayout height="{{safeAreaInsets, safeAreaInsets.bottom + 200 }}"/> -->
+                    </FlexboxLayout>
+                </ScrollView>
+
+            </FlexboxLayout>
+
+        </GridLayout>
+
+    </GridLayout>
+
+
+
+    <!-- <realityChooser:RealityChooserView id="realityChooser" visibility="collapse" loaded="realityChooserLoaded" /> -->
+
+    <Button text="exit_to_app" class="material-icon action-btn" horizontalAlignment="center" verticalAlignment="bottom" tap="onViewerToggle" visibility="{{ viewerEnabled ? 'visible' : 'collapsed' }}"></Button>
+    <StackLayout id="touchOverlay" visibility="collapsed" loaded="touchOverlayLoaded" />
+
+
+    <!-- <StackLayout id="permissionMenu" loaded="permissionMenuLoaded" visibility="collapsed" horizontalAlignment="left" verticalAlignment="top" orientation="vertical">
+        <Label id="permissionLabel" tap="onPermissionIconMenuChangeTap">
+            <FormattedString>
+                <Span text="{{ 'Access ' + permissionDescriptions[selectedPermission.type] + ': ' }}" />
+                <Span foregroundColor="black" text="{{ selectedPermission.state == 'granted' ? 'Allowed' : 'Blocked' }}" tap="onPermissionIconMenuChangeTap"/>
+            </FormattedString>
+        </Label>
+        <Label id="changePermission" color="gray" text="{{ 'Click to ' + (selectedPermission.state == 'granted' ? 'Revoke' : 'Allow' ) }}" tap="onPermissionIconMenuChangeTap"/>
+    </StackLayout> -->
+
+
+    <!-- <GridLayout id="bottom-edge" touch="onEdgeTouch" height="25" verticalAlignment="bottom" /> -->
+
+</GridLayout>
+
+<!-- </Page> -->

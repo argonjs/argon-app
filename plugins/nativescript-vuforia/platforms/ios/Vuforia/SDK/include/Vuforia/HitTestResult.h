@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
@@ -28,6 +28,8 @@ class VUFORIA_API HitTestResult : private NonCopyable
 public:
     /// The position and orientation of the hit test result in the world coordinate system, represented as a pose matrix in row-major order.
     virtual Matrix34F getPose() const = 0;
+    
+    virtual ~HitTestResult() {}
 };
 
 } // namespace Vuforia

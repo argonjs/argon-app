@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -27,6 +27,7 @@ namespace Vuforia
 class Trackable;
 class TrackableResult;
 class StateData;
+class DeviceTrackableResult;
 
 
 /// AR State
@@ -99,6 +100,18 @@ public:
      *  object is valid. Do not keep a copy of the pointer!
      */
     const TrackableResult* getTrackableResult(int idx) const;
+
+    /// Returns the trackable result for the device directly. Will return NULL
+    /// if the device tracker is not running (i.e. has not been started).
+    /**
+     *  This convenience method provides faster access to the DeviceTrackableResult.
+     *  The DeviceTrackableResult continues to be available in the list of TrackableResults.
+     *  See State::getTrackable.
+     *
+     *  The returned object is only valid as long as the State
+     *  object is valid. Do not keep a copy of the pointer!
+     */
+    const DeviceTrackableResult* getDeviceTrackableResult() const;
 
 protected:
     StateData* mData;

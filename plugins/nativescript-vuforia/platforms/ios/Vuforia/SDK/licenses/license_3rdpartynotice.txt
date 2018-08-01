@@ -1,9 +1,9 @@
-﻿Vuforia SDK v7.0.43
+﻿Vuforia SDK v7.1.35
 PTC Inc.
 =============================================================
 
 This Readme file contains certain notices of software components
-included with the Vuforia SDK v7.0.43  that
+included with the Vuforia SDK v7.1.35  that
 PTC Inc. is required to provide you. Notwithstanding anything in the
 notices in this file, your use of these software components together
 with the Vuforia SDK is subject to the terms of your license from

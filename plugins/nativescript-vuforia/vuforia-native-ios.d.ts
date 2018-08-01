@@ -945,11 +945,3 @@ declare const enum VuforiaViewerParamtersTrayAlignment {
 
 	Top = 2
 }
-
-declare class VuforiaWord extends VuforiaTrackable {
-}
-
-declare class VuforiaWordResult extends VuforiaTrackableResult {
-
-	getTrackable(): VuforiaWord;
-}

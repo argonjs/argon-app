@@ -3,8 +3,6 @@
 	// for the documentation about the extensions.json format
 	"recommendations": [
 		// Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
-		"Telerik.nativescript",
-		"egamma.npm",
-		"prashant.nativescript-cli"
+		"Telerik.nativescript"
 	]
 }

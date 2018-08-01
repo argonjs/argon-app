@@ -23,7 +23,3 @@ pod "Vuforia"
 ## Author
 
 Gheric Speiginer, gheric.speiginer@gmail.com
-
-## License
-
-Vuforia is available under the MIT license. See the LICENSE file for more info.

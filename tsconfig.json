@@ -4,7 +4,7 @@
         "target": "es5",
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "noEmitHelpers": true,
+        "noEmitHelpers": false,
         "noEmitOnError": true,
         "strictNullChecks": true,
         "skipLibCheck": true,
@@ -22,6 +22,9 @@
             "*": [
                 "./node_modules/tns-core-modules/*",
                 "./node_modules/*"
+            ],
+            "~/*": [
+                "app/*"
             ]
         }
     },

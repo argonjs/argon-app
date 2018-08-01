@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -49,25 +49,37 @@ public:
     /**
      *  Value in seconds representing the offset to application startup time.
      *  The timestamp can be used to compare trackable results.
+     *
+     *  Returns 0.0 when the STATUS is set to NO_POSE.
      */
     virtual double getTimeStamp() const = 0;
 
 
-    /// Status of a TrackableResults
-    enum STATUS {
-        UNKNOWN,            ///< The state of the TrackableResult is unknown
-        UNDEFINED,          ///< The state of the TrackableResult is not defined
-                            ///< (this TrackableResult does not have a state)
-        DETECTED,           ///< The TrackableResult was detected
-        TRACKED,            ///< The TrackableResult was tracked
-        EXTENDED_TRACKED,   ///< The Trackable Result was extended tracked
-        DEGRADED            ///< The Trackable Result has a pose of degraded
-                            ///< quality (i.e. pose is 3DOF but Tracker is
-                            ///< expected to deliver 6DOF)
+    /// The tracking status of the trackable.
+    enum STATUS
+    {
+        NO_POSE,            ///< No pose was delivered for the trackable.
+        LIMITED,            ///< The trackable is being tracked in a limited form.
+        DETECTED,           ///< The trackable was detected.
+        TRACKED,            ///< The trackable is being tracked.
+        EXTENDED_TRACKED    ///< The trackable is being tracked using extended tracking.
     };
 
-    /// Returns the tracking status
+    /// Information on the tracking status.
+    enum STATUS_INFO
+    {
+        NORMAL,                          ///< Status is normal, i.e. not STATUS::NO_POSE or STATUS::LIMITED.
+        UNKNOWN,                         ///< Unknown reason for the tracking status.
+        INITIALIZING,                    ///< The tracking system is currently initializing.
+        EXCESSIVE_MOTION,                ///< The device is moving too fast.
+        INSUFFICIENT_FEATURES            ///< There are insufficient features available in the scene.
+    };
+
+    /// Returns the tracking status.
     virtual STATUS getStatus() const = 0;
+
+    /// Returns information on the tracking status.
+    virtual STATUS_INFO getStatusInfo() const = 0;
 
     /// Returns the corresponding Trackable that this result represents
     virtual const Trackable& getTrackable() const = 0;
@@ -76,10 +88,15 @@ public:
     /**
      *  A pose is defined in a base coordinate system and defines a transformation
      *  from a target coordinate system to a base coordinate system.
+     *
+     *  Returns the identity matrix when the STATUS is set to NO_POSE.
      */
     virtual const Matrix34F& getPose() const = 0;
 
     /// Returns the base coordinate system defined for the pose
+    /**
+     *  Returns COORDINATE_SYSTEM_UNKNOWN when the STATUS is set to NO_POSE.
+     */
     virtual COORDINATE_SYSTEM_TYPE getCoordinateSystem() const = 0;
 
     virtual ~TrackableResult()  {}

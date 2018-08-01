@@ -3,6 +3,10 @@
 
 declare module 'polyfill-crypto.getrandomvalues';
 
+// declare module 'metascraper';
+declare module 'domino'
+declare module 'page-metadata-parser'
+
 declare function alert(message?: any): void;
 
 type HTMLElement = never;

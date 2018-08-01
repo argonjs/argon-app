@@ -7,7 +7,8 @@
 	},
     "files.exclude": {
         "app/components/**/*.js": true,
-		"app/**/*.js": true,
-		"app/**/*.js.map": true
-    }
+		"app/*.js": true,
+		"app/**/*.js.map": true,
+	},
+	"nativescript.iosTeamId": "W769C94732"
 }

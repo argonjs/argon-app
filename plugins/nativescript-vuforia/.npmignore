@@ -1,2 +1,4 @@
-# Exclude the native source code. The native libraries are included in the plugin as compiled resources (i.e. aar file)
+# Exclude the android native source code. The native libraries are included in the plugin as compiled resources (i.e. aar file)
 native-src/
+# Exclude example app 
+platforms/ios/Vuforia/Example

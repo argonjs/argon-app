@@ -23,8 +23,6 @@
 #import <Vuforia/CylinderTargetResult.h>
 #import <Vuforia/MultiTarget.h>
 #import <Vuforia/MultiTargetResult.h>
-#import <Vuforia/Word.h>
-#import <Vuforia/WordResult.h>
 #import <Vuforia/Tool.h>
 
 @interface VuforiaTrackable ()
@@ -53,8 +51,6 @@
         wrapped = [[VuforiaMultiTarget alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::ObjectTarget::getClassType())) {
         wrapped = [[VuforiaObjectTarget alloc] initWithCpp:cpp asConst:asConst];
-    } else if (cpp->isOfType(Vuforia::Word::getClassType())){
-        wrapped = [[VuforiaWord alloc] initWithCpp:cpp asConst:asConst];
     } else {
         wrapped = [[VuforiaTrackable alloc] initWithCpp:cpp asConst:asConst];
     }
@@ -127,20 +123,6 @@
 - (void)dealloc {
     self.cpp = nil;
 }
-@end
-
-
-
-@implementation VuforiaWord
-
-+(int) getClassType {
-    return Vuforia::Word::getClassType().getData();
-}
-
-- (Vuforia::Word*)word {
-    return (Vuforia::Word*)self.cpp;
-}
-
 @end
 
 @implementation VuforiaDeviceTrackable
@@ -241,8 +223,6 @@
         wrapped = [[VuforiaCylinderTargetResult alloc] initWithCpp:cpp asConst:asConst];
     } else if (cpp->isOfType(Vuforia::MultiTargetResult::getClassType())){
         wrapped = [[VuforiaMultiTargetResult alloc] initWithCpp:cpp asConst:asConst];
-    } else if (cpp->isOfType(Vuforia::WordResult::getClassType())){
-        wrapped = [[VuforiaWordResult alloc] initWithCpp:cpp asConst:asConst];
     } else {
         wrapped = [[VuforiaTrackableResult alloc] initWithCpp:cpp asConst:asConst];
     }
@@ -291,22 +271,6 @@
 - (void)dealloc {
     self.cpp = nil;
 }
-@end
-
-@implementation VuforiaWordResult
-
-+(int) getClassType {
-    return Vuforia::WordResult::getClassType().getData();
-}
-
-- (Vuforia::WordResult*)result {
-    return (Vuforia::WordResult*)self.cpp;
-}
-
-- (VuforiaWord*)getTrackable {
-    return (VuforiaWord*) [VuforiaTrackable trackableFromCpp:(void*)&self.cpp->getTrackable() asConst:true];
-}
-
 @end
 
 

@@ -21,7 +21,6 @@
 #import <Vuforia/PositionalDeviceTracker.h>
 #import <Vuforia/RotationalDeviceTracker.h>
 #import <Vuforia/ObjectTracker.h>
-#import <Vuforia/TextTracker.h>
 #import <Vuforia/SmartTerrain.h>
 #import <Vuforia/HitTestResult.h>
 #import <Vuforia/State.h>
@@ -370,7 +369,8 @@ static VuforiaPositionalDeviceTracker *tracker = nil;
     Vuforia::Anchor* a = self.cppTracker->createAnchor(
                                   [name cStringUsingEncoding:[NSString defaultCStringEncoding]],
                                   (const Vuforia::Matrix34F&)pose);
-    return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)&a asConst:NO];
+    if (!a) return nil;
+    return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)a asConst:NO];
 }
 
 /// Create a named Anchor using the result of a hit test from SmartTerrain.
@@ -390,7 +390,8 @@ static VuforiaPositionalDeviceTracker *tracker = nil;
     Vuforia::Anchor* a = self.cppTracker->createAnchor(
                            [name cStringUsingEncoding:[NSString defaultCStringEncoding]],
                            (const Vuforia::HitTestResult&)*hitTestResult.cpp);
-    return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)&a asConst:NO];
+    if (!a) return nil;
+    return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)a asConst:NO];
 }
 
 /// Destroys the specified Anchor.
@@ -423,7 +424,7 @@ static VuforiaPositionalDeviceTracker *tracker = nil;
 -(VuforiaAnchor*)getAnchorAtIndex:(int)idx {
     Vuforia::Anchor* a = self.cppTracker->getAnchor(idx);
     if (a) {
-        return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)&a asConst:NO];
+        return (VuforiaAnchor*)[VuforiaTrackable trackableFromCpp:(void*)a asConst:NO];
     }
     return NULL;
 }

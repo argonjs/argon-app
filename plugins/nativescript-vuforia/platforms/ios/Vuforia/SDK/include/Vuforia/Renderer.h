@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -139,7 +139,7 @@ public:
 
     /// Returns the texture info associated with the current video background
     /**
-     * Note: The result is only valid after a call to drawVideoBackground or updateVideoBackgroundTexture.
+     * Note: The result is only valid after a call to updateVideoBackgroundTexture.
      */
     virtual const VideoBackgroundTextureInfo& 
                                       getVideoBackgroundTextureInfo() = 0;
@@ -155,12 +155,6 @@ public:
      *  been made.
      */
     virtual bool setVideoBackgroundTexture(const TextureData& textureData) = 0;
-
-    /// Calculate a perspective projection matrix and apply it to OpenGL
-    /**
-     *  Must only be called from the render thread.
-     */
-    virtual void setARProjection(float nearPlane, float farPlane) = 0;
 
     /// Set a target rendering frame rate in frames per second
     /**

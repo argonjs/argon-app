@@ -1,6 +1,6 @@
 {
     "name": "nativescript-vuforia",
-    "version": "1.0.0",
+    "version": "7.1.35",
     "description": "",
     "main": "vuforia.js",
     "scripts": {
