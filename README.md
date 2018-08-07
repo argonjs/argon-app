@@ -12,25 +12,23 @@ To use ArgonXR, you create web pages using the WebXR Device API and host them on
 
 ### Build Instructions
 
-0. Clone this repo to your computer, e.g. to an `argon-app` directory
-
-1. Install node
-2. Install nativescript tools via `npm i -g nativescript` 
+0. Install node
+1. Install nativescript tools via `npm i -g nativescript` 
     - advanced installataion instructions at http://docs.nativescript.org/start/ns-setup-os-x (Mac, supports iOS and Android) or http://docs.nativescript.org/start/ns-setup-win (Windows, supports Android only).
       *Note that Cocoapods is required for iOS development.*
-2. Execute `tns install` in the `argon-app` directory
+2. Clone this repo to your computer, e.g. to an `argon-app` directory
 
-### iOS
+## iOS
 
 3. Execute `tns run ios`, or execute `tns prepare ios` and open argonapp.xcworkspace (located at /argon-app/platforms/ios) in XCode
 
-4. Debug with javascript inspector using `tns debug ios`
+4. Debug with javascript inspector using `tns debug ios` (or use VSCode)
 
-### Android
+## Android
 
 3. Execute `tns run android`
 
-4. Debug with javascript inspector using `tns debug android`
+4. Debug with javascript inspector using `tns debug android` (or use VSCode)
 
 ### Setting up Vuforia
 
