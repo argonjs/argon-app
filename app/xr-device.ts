@@ -112,6 +112,7 @@ export class XRVuforiaDevice extends XRDevice {
             // const index = frame.getIndex()
             // const renderingPrimitives = this._renderingPrimitives
             // renderingPrimitives.
+            this._renderingPrimitives
             this.sendNextFrameState()
         })
 
