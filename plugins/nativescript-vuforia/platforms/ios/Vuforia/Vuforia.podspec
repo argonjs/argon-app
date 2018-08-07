@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = "Vuforia"
-  s.version          = "7.1.35"
+  s.version          = "7.2.23"
   s.summary          = "An Obj-C wrapper for the VuforiaSDK"
 
 # This description is used to generate tags and improve search results.
@@ -33,6 +33,7 @@ Pod::Spec.new do |s|
   s.header_dir = 'Vuforia'
   
   s.vendored_libraries = 'SDK/lib/arm/libVuforia.a'
+  s.vendored_frameworks = 'SDK/Vuforia.framework'
   
   other_frameworks =  [
     'AVFoundation',

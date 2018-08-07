@@ -126,7 +126,7 @@ export class LayerDetails extends Observable {
 
     @observable()
     @serializable
-    type: 'reality' | 'augmentation' | 'page' = 'augmentation'
+    immersiveMode: 'reality' | 'augmentation' | 'none' = 'augmentation'
 
     @observable()
     @serializable
@@ -144,11 +144,11 @@ export class LayerDetails extends Observable {
                 case 'content.uri': {
                     const contentURI = this.content.uri
                     if (contentURI.startsWith('reality:')) {
-                        this.type = 'reality'
+                        this.immersiveMode = 'reality'
                     } else if (contentURI === '') {
-                        this.type = 'augmentation'
+                        this.immersiveMode = 'augmentation'
                     } else {
-                        this.type = 'page'
+                        this.immersiveMode = 'none'
                     }
                 }
             }
@@ -246,7 +246,7 @@ export class AppModel extends Observable {
         this.on('propertyChange', (evt:PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'layers': 
-                    this.realityLayer = this.layers.slice().find(layer => layer.type === 'reality')
+                    this.realityLayer = this.layers.slice().find(layer => layer.immersiveMode === 'reality')
                     this.focussedLayer = this.layers.getItem(this.layers.length - 1)
                     this.ensureLayersExists()
                     break
@@ -303,9 +303,9 @@ export class AppModel extends Observable {
         return layer.content.title
     }
 
-    getLayerType(layer = this.focussedLayer) {
+    getLayerImmersiveMode(layer = this.focussedLayer) {
         if (!layer) return ''
-        return layer.type
+        return layer.immersiveMode
     }
 
     private _fixURI(uri) {
@@ -323,7 +323,7 @@ export class AppModel extends Observable {
         return uriObject.toString()
     }
 
-    openURI(uri: string) {
+    openURI(uri = '') {
         uri = this._fixURI(uri)
         const bookmarkItem = new BookmarkItem({uri})
         if (!this.getLayerURI()) {
@@ -338,7 +338,7 @@ export class AppModel extends Observable {
         }
     }
 
-    loadURI(uri: string, layer = this.focussedLayer) {
+    loadURI(uri = '', layer = this.focussedLayer) {
         if (!layer) {
             this.openURI(uri)
             return
@@ -406,7 +406,7 @@ export class AppModel extends Observable {
 
     ensureLayersExists() {
         if (this.layers.length === 0) this.layers = new ObservableArray(...defaultLayers.slice())
-        const nonRealityLayer = this.layers.slice().find(layer => layer.type !== 'reality')
+        const nonRealityLayer = this.layers.slice().find(layer => layer.immersiveMode !== 'reality')
         if (!nonRealityLayer) {
             this.layers.push(new LayerDetails())
         }

@@ -82,13 +82,13 @@ export const updateUI = () => {
         uiLabel.sizeToFit()
     }
 
-    const layerType = appModel.getLayerType()
+    const layerImmersiveMode = appModel.getLayerImmersiveMode()
 
     if (screenOrientation === 90 || screenOrientation === -90) {
         hideSystemUI()
     } else if (appModel.uiMode !== 'hidden' || 
                 appModel.layerPresentation === 'overview' || 
-                layerType === 'page') {
+                layerImmersiveMode === 'none') {
         showSystemUI()
     } else {
         hideSystemUI()
@@ -495,7 +495,7 @@ export function showSystemUI() {
         decorView.setSystemUiVisibility(uiOptions);
     }
 
-    if (appModel.getLayerType() === 'page' && appModel.uiMode === 'full') {
+    if (appModel.getLayerImmersiveMode() === 'none' && appModel.uiMode === 'full') {
         topView.animate({
             scale: {x:1,y:0},
             curve: AnimationCurve.easeInOut,

@@ -4,10 +4,10 @@ Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
  
-@file 
+\file
     MetalRenderer.h
 
-@brief
+\brief
     Header file for Metal renderer classes.
 ===============================================================================*/
 
@@ -15,28 +15,28 @@ countries.
 #define _VUFORIA_METALRENDERER_H_
 
 // Include files
-#if defined (__arm__) || (__arm64__)
 #include <Metal/Metal.h>
 #include <Vuforia/Renderer.h>
 
 namespace Vuforia
 {
 
-/// Metal-specific classes
+// Metal-specific classes
 
+/// Metal-specific texture data.
 /**
- *  MetalTextureData object passed to Vuforia to set the Metal texture pointer
+ *  MetalTextureData object passed to %Vuforia to set the Metal texture pointer
  *  to the video background texture created by the app.
  *
- *  Use with Vuforia::Renderer::setVideoBackgroundTexture and in conjunction
- *  with Vuforia::Renderer::updateVideoBackgroundTexture
+ *  Use with Renderer::setVideoBackgroundTexture() and in conjunction
+ *  with Renderer::updateVideoBackgroundTexture().
  */
 class VUFORIA_API MetalTextureData : public TextureData
 {
 public:
+    /// Convenience constructor
     /**
-     *  videoBackgroundTexture is a convenience that allows
-     *  mVideoBackgroundTexture to be set when the object is constructed.
+     * \param videoBackgroundTexture The video background texture to use.
      */
     MetalTextureData(id<MTLTexture> videoBackgroundTexture = nil);
     ~MetalTextureData();
@@ -47,20 +47,21 @@ public:
 };
 
 
+/// Metal-specific texture unit.
 /**
- *  MetalTextureUnit object passed to Vuforia to set the video background
+ *  MetalTextureUnit object passed to %Vuforia to set the video background
  *  texture unit after updating the background image data. The fragment texture
  *  is set on the current render command encoder at the index specified by
  *  mTextureIndex.
  *
- *  Use with Vuforia::Renderer::updateVideoBackgroundTexture
+ *  Use with Renderer::updateVideoBackgroundTexture()
  */
 class VUFORIA_API MetalTextureUnit : public TextureUnit
 {
 public:
+    /// Convenience constructor
     /**
-     *  textureIndex is a convenience that allows mTextureIndex to be
-     *  set when the object is constructed.
+     * \param textureIndex The index of this texture unit.
      */
     MetalTextureUnit(int textureIndex = 0);
     ~MetalTextureUnit();
@@ -71,6 +72,7 @@ public:
 };
 
 
+/// Metal-specific render data.
 /**
  *  MetalRenderData object passed to Vuforia when performing Metal rendering
  *  operations. Pass a pointer to the current drawable texture and a pointer
@@ -87,7 +89,7 @@ public:
  *  will be in the buffer before Vuforia adds it commands, or a new encoder
  *  that loads the data from the texture at the start of its render pass).
  * 
- *  Use with Vuforia::Renderer::begin and Vuforia::Renderer::end
+ *  Use with Renderer::begin() and Renderer::end()
  */
 class VUFORIA_API MetalRenderData : public RenderData
 {
@@ -105,5 +107,4 @@ public:
 
 } // namespace Vuforia
 
-#endif // (__arm__) || (__arm64__)
 #endif // _VUFORIA_METALRENDERER_H_

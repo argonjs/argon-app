@@ -1,13 +1,13 @@
 /*===============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Anchor.h
 
-@brief
+\brief
     Header file for Anchor class.
 ===============================================================================*/
 
@@ -20,21 +20,23 @@ countries.
 namespace Vuforia
 {
 
-/// A target representing a spatial anchor
+/// A type of Trackable that represents a spatial anchor point.
 /**
- *  An instance of the Anchor class represents a spatial anchor, which is a
- *  real-world pose that can be used for accurate positioning of objects in AR.
- *  Anchors can be created and destroyed via the DeviceTracker.
+ * An Anchor represents a fixed position and orientation (pose) relative to the
+ * real world. It can be used to accurately position objects in augmented reality.
+ *
+ * The lifecycle of an Anchor is managed by the PositionalDeviceTracker. See
+ * PositionalDeviceTracker::createAnchor() and PositionalDeviceTracker::destroyAnchor()
+ * for more information.
  */
 class VUFORIA_API Anchor : public Trackable
 {
 public:
 
-    /// Returns the Trackable class' type
+    /// Get the Type for class 'Anchor'
     static Type getClassType();
 };
 
 } // namespace Vuforia
-
 
 #endif // _VUFORIA_ANCHOR_H_

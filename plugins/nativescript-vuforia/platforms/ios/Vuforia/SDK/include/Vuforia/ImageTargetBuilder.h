@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     ImageTargetBuilder.h
 
-@brief
+\brief
     Header file for ImageTargetBuilder class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_IMAGE_TARGET_BUILDER_H_
 #define _VUFORIA_IMAGE_TARGET_BUILDER_H_
 
@@ -21,74 +22,87 @@ countries.
 namespace Vuforia
 {
 
+// Forward declarations
 class TrackableSource;
 
-/// ImageTargetBuilder
+/// A helper class for creating ImageTarget instances from runtime data.
 class VUFORIA_API ImageTargetBuilder
 {
 public:
 
    enum FRAME_QUALITY {
        FRAME_QUALITY_NONE = -1, ///< getFrameQualty was called oustside of scanning mode
-       FRAME_QUALITY_LOW = 0,   ///< Poor number of features for tracking
-       FRAME_QUALITY_MEDIUM,    ///< Sufficient number features for tracking
-       FRAME_QUALITY_HIGH,      ///< Ideal number of features for tracking
+       FRAME_QUALITY_LOW = 0,   ///< The frame does not have enought features for tracking
+       FRAME_QUALITY_MEDIUM,    ///< The frame has sufficient features for tracking, but
+                                ///< tracking may not be particularly good.
+       FRAME_QUALITY_HIGH,      ///< The frame has an ideal number of features; tracking
+                                ///< will likely be high quality.
    };
-   
 
-   /// Build an Image Target Trackable source from the next available camera frame 
+   /// Build an ImageTarget from the next available camera frame.
    /**
-    * Build an Image Target Trackable Source from the next available camera frame.
-    * This is an asynchronous process, the result of which will be available from
-    * getTrackableSource().
+    * The target is built asynchronously. The result of the build process will
+    * be made available via getTrackableSource().
     *
-    * Note, the ImageTargetBuilder class must be in scan mode for a successful
-    * target to be built.  This allows you to provide feedback to the end user
-    * as to what the quality of the current frame is before creating a target.
+    * \note The ImageTargetBuilder must be in scan mode (startScan()) to build a
+    * target successfully. Before calling build(), you should call startScan()
+    * and report the values from getFrameQuality() to the user, to guide them in
+    * selecting an appropriate target and camera position relative to the target.
     *
-    * This method will return true if the build was successfully started, and false
-    * if an invalid name or sceenSizeWidth is provided.
+    * \returns true if the build was successfully started, or false if an
+    * invalid name or sceneSizeWidth is provided.
     */
    virtual bool build(const char* name, float sceneSizeWidth) = 0;
 
-
-   /// Start the scanning mode, allowing calls to getFrameQuality()
+   /// Start the scanning mode, allowing calls to getFrameQuality().
    /**
-    * Starts the internal frame scanning process, allowing calls to getFrameQuality()
+    * Starts the internal frame scanning process, allowing calls to getFrameQuality().
+    *
+    * \note Running the scanning mode may incur a performance penalty. You should
+    * use startScan() and stopScan() in a fine-grained manner so that the scanning
+    * is only run when it is needed.
     */
    virtual void startScan() = 0;
 
-
-   /// Stop the scanning mode
+   /// Stop the scanning mode.
    /**
-    * Stop the scanning mode, getFrameQuality will return FRAME_QUALITY_NONE until
-    * startScan is called again.  Stopping scan mode will reduce the overall system
-    * utilization when not building ImageTargets.
+    * getFrameQuality() will return FRAME_QUALITY_NONE until startScan() is
+    * called again.
+    *
+    * \note Running the scanning mode may incur a performance penalty. You should
+    * use startScan() and stopScan() in a fine-grained manner so that the scanning
+    * is only run when it is needed.
     */
    virtual void stopScan() = 0;
 
-   
-   /// Get frame quality, available after startScan is called.
+   /// Get the quality (i.e. suitability as an image target) of the current frame.
    /**
-    * Will return the frame quality for the last available camera frame, a value
-    * of FRAME_QUALITY_NONE will be returned if the scanning mode was not enabled.
-    * via the startScan() method.
+    * \returns The quality of the last available camera frame with respect to its
+    * suitability as an image target, or FRAME_QUALITY_NONE if scanning mode is
+    * not enabled (see startScan()).
     */
    virtual FRAME_QUALITY getFrameQuality() const = 0;
 
-   
-   /// Returns a trackable source object to be used in adding a new target to a dataset
+   /// Get a TrackableSource which can be used to add the built target to a DataSet.
    /**
-    * This method will return a TrackableSource to be provided to the DataSet.  This 
-    * API will return NULL until a trackable source is available.  This trackable
-    * source will be provided via this api until build() is called again, at which
-    * point it will return NULL again until a successful build step has occured.
+    * This method should be called after calling build().
+    *
+    * It will return NULL until build() has completed its asynchronous work, at
+    * which point the the returned TrackableSource should be passed to
+    * DataSet::createTrackable().
+    *
+    * Repeated calls to getTrackableSource() will continue to return the same
+    * TrackableSource until build() is called again.
+    *
+    * \returns A TrackableSource representing the frame captured by a previous
+    * call to build(); or NULL if the last call to build() is still processing,
+    * or if build() has not yet been called.
     */
    virtual TrackableSource* getTrackableSource() = 0;
 
 protected:
-   virtual ~ImageTargetBuilder()  {}
 
+   virtual ~ImageTargetBuilder() {}
 };
 
 } // namespace Vuforia

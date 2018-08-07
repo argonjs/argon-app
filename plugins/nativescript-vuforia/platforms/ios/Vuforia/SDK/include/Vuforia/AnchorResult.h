@@ -1,13 +1,13 @@
 /*==============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file 
+\file
     AnchorResult.h
 
-@brief
+\brief
     Header file for AnchorResult class. 
 ==============================================================================*/
 
@@ -21,19 +21,15 @@ countries.
 namespace Vuforia
 {
 
-/// AnchorResult class.
-/**
- *  The AnchorResult defines trackable results returned
- *  by a DeviceTracker, representing a spatial anchor
- */
+/// Tracking data resulting from tracking an Anchor.
 class VUFORIA_API AnchorResult : public TrackableResult
 {
 public:
 
-    /// Returns the TrackableResult class' type
+    /// Get the Type for class 'AnchorResult'
     static Type getClassType();
 
-    /// Returns the corresponding Trackable that this result represents
+    /// Get the Anchor that participated in generating this result.
     virtual const Anchor& getTrackable() const = 0;
 };
 

@@ -19,8 +19,8 @@ export class XRDevice extends Observable {
     constructor(public browserView:BrowserView) {
         super()
         
-        browserView.on('layerAdded', this.onLayerAddedBound)
-        browserView.on('layerDeleted', this.onLayerDeletedBound)
+        browserView.on('layerAdded', this.onLayerAdded, this)
+        browserView.on('layerDeleted', this.onLayerDeleted, this)
 
         browserView.layers.forEach((layer)=>{
             this.onLayerAdded({layer})
@@ -29,20 +29,15 @@ export class XRDevice extends Observable {
 
     onLayerAdded(evt:{layer:LayerView}) {
         const layer = evt.layer
-        layer.on('propertyChanged', this.onLayerPropertyChanged)
+        layer.on('propertyChange', this.onLayerPropertyChange, this)
     }
     
     onLayerDeleted(evt:{layer:LayerView}) {
         const layer = evt.layer
-        layer.off('propertyChanged', this.onLayerPropertyChangedBound)
+        layer.off('propertyChange', this.onLayerPropertyChange, this)
     }
 
-    onLayerPropertyChanged(evt:PropertyChangeData) {
-    }    
-
-    onLayerAddedBound = this.onLayerAdded.bind(this)
-    onLayerDeletedBound = this.onLayerAdded.bind(this)
-    onLayerPropertyChangedBound = this.onLayerPropertyChanged.bind(this)
+    onLayerPropertyChange(evt:PropertyChangeData) {}
 
     sendNextFrameState() {
         for (const layer of this.browserView.layers) {
@@ -102,14 +97,22 @@ export class XRVuforiaDevice extends XRDevice {
                     }
                     break
                 case 'layerPresentation':
-                case 'focussedLayer.type':
+                case 'focussedLayer.immersiveMode':
                     this._updateCameraEnabled()
                     break
             }
         })
 
-        browserView.on('layoutChanged', () => {
-            this.configureVuforiaVideoBackground()
+        vuforia.videoView.on('layoutChanged', () => {
+            this.configureView()
+        })
+
+        vuforia.api.setStateUpdateCallback((state) => {
+            // const frame = state.getFrame()
+            // const index = frame.getIndex()
+            // const renderingPrimitives = this._renderingPrimitives
+            // renderingPrimitives.
+            this.sendNextFrameState()
         })
 
         this._setControllingLayer(null)
@@ -144,12 +147,8 @@ export class XRVuforiaDevice extends XRDevice {
         }
     }
 
-    onLayerPropertyChanged(evt:PropertyChangeData) {
-        switch (evt.propertyName) {
-            case 'xrEnabled':
-            case 'xrImmersiveMode':
-                this._updateCameraEnabled()
-        }
+    onLayerPropertyChange(evt:PropertyChangeData) {
+        
     }
 
     private _zoomFactor = 1;
@@ -159,7 +158,7 @@ export class XRVuforiaDevice extends XRDevice {
     @bind
     private _handlePinchGestureEventData(data: PinchGestureEventData) {
         if (appModel.layerPresentation !== 'stack' || 
-            appModel.focussedLayer && appModel.focussedLayer.type === 'page')
+            appModel.focussedLayer && appModel.focussedLayer.immersiveMode === 'none')
             return
 
         switch (data.state) {
@@ -178,25 +177,28 @@ export class XRVuforiaDevice extends XRDevice {
         }
 
         this._effectiveZoomFactor = Math.abs(this._zoomFactor - 1) < 0.05 ? 1 : this._zoomFactor
-        this.configureVuforiaVideoBackground()
+        this.configureView()
     }
 
-    private _vuforiaIsInitialized = false;
-    private _cameraEnabled = false;
+    private _vuforiaIsInitialized = false
+    private _cameraEnabled = false
+    private _renderingPrimitives:vuforia.RenderingPrimitives
 
     private _updateCameraEnabled() {
         const shouldEnableCamera = 
             appModel.layerPresentation !== 'stack' || 
             appModel.focussedLayer === undefined || 
-            appModel.focussedLayer.type !== 'page'
+            appModel.focussedLayer.immersiveMode !== 'none'
             
         if (shouldEnableCamera !== this._cameraEnabled) {
-            this._cameraEnabled = shouldEnableCamera;
+            this._cameraEnabled = shouldEnableCamera
             if (this._vuforiaIsInitialized) {
-                if (shouldEnableCamera) 
-                    vuforia.api.getCameraDevice().start();
-                else 
-                    vuforia.api.getCameraDevice().stop();
+                if (shouldEnableCamera) {
+                    vuforia.api.getCameraDevice().start()
+                    this.configureView()
+                } else {
+                    vuforia.api.getCameraDevice().stop()
+                }
             }
         }
     }
@@ -339,7 +341,7 @@ export class XRVuforiaDevice extends XRDevice {
                 const fps = renderer.getRecommendedFps(vuforia.FPSHint.Fast);
                 renderer.setTargetFps(fps);
                 
-                this.configureVuforiaVideoBackground()
+                this.configureView()
                 
                 if (this._cameraEnabled) {
                     if (!vuforia.api.getCameraDevice().start()) 
@@ -564,7 +566,7 @@ export class XRVuforiaDevice extends XRDevice {
         return trackables;
     }
 
-    private _handleObjectTrackerLoadDataSet(layer:LayerView|null, id:string) : Promise<Argon.VuforiaTrackables> {
+    private _handleObjectTrackerLoadDataSet(layer:LayerView|null, id:string) : Promise<XRVuforiaTrackables> {
         return this._getLayerState(layer).commandQueue.push(()=>{
             return this._objectTrackerLoadDataSet(layer, id);
         });
@@ -674,7 +676,7 @@ export class XRVuforiaDevice extends XRDevice {
 
     private _config = <vuforia.VideoBackgroundConfig>{};
 
-    public configureVuforiaVideoBackground(reflection=vuforia.VideoBackgroundReflection.Default, viewport?:{top:number,left:number,width:number,height:number}) {
+    public configureView(viewport?:{top:number,left:number,width:number,height:number}) {
     
         const videoView = vuforia.videoView;
         const viewWidth = viewport ? viewport.width : videoView.getActualSize().width;
@@ -741,6 +743,7 @@ export class XRVuforiaDevice extends XRDevice {
 
         const renderer = vuforia.api.getRenderer();
         renderer.setVideoBackgroundConfig(config);
+        this._renderingPrimitives = vuforia.api.getDevice().getRenderingPrimitives()
     }
 
 }

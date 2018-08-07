@@ -1,20 +1,22 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2015 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file
+\file
     ViewerParameters.h
 
-@brief
+\brief
     Header file for ViewerParameters class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_VIEWER_PARAMETERS_H_
 #define _VUFORIA_VIEWER_PARAMETERS_H_
 
+// Include files
 #include <Vuforia/System.h>
 #include <Vuforia/Vuforia.h>
 #include <Vuforia/Vectors.h>
@@ -22,12 +24,12 @@ countries.
 namespace Vuforia
 {
 
-/// Container class for parameters needed to define a viewer
+/// Container class for parameters needed to define a viewer.
 class VUFORIA_API ViewerParameters
 {
 public:
 
-    /// Possible viewer button types
+    /// Possible viewer button types.
     enum BUTTON_TYPE
     {
         BUTTON_TYPE_NONE = 0,       ///< The viewer has no button.
@@ -36,7 +38,7 @@ public:
         BUTTON_TYPE_BUTTON_TOUCH,   ///< The viewer has a button which touches the screen when pressed.
     };
 
-    /// Possible viewer tray alignment values
+    /// Possible viewer tray alignment values.
     enum TRAY_ALIGNMENT
     {
         TRAY_ALIGN_BOTTOM = 0,      ///< The bottom of the phone is aligned with the bottom of the viewer.
@@ -46,55 +48,55 @@ public:
 
     virtual ~ViewerParameters();
 
-    /// Copy constructor
+    /// Copy constructor.
     ViewerParameters(const ViewerParameters &);
 
-    /// Assignment operator
+    /// Assignment operator.
     ViewerParameters& operator= (const ViewerParameters &);
 
-    /// Returns the version of this ViewerParameters.
+    /// Get the version of this ViewerParameters.
     virtual float getVersion() const;
 
-    /// Returns the name of the viewer.
+    /// Get the name of the viewer.
     virtual const char* getName() const;
 
-    /// Returns the manufacturer of the viewer.
+    /// Get the manufacturer of the viewer.
     virtual const char* getManufacturer() const;
 
-    /// Returns the type of button in the viewer.
+    /// Get the type of button in the viewer.
     virtual BUTTON_TYPE getButtonType() const;
 
-    /// Returns the distance between the phone screen and the viewer lens' in meters.
+    /// Get the distance between the phone screen and the viewer lens' in meters.
     virtual float getScreenToLensDistance() const;
 
-    /// Returns the distance between the viewer lens' in meters.
+    /// Get the distance between the viewer lens' in meters.
     virtual float getInterLensDistance() const;
 
-    /// Returns how the phone sits within the viewer.
+    /// Get how the phone sits within the viewer.
     virtual TRAY_ALIGNMENT getTrayAlignment() const;
 
-    /// Returns the distance between the lens' and the tray position in meters.
+    /// Get the distance between the lens' and the tray position in meters.
     virtual float getLensCentreToTrayDistance() const;
 
-    /// Returns the number of distortion coefficients specified for the viewer lens'.
+    /// Get the number of distortion coefficients specified for the viewer lens.
     virtual size_t getNumDistortionCoefficients() const;
 
-    /// Returns the distortion coefficient at the specified index, 0 if index is out of range.
+    /// Get the distortion coefficient at the specified index, 0 if index is out of range.
     virtual float getDistortionCoefficient(int idx) const;
 
-    /// Get field-of-view of the lens'.
+    /// Get the field-of-view of the lens.
     /**
-     * \return a Vector containing the half angles in order 
-     *         outer (ear), inner (nose), top, bottom
+     * \returns a 4D vector containing the field of view of the viewer, expressed
+     * as half angles, in degrees, in order (outer (ear), inner (nose), top, bottom)
      */
     virtual Vec4F getFieldOfView() const;
 
-    /// Returns true if the viewer contains a magnet, false otherwise.
+    /// Get whether the view contains a magnet.
     virtual bool containsMagnet() const;
 
 protected:
-    /// To construct ViewerParameters please use CustomViewerParameters, 
-    /// objects of this type are read-only
+
+    /// Use CustomViewerParameters to construct your own ViewerParameters if necessary.
     ViewerParameters();
 
     class Data;

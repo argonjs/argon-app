@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2013-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Obb2d.h
 
-@brief
+\brief
     Header file for Obb2d class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_OBB2D_H_
 #define _VUFORIA_OBB2D_H_
 
@@ -21,7 +22,7 @@ countries.
 namespace Vuforia
 {
 
-/// An Obb2D represents a 2D oriented bounding box
+/// A 2D oriented bounding box.
 class VUFORIA_API Obb2D
 {
 public:
@@ -33,29 +34,36 @@ public:
     Obb2D(const Obb2D& other);
 
     /// Construct from center, half extents and rotation.
+    /**
+     * \param nCenter The center of the box.
+     * \param nHalfExtents The half width and half height of the (unrotated) box
+     * \param nRotation Counter-clock-wise rotation angle with respect to the X
+     * axis, in radians.
+     */
     Obb2D(const Vec2F& nCenter, const Vec2F& nHalfExtents,
         float nRotation);
 
-    /// Returns the center of the bounding box.
+    /// Get the center of the bounding box.
     virtual const Vec2F& getCenter() const;
 
-    /// Returns the half width and half height of the bounding box.
+    /// Get the half width and half height of the bounding box.
     virtual const Vec2F& getHalfExtents() const;
 
-    /// Returns the counter-clock-wise rotation angle (in radians) 
-    /// of the bounding box with respect to the X axis.
+    /// Get the rotation angle of the box.
+    /**
+     * \returns the counter-clock-wise rotation angle of the bounding box, in radians
+     */
     virtual float getRotation() const;
 
     virtual ~Obb2D();
 
 protected:
+
     Vec2F center;
     Vec2F halfExtents;
     float rotation;
 };
 
-
 } // namespace Vuforia
-
 
 #endif // _VUFORIA_OBB2D_H_

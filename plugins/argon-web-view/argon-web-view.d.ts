@@ -1,5 +1,4 @@
 import {WebView} from 'ui/web-view'
-import {SessionPort} from '@argonjs/argon';
 import {Observable, EventData} from 'data/observable';
 import {ObservableArray} from 'data/observable-array';
 import {Property} from 'ui/core/properties'

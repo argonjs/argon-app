@@ -6,12 +6,13 @@ Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Tool.h
 
-@brief
+\brief
     Header file for global Tool functions.
 ===============================================================================*/
+
 #ifndef _VUFORIA_TOOL_H_
 #define _VUFORIA_TOOL_H_
 
@@ -26,64 +27,82 @@ namespace Vuforia
 // Forward declarations
 class CameraCalibration;
 
-/// Tool functions
+/// Various geometry and linear algebra utility functions.
 namespace Tool
 {
-    /// Returns a 4x4 col-major OpenGL model-view matrix from a 3x4 Vuforia pose
-    /// matrix.
+    /// Convert a 3x4 %Vuforia pose matrix to an 4x4 column-major OpenGL model-view matrix.
     /**
-     *  Vuforia uses 3x4 row-major matrices for pose data. convertPose2GLMatrix()
-     *  takes such a pose matrix and returns an OpenGL compatible model-view
-     *  matrix.
+     *  %Vuforia uses 3x4 row-major matrices for pose data. This function
+     *  takes such a pose matrix (rotation, translation) and returns an
+     *  OpenGL-compatible model-view matrix.
      */
     VUFORIA_API Matrix44F convertPose2GLMatrix(const Matrix34F& pose);
 
-    /// Returns a 4x4 col-major OpenGL matrix from a 3x4 Vuforia matrix.
+    /// Convert a 3x4 %Vuforia matrix to an 4x4 column-major OpenGL matrix.
     /**
-     *  Vuforia uses 3x4 row-major matrices.
-     *  convert2GLMatrix() takes such a matrix and returns an OpenGL compatible matrix.
+     *  %Vuforia uses 3x4 row-major matrices. This function takes such a matrix
+     *  (which may or may not represent a transformation/pose) and returns an
+     *  OpenGL-compatible matrix.
      */
     VUFORIA_API Matrix44F convert2GLMatrix(const Matrix34F& matrix34F);
 
-    /// Returns a 4x4 col-major OpenGL perspective projection matrix from a 3x4 Vuforia perspective projection
-    /// matrix.
+    /// Convert a 3x4 %Vuforia perspective projection matrix to a 4x4 column-major OpenGL matrix.
     /**
-     *  Vuforia uses 3x4 row-major matrices for perspective projection data. convertPerspectiveProjection2GLMatrix()
-     *  takes such a perspective projection matrix and returns an OpenGL compatible perspective projection matrix.
+     *  %Vuforia uses 3x4 row-major matrices for perspective projection data.
+     *  This function takes such a perspective projection matrix and returns an
+     *  OpenGL-compatible perspective projection matrix using the given near
+     *  and far planes.
      */
     VUFORIA_API Matrix44F convertPerspectiveProjection2GLMatrix(const Matrix34F& projection, float nearPlane, float farPlane);
 
-    /// Returns an OpenGL style projection matrix (DEPRECATED).
+    /// Get an OpenGL-compatible projection matrix (DEPRECATED).
     /**
-     *  Deprecated: This API has been deprecated. It will be removed in an 
-     *  upcoming Vuforia release. To get a projection matrix for rendering your scene,
-     *  please use the RenderingPrimitives::getProjectionMatrix() API.
+     *  \deprecated This function has been deprecated. It will be removed in an
+     *  upcoming %Vuforia release. To get a projection matrix for rendering your scene,
+     *  please use RenderingPrimitives::getProjectionMatrix(), and convert it to an
+     *  OpenGL-compatible matrix with Tool::convertPerspectiveProjection2GLMatrix.
      */
     VUFORIA_API Matrix44F getProjectionGL(const CameraCalibration& calib,
                                        float nearPlane, float farPlane);
 
-    /// Projects a 3D scene point into the camera image(device coordinates)
-    /// given a pose in form of a 3x4 matrix.
+    /// Project a 3D scene point onto a camera image.
     /**
-     *  The projectPoint() function takes a 3D point in scene coordinates and
-     *  transforms it using the given pose matrix. It then projects it into the
-     *  camera image (pixel coordinates) using the given camera calibration.
-     *  Note that camera coordinates are usually different from screen
-     *  coordinates, since screen and camera resolution can be different.
-     *  Transforming from camera to screen coordinates requires another
-     *  transformation using the settings applied to the Renderer via the
-     *  VideoBackgroundConfig structure.
+     *  This function takes a 3D point in scene coordinates and transforms it
+     *  using the given pose matrix, then projects it onto the camera image and
+     *  returns the result in pixel coordinates.
+     *
+     *  \param calib The camera calibration, used to compensate for visual distortion
+     *  \param pose The pose matrix to use to transform the point.
+     *  \param point A point in the same space as the pose matrix that you want
+     *  to transform to camera coordinates.
+     *
+     *  \returns A point in the camera image, in device coordinates (pixels).
+     *
+     *  \note Because the camera resolution and screen resolution can be different,
+     *  camera coordinates are usually not the same as screen coordinates. If you
+     *  need screen coordinates, apply another transformation using the same
+     *  VideoBackgroundConfig data as you used for Renderer::setVideoBackgroundConfig()
+     *  to convert camera pixel coordinates to screen pixel coordinates.
      */
     VUFORIA_API Vec2F projectPoint(const CameraCalibration& calib,
                                 const Matrix34F& pose, const Vec3F& point);
 
-    /// Project a camera coordinate down to a plane aligned on the x-y plane with 
-    /// the given pose.  Returns the offset along the plane from its origin.
+    /// Project a camera coordinate onto a plane with given pose.
+    /**
+     * \param calib The camera calibration, used to compensate for visual distortion
+     * \param pose A pose matrix describing the origin and orientation of the
+     * plane (the plane itself occupies on the X-Y axes with normal in the Z axis
+     * direction)
+     * \param screenPoint The point to project, in camera coordinates (not the
+     * same as screen coordinates - see projectPoint())
+     * \returns An point in the coordinates of the plane (i.e. an offset from the
+     * origin in the X-Y plane) that corresponds to the input screenPoint.
+     */
     VUFORIA_API Vec2F projectPointToPlaneXY(const CameraCalibration& calib,
                                          const Matrix34F& pose, 
                                          const Vec2F& screenPoint);
 
-    /// Multiplies two Vuforia pose matrices
+    /// Multiply two %Vuforia pose matrices together and return the result.
     /**
      *  In order to apply a transformation A on top of a transformation B,
      *  perform: multiply(B,A).
@@ -91,43 +110,42 @@ namespace Tool
     VUFORIA_API Matrix34F multiply(const Matrix34F& matLeft,
                                 const Matrix34F& matRight);
 
-    /// Multiplies two Vuforia-style 4x4-matrices (row-major order)
+    /// Multiply two Vuforia-style 4x4-matrices (row-major order) and return the result.
     VUFORIA_API Matrix44F multiply(const Matrix44F& matLeft,
                                 const Matrix44F& matRight);
 
-    /// Multiplies 1 vector and 1 Vuforia-style 4x4-matrix (row-major order)
+    /// Multiply a vector and a %Vuforia-style 4x4-matrix (row-major order) and return the result.
     VUFORIA_API Vec4F multiply(const Vec4F& vec,
                             const Matrix44F& mat);
 
-    /// Multiplies 1 Vuforia-style 4x4-matrices (row-major order) and 1 vector
+    /// Multiply a %Vuforia-style 4x4-matrix (row-major order) and a vector and return the result.
     VUFORIA_API Vec4F multiply(const Matrix44F& mat,
                             const Vec4F& vec);
 
-    /// Multiplies two GL-style matrices (col-major order)
+    /// Multiply two OpenGL-style matrices (col-major order) and return the result.
     VUFORIA_API Matrix44F multiplyGL(const Matrix44F& matLeft,
                                   const Matrix44F& matRight);
 
-    /// Sets the translation part of a 3x4 pose matrix
+    /// Set the translation part of a %Vuforia-style 3x4 pose matrix.
     VUFORIA_API void setTranslation(Matrix34F& pose,
                                  const Vec3F& translation);
 
-    /// Sets the rotation part of a 3x4 pose matrix using axis-angle as input
+    /// Set the rotation part of a %Vuforia-style 3x4 pose matrix.
     /**
-     *  The axis parameter defines the 3D axis around which the pose rotates.
-     *  The angle parameter defines the angle in degrees for the rotation
-     *  around that axis.
+     * \param pose The pose matrix on which the rotation should be set.
+     * \param axis The 3D axis around which the pose should rotate
+     * \param angle The angle to rotate around the axis, in degrees.
      */
     VUFORIA_API void setRotation(Matrix34F& pose,
                               const Vec3F& axis, float angle);
 
-    /// Sets the rotation part of a 3x4 pose matrix using quaternion as input
+    /// Set the rotation part of a %Vuforia-style 3x4 pose matrix.
     /**
-     * Quaternion is represented in Vec4F as (x, y, z, w)
+     * \param pose The pose matrix on which the rotation should be set.
+     * \param quaternion A 4D vector describing the rotation to set as a quaternion
+     * (x, y, z, w)
      */
     VUFORIA_API void setRotationFromQuaternion(Matrix34F& pose, const Vec4F& quaternion);
-
-
-
 } // namespace Tool
 
 } // namespace Vuforia

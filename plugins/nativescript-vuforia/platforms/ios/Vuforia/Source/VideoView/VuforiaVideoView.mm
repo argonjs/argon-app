@@ -282,9 +282,7 @@ namespace{
         
         Vuforia::Matrix44F projectionMatrix;
         
-        Vuforia::Matrix34F projMatrix = renderingPrimitives.getProjectionMatrix(vw,
-                                                                                Vuforia::COORDINATE_SYSTEM_CAMERA,
-                                                                                NULL);
+        Vuforia::Matrix34F projMatrix = renderingPrimitives.getProjectionMatrix(vw, NULL, NULL);
         
         Vuforia::Matrix44F rawProjectionMatrixGL = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(
                                                                                                         projMatrix,

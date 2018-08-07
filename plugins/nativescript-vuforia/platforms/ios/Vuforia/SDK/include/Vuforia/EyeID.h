@@ -1,17 +1,18 @@
 /*==============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file 
+\file
     EyeID.h
 
-@brief
+\brief
     Header file for EyeID enum. 
 ==============================================================================*/
+
 #ifndef _VUFORIA_EYEID_H_
 #define _VUFORIA_EYEID_H_
 

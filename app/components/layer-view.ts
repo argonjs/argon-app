@@ -51,8 +51,9 @@ export interface LayerView {
     on(event: "xrCreateMidAirAnchor", callback: (data: XRCreateMidAirAnchorData) => void, thisArg?: any);
 }
 
-const WEBXR_SOURCE = fileSystem.knownFolders.currentApp().getFile('js/webxr-polyfill.js').readTextSync()
-// const WEBXR_SOURCE = fileSystem.File.fromPath('~/js/webxr-polyfill.js')
+const WEBXR_FILE = fileSystem.knownFolders.currentApp().getFile('js/webxr-polyfill.js')
+let WEBXR_SOURCE = WEBXR_FILE.readTextSync()
+let WEBXR_LAST_MODIFIED = WEBXR_FILE.lastModified
 
 export class LayerView extends GridLayout {
 
@@ -64,10 +65,9 @@ export class LayerView extends GridLayout {
 
     @observable()
     private needsTransparentBackground = false
-    private backgroundFadeTimerId?:number
+    // private backgroundFadeTimerId?:number
     
     webView: ArgonWebView
-    containerView: GridLayout
     contentView: GridLayout
     touchOverlay: GridLayout
     titleBar: GridLayout
@@ -83,10 +83,19 @@ export class LayerView extends GridLayout {
     constructor(details: LayerDetails) {
         super()
 
+        this.horizontalAlignment = 'left';
+        this.verticalAlignment = 'top';
+        this.clipToBounds = false;
+
         const webView = new ArgonWebView() 
         webView.visibility = 'collapse'
         webView.horizontalAlignment = 'stretch'
         webView.verticalAlignment = 'stretch'
+
+        if (WEBXR_FILE.lastModified.getTime() > WEBXR_LAST_MODIFIED.getTime()) {
+            WEBXR_LAST_MODIFIED = WEBXR_FILE.lastModified
+            WEBXR_SOURCE = WEBXR_FILE.readTextSync()
+        }
 
         if (webView.ios) {
             const wkWebView = webView.ios as WKWebView
@@ -96,7 +105,6 @@ export class LayerView extends GridLayout {
         } else if (webView.android) {
             // TODO: inject WebXR
         }
-
 
         webView.on('urlChange', () => {
             const uri = webView!.url
@@ -116,8 +124,8 @@ export class LayerView extends GridLayout {
             this.xrEnabled = true
         }
         
-        webView.messageHandlers['xr.setImmersiveMode'] = (options:{type:XRImmersiveMode}) => {
-            this.xrImmersiveMode = options.type
+        webView.messageHandlers['xr.setImmersiveMode'] = (options:{mode:XRImmersiveMode}) => {
+            this.xrImmersiveMode = options.mode
         }
 
         webView.messageHandlers['xr.hitTest'] = (options:{x:number,y:number}) => {
@@ -155,11 +163,6 @@ export class LayerView extends GridLayout {
             if (evt.result) return Promise.resolve(evt.result)
             else return Promise.reject()
         }
-
-        const containerView = this;
-        containerView.horizontalAlignment = 'left';
-        containerView.verticalAlignment = 'top';
-        containerView.clipToBounds = false;
 
         const contentView = new GridLayout();
         contentView.horizontalAlignment = 'stretch';
@@ -218,15 +221,14 @@ export class LayerView extends GridLayout {
         progressBar.height = 5;
         progressBar.visibility = 'collapse';
 
-        containerView.addChild(contentView);
-        containerView.addChild(touchOverlay);
-        containerView.addChild(titleBar);
+        this.addChild(contentView);
+        this.addChild(touchOverlay);
+        this.addChild(titleBar);
         contentView.addChild(progressBar);
         contentView.addChild(webView);
         
         Object.assign(this, {
             webView,
-            containerView,
             contentView,
             touchOverlay,
             titleBar,
@@ -275,28 +277,32 @@ export class LayerView extends GridLayout {
                 case 'xrImmersiveMode': {
                     this.needsTransparentBackground = 
                         this.xrEnabled && this.xrImmersiveMode !== 'none'
+                    this.details.immersiveMode = this.xrImmersiveMode
                     break
                 }
                 case 'needsTransparentBackground': {
-                    if (this.backgroundFadeTimerId !== undefined) {
-                        clearTimeout(this.backgroundFadeTimerId)
-                    }
-                    this.backgroundFadeTimerId = setTimeout(()=>{
+                    // if (this.backgroundFadeTimerId !== undefined) {
+                    //     clearTimeout(this.backgroundFadeTimerId)
+                    // }
+                    // this.backgroundFadeTimerId = setTimeout(()=>{
                         const transparent = this.needsTransparentBackground
                         if (this.webView.ios) {
                             const wkWebView = this.webView.ios as WKWebView
-                            const color = transparent ? UIColor.clearColor : UIColor.whiteColor;
+                            const transparentColor = UIColor.colorWithCIColor(CIColor.clearColor)
+                            const whiteColor = UIColor.colorWithCIColor(CIColor.whiteColor)
+                            const color = transparent ? transparentColor : whiteColor;
+                            wkWebView.opaque = !transparent
+                            wkWebView.scrollView.opaque = !transparent
                             wkWebView.scrollView.backgroundColor = color
-                            wkWebView.backgroundColor = color
-                            wkWebView.opaque = !transparent;     
+                            wkWebView.backgroundColor = color  
                         }
                         if (this.webView.android) {
                             const androidWebView = this.webView.android as android.webkit.WebView
                             const color = transparent ? android.graphics.Color.TRANSPARENT : android.graphics.Color.WHITE
                             androidWebView['setBackgroundColor'](color)
                         }
-                        this.backgroundFadeTimerId = undefined
-                    }, 200)
+                        // this.backgroundFadeTimerId = undefined
+                    // }, 200)
                 }
             }
         })
@@ -310,7 +316,7 @@ export class LayerView extends GridLayout {
     private _updateUI() {
         const title = this.details.content ? this.details.content.title : ''
 
-        if (this.details.type === 'reality') {
+        if (this.details.immersiveMode === 'reality') {
             this.titleBar.backgroundColor = new Color(0xFF222222);
             this.titleLabel.color = new Color('white');        
             this.titleLabel.text = title ? 'Reality' : 'Reality: ' + title
@@ -320,7 +326,7 @@ export class LayerView extends GridLayout {
             this.titleLabel.text = title
         }
 
-        if (this.details.type === 'page') {
+        if (this.details.immersiveMode === 'none') {
             this.marginTop = appModel.safeAreaInsets.top
         } else {
             this.marginTop = 0

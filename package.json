@@ -5,11 +5,10 @@
       "version": "4.0.1"
     },
     "tns-ios": {
-      "version": "4.2.0-2018-07-21-01"
+      "version": "4.2.0-rc-2018-08-02-02"
     }
   },
   "dependencies": {
-    "@argonjs/argon": "^1.4.0-58",
     "argon-private": "file:../argon-private/src",
     "argon-web-view": "file:plugins/argon-web-view",
     "domino": "^2.0.2",

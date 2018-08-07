@@ -1,13 +1,13 @@
 /*===============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file 
+\file
     ModelTargetResult.h
 
-@brief
+\brief
     Header file for the ModelTargetResult class.  Exposes the result of 
     detecting and tracking a three dimensional rigid body.
 ===============================================================================*/
@@ -22,17 +22,17 @@ countries.
 namespace Vuforia
 {
 
-/// Result from detecting and tracking a rigid three dimensional body.
+
+/// Tracking data resulting from tracking a ModelTarget.
 class VUFORIA_API ModelTargetResult : public ObjectTargetResult
 {
 public:
 
-    /// Returns the TrackableResult class' type
+    /// Get the Type for class 'ModelTargetResult'.
     static Type getClassType();
 
-    /// Returns the corresponding Trackable that this result represents
+    /// Get the ModelTarget that participated in generating this result.
     virtual const ModelTarget& getTrackable() const = 0;
-
 };
 
 } // namespace Vuforia

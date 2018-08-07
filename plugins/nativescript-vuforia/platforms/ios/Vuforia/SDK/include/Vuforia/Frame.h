@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Frame.h
 
-@brief
+\brief
     Header file for Frame class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_FRAME_H_
 #define _VUFORIA_FRAME_H_
 
@@ -25,52 +26,62 @@ namespace Vuforia
 class Image;
 class FrameData;
 
-/// Frame is a collection of different representations of a single
-/// camerasnapshot
+
+/// A collection of different representations of a single image captured from a camera.
 /**
- *  A Frame object can include an arbitrary number of image representations in
- *  different formats or resolutions together with a time stamp and frame index.
- *  Frame implements the RAII pattern: A newly created frame holds
- *  new image data whereas copies share this data. The image data held by
- *  Frame exists as long as one or more Frame objects referencing this image
- *  data exist.
+ * A Frame object can include an arbitrary number of image representations in
+ * different formats or resolutions together with a time stamp and frame index.
+ *
+ * If any of the configured Trackers require particular frame formats internally,
+ * these will be included in getNumImages()/getImage(). It is not possible to
+ * predict in advance exactly which frame formats will be used, however, so if
+ * you require a specific image representation you should request it using
+ * Vufora::setFrameFormat().
+ *
+ * Frame implements the RAII pattern: A newly created frame holds
+ * new image data whereas copies share this data. The image data held by
+ * Frame exists as long as one or more Frame objects referencing this image
+ * data exist.
  */
 class VUFORIA_API Frame
 {
 public:
-    /// Creates a new frame
+
+    /// Creates a new frame.
     Frame();
 
-    /// Creates a reference to an existing frame
+    /// Creates new references to an existing frame's data.
     Frame(const Frame& other);
 
-    /// Destructor
+    /// Destructor.
     ~Frame();
 
-    /// Thread safe assignment operator
+    /// Thread safe assignment operator.
     Frame& operator=(const Frame& other);
 
-    /// A time stamp in seconds that defines when the camera image was shot
+    /// Get the time stamp (in seconds) of this frame.
     /**
-     *  Independent from image buffer creation the time stamp always refers to
-     *  the time the camera image was shot.
-     *  This time is taken on a monotonic timer on all platforms. However the
-     *  frame of reference is platform and device dependent. For example on one
-     *  device it may represent the time elapsed since application start, on
-     *  others since device start.
+     * The time stamp of a frame is the time when the image was captured,
+     * independent of when the image buffer itself was created.
+     *
+     * The time stamp is measured in seconds, and represents the time elapsed since
+     * some reference time. The reference time is platform and device specific,
+     * but is usually either the time when the application was launched or the
+     * time the device started up.
      */
     double getTimeStamp() const;
-    
-    /// Index of the frame
+
+    /// Get the index of this frame.
     int getIndex() const;
 
-    /// Number of images in the images-array
+    /// Get the number of images referenced by this frame.
     unsigned int getNumImages() const;
 
-    /// Read-only access to an image
+    /// Get one of the images referenced by this frame.
     const Image* getImage(int idx) const;
 
 protected:
+
     FrameData* mData;
 };
 

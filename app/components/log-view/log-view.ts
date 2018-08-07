@@ -11,6 +11,7 @@ let shadow:Label;
 export function onLayoutLoaded(args) {
     const layout:Layout = args.object;
     layout.backgroundColor = new Color('transparent');
+    layout.bindingContext = {getLogText}
 }
 
 export function onLoaded(args) {

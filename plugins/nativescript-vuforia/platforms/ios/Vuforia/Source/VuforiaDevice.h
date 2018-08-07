@@ -175,12 +175,11 @@ typedef NS_ENUM (NSInteger, VuforiaView)
 /// Returns a viewport for the given display in the format (x, y, width, height) normalized between 0 and 1
 -(VuforiaVec4F)getNormalizedViewport:(VuforiaView)viewID;
 
-/// Returns the projection matrix to use for the given view and the specified coordinate system
--(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType;
+/// Returns the projection matrix to use for the given view
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID;
 
-/// Returns the projection matrix to use for the given view and the specified coordinate system
+/// Returns the projection matrix to use for the given view
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
-                     coordinateSystem:(VuforiaCoordinateSystemType)csType
                     cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
      adjustForViewportCentreToEyeAxis:(BOOL)adjust;
 

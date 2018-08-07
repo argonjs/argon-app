@@ -75,7 +75,7 @@ export function getInternalVuforiaKey() : string|undefined {
 export function bringToFront(view: View) {
   if (view.android) {
     view.android.bringToFront();
-  } else if (view.ios) {
+  } else if (view.ios && view.ios.superview) {
     view.ios.superview.bringSubviewToFront(view.ios);
   }
 }

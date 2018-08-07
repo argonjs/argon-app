@@ -276,28 +276,19 @@
     return (VuforiaVec4F&)v;
 }
 
-/// Returns the projection matrix to use for the given view and the specified coordinate system
--(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
-                     coordinateSystem:(VuforiaCoordinateSystemType)csType {
-    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,
-                                                         (Vuforia::COORDINATE_SYSTEM_TYPE)csType,
-                                                         NULL);
-//    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000);
-//    return (VuforiaMatrix44&)m44;
+/// Returns the projection matrix to use for the given view
+-(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID {
+    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, NULL);
     return (VuforiaMatrix34&)m;
 }
 
-/// Returns the projection matrix to use for the given view and the specified coordinate system
+/// Returns the projection matrix to use for the given view
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
-                     coordinateSystem:(VuforiaCoordinateSystemType)csType
                     cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
      adjustForViewportCentreToEyeAxis:(BOOL)adjust{
     Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,
-                                                         (Vuforia::COORDINATE_SYSTEM_TYPE)csType,
                                                          (const Vuforia::CameraCalibration*)cameraCalibration.cpp,
                                                          adjust);
-//    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000);
-//    return (VuforiaMatrix44&)m44;
     return (VuforiaMatrix34&)m;
 }
 

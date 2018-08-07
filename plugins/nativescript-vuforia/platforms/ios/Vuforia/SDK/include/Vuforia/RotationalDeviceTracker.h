@@ -1,106 +1,123 @@
 /*==============================================================================
-Copyright (c) 2015-2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file 
+\file
     RotationalDeviceTracker.h
 
-@brief
+\brief
     Header file for RotationalDeviceTracker class. 
 ==============================================================================*/
+
 #ifndef _VUFORIA_ROTATIONAL_DEVICE_TRACKER_H_
 #define _VUFORIA_ROTATIONAL_DEVICE_TRACKER_H_
 
+// Include files
 #include <Vuforia/DeviceTracker.h>
 
 namespace Vuforia
 {
+
+// Forward declarations
 class TransformModel;
 class HandheldTransformModel;
 class HeadTransformModel;
 
 
-/// RotationalDeviceTracker class.
+/// A type of DeviceTracker that tracks the world-relative rotation of a device.
 /**
- *  The RotationalDeviceTracker tracks a device in the world by relying on
- *  sensor tracking. The RotationalDeviceTracker publishes a DeviceTrackableResult.
- *  DeviceTrackableResult objects are in world coordinate system 
- *  and use a physical unit (meter).
- *  A RotationalDeviceTracker can use model correction to improve the 
- *  returned pose based on the context usage (e.g. on the  head for doing 
- *  head tracking, holding a device in your hands for handheld tracking, etc.). 
- *  This tracker also supports a pose prediction mode to improve the quality 
- *  of the returned pose. This mode is only applicable with a VR configuration.
+ * The RotationalDeviceTracker tracks a device in the world using device
+ * sensors (gyroscope and accelerometer).
+ *
+ * While this Tracker is running, the device's position and rotation are made
+ * available on the State class as a DeviceTrackableResult containing a 3DOF
+ * pose in the world coordinate system.
+ *
+ * You may use setModelCorrection() with one of the TransformModel instances
+ * returned from getDefaultHeadModel() and getDefaultHandheldModel() to use a
+ * correction model to improve the returned pose based on the usage context
+ * (e.g. on the head for doing head tracking, holding a device in your hands
+ * for handheld tracking, etc.). See HeadTransformModel and
+ * HandheldTransformModel for more details.
+ *
+ * When using a RotationalDeviceTracker in a VR application, you can call
+ * setPosePrediction(true) to improve the quality of the returned pose.
  */
 class VUFORIA_API RotationalDeviceTracker : public DeviceTracker
 {
 public:
 
-    /// Returns the Tracker class' type
+    /// Get the Type for class 'RotationalDeviceTracker'.
     static Type getClassType();
 
-    /// Reset the current pose.
+    /// Reset the coordinate system to the current rotation.
     /**
-     *  Reset the current pose heading in the world coordinate system.
-     *  Useful if you want to reset the direction the device is pointing too
-     *  without impacting the current pitch or roll angle (your horizon).
+     * Create a new world coordinate system with the device's current rotation
+     * as the origin.
+     *
+     * This is useful if you want to reset the direction the device is pointing
+     * without impacting the current pitch or roll angle (your horizon).
+     *
+     * \returns true if the tracker was successfully re-centered, otherwise false
+     * (check application logs for failure details).
      */
     virtual bool recenter() = 0;
 
-    ///  Enable pose prediction to reduce latency.
+    /// Enable pose prediction to reduce latency.
     /**
-     *  Recommended to use this mode for VR experience.
-     *  Return true if pose prediction is supported
+     * You should always enable pose prediction for VR experiences.
+     *
+     * \returns true if pose prediction is requested and supported, otherwise false.
      */
     virtual bool setPosePrediction(bool enable) = 0;
 
-    // Get the current pose prediction mode
+    /// Get the current pose prediction mode.
     /**
-     *  by default prediction is off.
+     * By default prediction is off.
      */
     virtual bool getPosePrediction() const = 0;
 
-    /// Enable usage of a model correction for the pose
+    /// Enable usage of a transform correction model for the pose.
     /**
-     *  Specify a correction mode of the returned pose.
-     *  Correction mode are based on transformation model, defining the context
-     *  usage of the tracker.
-     *  For example, if you device tracker for doing head tracking (VR), you
-     *  can set a HeadTransformModel to the tracker and pose will be adjusted 
-     *  consequently. The rotational device tracker support two transform models:
-     *  - HeadTransformModel: for head tracking (VR, rotational AR experience)
-     *  - HandheldTransformModel: for handheld tracking.
-     *  by default no transform model is used.
-     *  Passing NULL as argument disable the usage of the model correction.
+     * Specify a correction model for the pose passed to the State.
+     *
+     * Correction is based on a transformation model that makes assumptions
+     * about the usage context to improve the pose matrix.
+     *
+     * For example, if you use a device tracker for head tracking (VR), you
+     * can pass a HeadTransformModel here, and the pose will be adjusted
+     * appropriately.
+     *
+     * The rotational device tracker support two transform models:
+     * - HeadTransformModel: for head tracking (VR, rotational AR experience)
+     * - HandheldTransformModel: for handheld tracking.
+     *
+     * By default no transform model is used.
+     *
+     * \param transformationmodel The transformation model to use, or NULL to
+     * disable model correction.
+     * \returns true on success, otherwise false (check application logs for
+     * failure details).
      */
     virtual bool setModelCorrection(const TransformModel* transformationmodel) = 0;
 
-    /// Get the current correction model
+    /// Get the current correction model.
     /**
-     *  return the currently set transform model used for correction.
-     *  by default no transform model are used, will return to null.
+     * \returns the transform model instance currently being used for
+     * correction, or NULL if no transform model is in use.
      */
     virtual const TransformModel* getModelCorrection() const = 0;
 
-    /// Return the default head transform model
-    /**
-     *  utility method to get the recommended Head model. 
-     *  Unit is in meter.
-     */
+    /// Get a head transform model with a default configuration.
     virtual const HeadTransformModel* getDefaultHeadModel() const = 0;
 
-    /// Returns the default handheld transform model
-    /**
-     *  utility method to get the recommended handheld model.
-     *  Unit is in meter.
-     */   
+    /// Get a handheld transform model with a default configuration.
     virtual const HandheldTransformModel* getDefaultHandheldModel() const = 0;
 };
-
 
 } // namespace Vuforia
 

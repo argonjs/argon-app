@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Image.h
 
-@brief
+\brief
     Header file for Image class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_IMAGE_H_
 #define _VUFORIA_IMAGE_H_
 
@@ -22,68 +23,78 @@ countries.
 namespace Vuforia
 {
 
-/// An image as e.g. returned by the CameraDevice object
+/// Represents an image, typically as returned by the CameraDevice.
 /**
- *  The image's pixel buffer can have a different size than the
- *  getWidth() and getHeight() methods report. This is e.g. the
- *  case when an image is used for rendering as a texture without
- *  non-power-of-two support.
- *  The real size of the image's pixel buffer can be queried using
- *  getBufferWidth() and getBufferHeight(). 
+ * The image's pixel buffer may have a different size than expected based on the
+ * return values from getWidth() and getHeight(). This typically happens when
+ * case when an image is used for rendering as a texture without non-power-of-two
+ * support.
+ *
+ * If you need the actual size of the image's pixel buffer, call getBufferWidth()
+ * and getBufferHeight().
  */
 class VUFORIA_API Image : private NonCopyable
 {
 public:
-    /// Returns the width of the image in pixels
+
+    /// Get the width of the image in pixels.
     /**
-     *  getWidth() returns the number of pixels in the pixel buffer that make up
-     *  the used image area. The pixel buffer can be wider than this. Use
-     *  getBufferWidth() to find out the real width of the pixel buffer.
+     *  \returns the number of pixels in the pixel buffer that make up
+     *  the used image area.
+     *
+     *  \note The pixel buffer can be wider than this. Use getBufferWidth() to
+     *  get the actual width of the pixel buffer.
      */
     virtual int getWidth() const = 0;
 
-    /// Returns the height of the image in pixels
+    /// Get the height of the image in pixels.
     /**
-     *  getHeight() returns the number of pixel rows in the pixel buffer that
-     *  make up the used image area. The pixel buffer can have more rows than
-     *  that. Use getBufferHeight() to find out the real number of rows that fit
-     *  into the buffer.
+     *  \returns the number of pixel rows in the pixel buffer that
+     *  make up the used image area.
+     *
+     *  \note The pixel buffer can have more rows than this. Use getBufferHeight()
+     *  to get the actual number of rows in the pixel buffer.
      */
     virtual int getHeight() const = 0;
 
-    /// Returns the number bytes from one row of pixels to the next row
+    /// Get the number of bytes between the start of a pixel row and the start of the next.
     /**
-     *  Per default the stride is number-of-pixels times bytes-per-pixel.
-     *  However, in some cases there can be additional padding bytes at
-     *  the end of a row (e.g. to support power-of-two textures).
+     * Typically, the stride is (numberOfPixels * bytesPerPixel).
+     *
+     * However, in some cases there may be additional padding at the end of a
+     * row (for example to pad the image data to a power-of-two size).
      */
     virtual int getStride() const = 0;
 
-    /// Returns the number of pixel columns that fit into the pixel buffer
+    /// Get the width (number of columns) of the underlying pixel buffer.
     /**
-     *  Per default the number of columns that fit into the pixel buffer
-     *  is identical to the width of the image.
-     *  However, in some cases there can be additional padding columns at
-     *  the right side of an image (e.g. to support power-of-two textures).
+     * Typically, this is the same as getWidth().
+     *
+     * However, in some cases there may be additional padding at the end of a
+     * row (for example to pad the image data to a power-of-two size).
      */
     virtual int getBufferWidth() const = 0;
 
-    /// Returns the number of rows that fit into the pixel buffer
+    /// Get the height (number of rows) of the underlying pixel buffer.
     /**
-     *  Per default the number of rows that fit into the pixel buffer
-     *  is identical to the height of the image.
-     *  However, in some cases there can be additional padding rows at
-     *  the bottom of an image (e.g. to support power-of-two textures).
+     * Typically, this is the same as getHeight().
+     *
+     * However, in some cases there may be additional padding rows at the bottom
+     * of an image (for example to pad the image data to a power-of-two size).
      */
     virtual int getBufferHeight() const = 0;
 
-    /// Returns the pixel format of the image
+    /// Get the pixel format of the image.
     virtual PIXEL_FORMAT getFormat() const = 0;
 
-    /// Provides read-only access to pixel data
+    /// Get a pointer to the start of the underlying pixel buffer.
+    /**
+     * The returned buffer is (getBufferHeight() * getStride()) bytes in size.
+     */
     virtual const void* getPixels() const = 0;
 
 protected:
+
     virtual ~Image() {}
 };
 

@@ -1,15 +1,16 @@
 /*===============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file
+\file
 ModelTarget.h
 
-@brief
+\brief
 Header file for the ModelTarget Trackable type.
 ===============================================================================*/
+
 #ifndef _VUFORIA_MODELTARGET_H_
 #define _VUFORIA_MODELTARGET_H_
 
@@ -20,65 +21,98 @@ Header file for the ModelTarget Trackable type.
 
 namespace Vuforia
 {
-    class GuideView;
 
-    /// A target for tracking rigid three-dimensional bodies.
-    class VUFORIA_API ModelTarget : public ObjectTarget
-    {
-    public:
+// Forward declarations
+class GuideView;
 
-        /// Returns the Trackable class' type
-        static Type getClassType();
+/// A type of ObjectTarget that recognizes and tracks objects by shape using existing 3D models.
+/**
+ * \note
+ * It is not possible to modify a ModelTarget while its DataSet is active. See
+ * the DataSet class for more information.
+ */
+class VUFORIA_API ModelTarget : public ObjectTarget
+{
+public:
 
-        /// Returns the system-wide unique id of the target.
-        /**
-        *  The target id uniquely identifies an ObjectTarget across multiple
-        *  Vuforia sessions. The system wide unique id may be generated off-line.
-        *  This is opposed to the function getId() which is a dynamically
-        *  generated id and which uniquely identifies a Trackable within one run
-        *  of Vuforia only.
-        */
-        virtual const char* getUniqueTargetId() const = 0;
+    /// Return the Type for class "ModelTarget".
+    static Type getClassType();
 
-        /// Returns the size (width, height, depth) of the target (in 3D scene units).
-        virtual Vec3F getSize() const = 0;
+    /// Get the persistent system-wide unique id for this target.
+    /**
+     *  A target's unique id, which may be generated offline, identifies an
+     *  ObjectTarget across multiple %Vuforia sessions. It is a property of
+     *  %Vuforia's model of the object being tracked, and typically resides
+     *  on permanent storage as part of loadable DataSet.
+     *
+     *  \note
+     *  Be careful not to confuse getUniqueTargetId() (which is persistent
+     *  across %Vuforia sessions) with Trackable::getId() (which is generated
+     *  at runtime and not persistent).
+     */
+    virtual const char* getUniqueTargetId() const = 0;
 
-        /// Set the size (width, height, depth) of the target (in 3D scene units).
-        /**
-        *  The dataset this target belongs to should not be active when calling
-        *  this function, otherwise it will fail.
-        *  We expect the scale factor to be uniform, and if the given size
-        *  corresponds to non-uniform scaling based on the original size,
-        *  we return false.
-        *  Returns true if the size was set successfully, false otherwise.
-        */
-        virtual bool setSize(const Vec3F& size) = 0;
+    /// Get the size of this target.
+    /**
+     * \return The size of this target, in meters (width, height, depth).
+     */
+    virtual Vec3F getSize() const = 0;
 
-        /// Gets the bounding box of the target (in 3D scene units)
-        /**
-         * If the bounding box has been queried and setSize is called, getBoundingBox()
-         * needs to be called again to have the correct size.
-         */
-        virtual const Obb3D& getBoundingBox() const = 0;
+    /// Apply a uniform scale to this target that makes it the given size.
+    /**
+     * The given size must represent a uniform scaling of the original target's
+     * size.
+     *
+     * If you try to set a size that is not the result of a uniform scaling of
+     * the model stored in the DataSet, this method will fail.
+     *
+     * \note
+     * The DataSet that this Target belongs must not be active when this function
+     * is called.
+     *
+     * \note
+     * Rescaling the target should only be used if you have different physical
+     * copies of the same object at different sizes (for example if you have a
+     * toy version of a real physical object. Do not use this method if you want
+     * to virtually re-scale the pose returned by the tracker - this should be
+     * handled by your own application logic.
+     *
+     * \param size The desired size of the target, in meters (width, height, depth).
+     * \returns true if the size was set successfully, or false if the DataSet
+     * is active or the requested size does not represent a uniform scaling of
+     * the size of model stored in the DataSet.
+     */
+    virtual bool setSize(const Vec3F& size) = 0;
 
-        /// Returns the number of guide views
-        /**
-        * guide views are the entry points that the application can use to snap to the trackables
-        */
-        virtual int getNumGuideViews() const = 0;
+    /// Get the bounding box of this target.
+    /**
+     * \note
+     * A call to setSize() will change the bounding box. If you have cached the
+     * result of getBoundingBox(), you will need to call it again to obtain an
+     * updated bounding box after every call to setSize().
+     *
+     * \returns An axis-aligned box that completely encloses the 3D geometry
+     * that this ModelTarget represents, including any scaling applied via
+     * setSize().
+     */
+    virtual const Obb3D& getBoundingBox() const = 0;
 
-        /// Returns a pointer to a GuideView object
-        /**
-        * The pointer to the guide view is not owned by the caller of this function.
-        * The application can use the information stored in GuideView to provide visual
-        * feedback to use user about how to position the camera in order to snap to a
-        * specific object
-        */
-        virtual GuideView * getGuideView(int idx) = 0;
-    };
+    /// Get the number of <span>GuideView</span>s for this target.
+    virtual int getNumGuideViews() const = 0;
+
+    /// Get one of this target's <span>GuideView</span>s.
+    /**
+     * A GuideView provides a visual guide that your application can show to aid
+     * users in initializing the tracking of a ModelTarget.
+     *
+     * \param idx The GuideView to return, in the range 0..getNumGuideViews()-1
+     * \returns The requested GuideView. This ImageTarget instance retains
+     * ownership of the returned object.
+    */
+    virtual GuideView * getGuideView(int idx) = 0;
+    
+};
 
 } // namespace Vuforia
 
 #endif //_VUFORIA_MODELTARGET_H_
-
-

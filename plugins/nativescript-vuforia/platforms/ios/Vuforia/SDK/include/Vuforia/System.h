@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     System.h
 
-@brief
+\brief
     System specific definitions.
 ===============================================================================*/
+
 #ifndef _VUFORIA_SYSTEM_H_
 #define _VUFORIA_SYSTEM_H_
 
@@ -19,7 +20,6 @@ countries.
 #if defined(_WIN32_WCE) || defined(WIN32) || defined(_WIN32)
 #  define VUFORIA_IS_WINDOWS
 #endif
-
 
 // Define exporting/importing of methods from module
 //

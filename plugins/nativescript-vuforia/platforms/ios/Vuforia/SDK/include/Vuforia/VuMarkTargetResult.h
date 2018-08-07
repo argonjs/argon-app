@@ -1,13 +1,13 @@
 /*===============================================================================
-Copyright (c) 2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2016,2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other
 countries.
 
-@file 
+\file
     VuMarkTargetResult.h
 
-@brief
+\brief
     Header file for VuMarkTargetResult class.
 ===============================================================================*/
 #ifndef _VUFORIA_VUMARKTARGETRESULT_H_
@@ -20,25 +20,37 @@ countries.
 namespace Vuforia
 {
 
-/// Result for a VuMarkTarget. 
+/// Tracking data resulting from tracking a VuMarkTarget.
 /**
- *  The same VuMarkTarget can have multiple physical instances on screen
- *  simultaneously. In this case each appearance has its own VuMarkTargetResult,
- *  pointing to the same VuMarkTarget with the same instance ID.
+ * A single VuMarkTarget can appear in multiple physical locations simultaneously.
+ * In this case each appearance is tracked separately, and each appearance
+ * generates its own VuMarkTargetResult. See getId() for more details.
  */
 class VUFORIA_API VuMarkTargetResult : public ObjectTargetResult
 {
 public:
 
-    /// Returns the TrackableResult class' type
+    /// Get the Type for class 'VuMarkTargetResult'.
     static Type getClassType();
 
-    /// Returns the corresponding Trackable that this result represents
+    /// Get the VuMarkTarget that participated in generating this result.
     virtual const VuMarkTarget& getTrackable() const = 0;
 
-    /// Returns a unique id for a particular VuMark result, which is consistent
-    /// frame-to-frame, while being tracked.  Note that this id is separate 
-    /// from the trackable id.
+    /// Get a unique id for this particular instance of the VuMarkTarget.
+    /**
+     * The unique id is assigned when the VuMark is first detected, and is
+     * consistent as long as the VuMark remains visible.
+     *
+     * When the same VuMarkTarget appears in multiple physical locations in the
+     * camera frame, the separate generated VuMarkTargetResults can be
+     * distinguished using the id returned from this function.
+     *
+     * \note This id has no relationship to the id returned by Trackable::getId().
+     *
+     * \returns A unique id for this particular VuMark result, which remains
+     * consistent as long as the VuMark instance remains visible. (Not related
+     * to Trackable::getId()).
+     */
     virtual int getId() const = 0;
 };
 

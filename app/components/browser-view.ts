@@ -22,6 +22,9 @@ const OVERVIEW_VERTICAL_PADDING = 150
 const OVERVIEW_ANIMATION_DURATION = 300
 const OVERVIEW_ANIMATION_CURVE = AnimationCurve.ease
 
+const TRANSLUCENT_BACKGROUND_COLOR = new Color(128, 255, 255, 255)
+const TRANSPARENT_BACKGROUND_COLOR = new Color(0, 255, 255, 255)
+
 export interface BrowserView extends GridLayout {    
     on(eventNames: string, callback: (data: EventData) => void, thisArg?: any);
     on(event: "layerAdded", callback: (args: EventData&{layer:LayerView}) => void, thisArg?: any);
@@ -90,19 +93,18 @@ export class BrowserView extends GridLayout {
                     break;
                 case 'realityLayer':
                 case 'focussedLayer': {
-                    const focussedLayer = this.focussedLayer
+                    // const focussedLayer = this.focussedLayer
                     this._sortLayers()
-                    if (focussedLayer && focussedLayer !== this.realityLayer) {
-                        bringToFront(focussedLayer);
-                    }
+                    // if (focussedLayer && focussedLayer !== this.realityLayer) {
+                    //     bringToFront(focussedLayer);
+                    // }
                     break;
                 }
             }
         })
 
-        appModel.layers.forEach((layer) => {
-            this._onAddLayer(layer)
-        })
+        appModel.layers.on('change', this._onLayerDetailsArrayChange)
+        appModel.layers.forEach((layer) => this._onAddLayer(layer))
     }
 
     @bind
@@ -159,7 +161,7 @@ export class BrowserView extends GridLayout {
 
         layer.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
-                case 'details.type':
+                case 'details.immersiveMode':
                     this._sortLayers()
                     break;
                 case 'details.src':
@@ -217,13 +219,13 @@ export class BrowserView extends GridLayout {
     private _layerTypeSortRank = {
         'reality': 0,
         'augmentation': 1,
-        'page': 2
+        'none': 2
     }
 
     private _sortLayers() {
         this.layers.sort((a, b) => {
-            const aTypeRank = this._layerTypeSortRank[a.details.type]
-            const bTypeRank = this._layerTypeSortRank[b.details.type]
+            const aTypeRank = this._layerTypeSortRank[a.details.immersiveMode]
+            const bTypeRank = this._layerTypeSortRank[b.details.immersiveMode]
             let result = aTypeRank - bTypeRank
 
             if (result !== 0) return result
@@ -235,6 +237,13 @@ export class BrowserView extends GridLayout {
             if (b.details === appModel.focussedLayer) return -1
 
             return 0
+        })
+
+        this.layers.forEach((layer) => {
+            bringToFront(layer)
+            if (appModel.layerPresentation === 'stack') {
+                this._showLayerInStack(layer)
+            }
         })
     }
 
@@ -335,12 +344,12 @@ export class BrowserView extends GridLayout {
     //         // webView.on('isArgonPageChange', () => {
     //         //     const isArgonPage = webView.isArgonPage || !webView.isLoaded;
     //         //     if (isArgonPage || layer === this.focussedLayer || this._overviewEnabled) {
-    //         //         layer.containerView.animate({
+    //         //         layer.animate({
     //         //             opacity: 1,
     //         //             duration: OVERVIEW_ANIMATION_DURATION
     //         //         });
     //         //     } else {
-    //         //         layer.containerView.opacity = 1;
+    //         //         layer.opacity = 1;
     //         //     }
     //         //     analytics.updateArgonAppCount(this._countArgonApps());
     //         // })
@@ -530,7 +539,7 @@ export class BrowserView extends GridLayout {
     //         throw new Error('Expected layer at index ' + index);
     //     layer.webView && layer.webView.session && layer.webView.session.close();
     //     this.layers.splice(index, 1);
-    //     this.layerContainer.removeChild(layer.containerView); // for now
+    //     this.layerContainer.removeChild(layer); // for now
     // }
 
     // removeLayer(layer:Layer) {
@@ -571,8 +580,8 @@ export class BrowserView extends GridLayout {
 
 
     //     this.layers.forEach((layer)=>{
-    //         layer.containerView.width = dipWidth;
-    //         layer.containerView.height = dipHeight;
+    //         layer.width = dipWidth;
+    //         layer.height = dipHeight;
 
     //         // workaround for layout issue that appeared in ios 11 beta
     //         if (layer.webView && layer.webView.ios) {
@@ -594,8 +603,8 @@ export class BrowserView extends GridLayout {
     //     }
 
     //     this.layers.forEach((layer)=>{
-    //         layer.containerView.width = width;
-    //         layer.containerView.height = height;
+    //         layer.width = width;
+    //         layer.height = height;
     //     });
     // }
 
@@ -660,11 +669,11 @@ export class BrowserView extends GridLayout {
         this.layers.forEach((layer, index) => {
             layer.visualIndex = this._lerp(layer.visualIndex, index, deltaT * 4)
             const transform = this._calculateTargetTransform(layer.visualIndex)
-            layer.containerView.originY = 0
-            layer.containerView.scaleX = transform.scale.x
-            layer.containerView.scaleY = transform.scale.y
-            layer.containerView.translateX = transform.translate.x
-            layer.containerView.translateY = transform.translate.y
+            layer.originY = 0
+            layer.scaleX = transform.scale.x
+            layer.scaleY = transform.scale.y
+            layer.translateX = transform.translate.x
+            layer.translateY = transform.translate.y
             maxTranslateY = Math.max(maxTranslateY, transform.translate.y)
         });
             
@@ -680,24 +689,24 @@ export class BrowserView extends GridLayout {
     private _showLayerInCarousel(layer: LayerView) {
         const idx = this.layers.indexOf(layer);
 
-        layer.containerView.borderRadius = 10;
-        if (layer.containerView.ios) {
-            layer.containerView.ios.layer.masksToBounds = true;
+        layer.borderRadius = 10;
+        if (layer.ios) {
+            layer.ios.layer.masksToBounds = true;
         }
 
 
         if (layer.contentView.ios) {
             layer.contentView.ios.layer.masksToBounds = true;
         }
-        // if (layer.containerView.ios) {
-        //     layer.containerView.ios.layer.masksToBounds = true;
-        // } else if (layer.containerView.android) {
-        //     layer.containerView.android.setClipChildren(true);
+        // if (layer.ios) {
+        //     layer.ios.layer.masksToBounds = true;
+        // } else if (layer.android) {
+        //     layer.android.setClipChildren(true);
         // }
 
 
 
-        // layer.containerView.clipToBounds = true;
+        // layer.clipToBounds = true;
 
         // if (layer.contentView.ios) {
         //     layer.contentView.ios.layer.masksToBounds = true;
@@ -723,10 +732,10 @@ export class BrowserView extends GridLayout {
         // }
 
         // For transparent webviews, add a little bit of opacity
-        layer.containerView.isUserInteractionEnabled = true;
-        layer.containerView.animate({
+        layer.isUserInteractionEnabled = true;
+        layer.animate({
             opacity: 1,
-            backgroundColor: new Color(128, 255, 255, 255),
+            backgroundColor: TRANSLUCENT_BACKGROUND_COLOR,
             duration: OVERVIEW_ANIMATION_DURATION,
         });
         layer.contentView.animate({
@@ -744,7 +753,7 @@ export class BrowserView extends GridLayout {
 
         // Update for the first time & animate.
         const { translate, scale } = this._calculateTargetTransform(idx);
-        layer.containerView.animate({
+        layer.animate({
             translate,
             scale,
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -752,7 +761,7 @@ export class BrowserView extends GridLayout {
         });
     }
 
-    private _layerBackgroundColor = new Color(0, 255, 255, 255);
+    // private _layerBackgroundColor = new Color(0, 255, 255, 255);
 
     private _showLayerInStack(layer: LayerView) {
         const idx = this.layers.indexOf(layer);
@@ -767,20 +776,19 @@ export class BrowserView extends GridLayout {
 
         if (application.ios) {
             // todo: this is causing issues on android, investigate further
-            layer.containerView.isUserInteractionEnabled = this.focussedLayer === layer;
+            layer.isUserInteractionEnabled = this.focussedLayer === layer;
         }
 
-        const visible = this.realityLayer === layer ||
-            layer.details.type !== 'page' ||
-            this.focussedLayer === layer
+        let visible = false
+        if (this.focussedLayer === layer) visible = true
+        if (this.focussedLayer && this.focussedLayer.xrImmersiveMode !== 'none') {
+            if (layer.xrImmersiveMode === 'augmentation') visible = true
+            if (layer === this.realityLayer) visible = true
+        }
 
-        // if (layer.session) {
-        //     appViewModel.argon.provider.visibility.set(layer.session, visible);
-        // }
-
-        layer.containerView.animate({
+        layer.animate({
             opacity: visible ? 1 : 0,
-            backgroundColor: this._layerBackgroundColor,
+            backgroundColor: TRANSPARENT_BACKGROUND_COLOR,
             duration: OVERVIEW_ANIMATION_DURATION,
         });
 
@@ -789,12 +797,12 @@ export class BrowserView extends GridLayout {
             translate: { x: 0, y: 0 },
             duration: OVERVIEW_ANIMATION_DURATION
         }).then(() => {
-            // layer.containerView.clipToBounds = false;
-            if (layer.containerView.ios) layer.containerView.ios.layer.masksToBounds = false;
-            // if (layer.containerView.ios) {
-            //     layer.containerView.ios.layer.masksToBounds = false;
-            // } else if (layer.containerView.android) {
-            //     layer.containerView.android.setClipChildren(false);
+            // layer.clipToBounds = false;
+            if (layer.ios) layer.ios.layer.masksToBounds = false;
+            // if (layer.ios) {
+            //     layer.ios.layer.masksToBounds = false;
+            // } else if (layer.android) {
+            //     layer.android.setClipChildren(false);
             // }
             // if (layer.contentView.ios) {
             //     layer.contentView.ios.layer.masksToBounds = false;
@@ -804,7 +812,7 @@ export class BrowserView extends GridLayout {
         });
 
         setTimeout(() => {
-            layer.containerView.borderRadius = 0;
+            layer.borderRadius = 0;
         }, OVERVIEW_ANIMATION_DURATION * 0.5)
 
         // Hide titlebars
@@ -818,7 +826,7 @@ export class BrowserView extends GridLayout {
 
         // Update for the first time & animate.
         layer.visualIndex = idx;
-        return layer.containerView.animate({
+        return layer.animate({
             translate: { x: 0, y: 0 },
             scale: { x: 1, y: 1 },
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -871,6 +879,7 @@ export class BrowserView extends GridLayout {
     //     return count;
     // }
 
+
     // public loadUrl(url:string) {
     //     if (!this.focussedLayer) this._setFocussedLayer(this.layers[this.layers.length-1]);
     //     if (this.focussedLayer && this.focussedLayer !== this.realityLayer) {
@@ -913,7 +922,7 @@ export class BrowserView extends GridLayout {
     //         if (layer !== this.realityLayer) {
     //             this.layers.splice(this.layers.indexOf(layer), 1);
     //             this.layers.push(layer);
-    //             bringToFront(layer.containerView);
+    //             bringToFront(layer);
     //         }
 
     //         if (previousFocussedLayer) this._showLayerInStack(previousFocussedLayer);

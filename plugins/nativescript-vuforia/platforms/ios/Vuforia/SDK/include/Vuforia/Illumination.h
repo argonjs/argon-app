@@ -1,58 +1,64 @@
 /*===============================================================================
-Copyright (c) 2017 PTC Inc. All Rights Reserved.
+Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Illumination.h
 
-@brief
+\brief
     Header file for the Illumination class.
 ===============================================================================*/
 
 #ifndef _VUFORIA_ILLUMINATION_H_
 #define _VUFORIA_ILLUMINATION_H_
 
+// Include files
 #include <Vuforia/System.h>
 #include <Vuforia/NonCopyable.h>
 
 namespace Vuforia
 {
 
-    
-    
-/// Vuforia abstract representation of the illumination for the current frame
+/// Abstract representation of the illumination for a particular frame.
 /**
- * Objects of this class contain information about the illumination in the current
- * frame. An instance of this class should be obtained from the State and the
- * values used to render augmentations using illumination consistent with the scene.
+ * Objects of this class contain information about the illumination in a particular
+ * camera frame.
+ *
+ * An instance of this class can be obtained from the State. Use its returned
+ * values to render augmentation using illumination consistent with the real
+ * world scene.
  */
 class VUFORIA_API Illumination : private NonCopyable
 {
 public:
-    /// Returned when the ambient intensity is not available,
-    /// see getAmbientIntensity()
+
+    /// Returned by getAmbientIntensity() when data is not available.
     static const float AMBIENT_INTENSITY_UNAVAILABLE;
-    
-    /// Returned when the ambient color temperature is not available
-    /// see getAmbientColorTemperature()
+
+    /// Returned by getAmbientColorTemperature() when data is not available.
     static const float AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE;
-    
-    /// The current ambient intensity for the scene measured in Lumens. The value
-    /// may not be available on all platforms. When the value is unavailable
-    /// AMBIENT_INTENSITY_UNAVAILABLE will be returned.
+
+    /// Get the scene's ambient intensity.
+    /**
+     * \returns The current ambient intensity of the scene, in Lumens, or
+     * AMBIENT_INTENSITY_UNAVAILABLE if the value is not available on the current
+     * platform.
+     */
     virtual float getAmbientIntensity() const = 0;
 
-    /// The current color temperature for the scene measured in Kelvin. The value
-    /// may not be available on all platforms. When the value is unavailable
-    /// AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE will be returned.
+    /// Get the scene's ambient color temperature.
+    /**
+     * \returns The current color temperature of the scene, in Kelvin, or
+     * AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE if the value is not available on
+     * the current platform.
+     */
     virtual float getAmbientColorTemperature() const = 0;
-    
+
     virtual ~Illumination() {}
 };
 
 } // namespace Vuforia
-
 
 #endif // _VUFORIA_ILLUMINATION_H_

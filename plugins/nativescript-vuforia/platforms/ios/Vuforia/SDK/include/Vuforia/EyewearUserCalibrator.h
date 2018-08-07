@@ -1,15 +1,15 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     EyewearUserCalibrator.h
 
-@brief
+\brief
     Header file for EyewearUserCalibrator class.
 ===============================================================================*/
 #ifndef _VUFORIA_EYEWEARUSERCALIBRATOR_H_
@@ -24,7 +24,7 @@ countries.
 namespace Vuforia
 {
 
-/// A class for creating custom user calibration procedures for see-through eyewear
+/// A class for creating custom user calibration procedures for see-through eyewear.
 /**
  *  - Users of optical see-through eyewear devices need to perform a calibration
  *    to determine how to project an augmentation such that it will appear

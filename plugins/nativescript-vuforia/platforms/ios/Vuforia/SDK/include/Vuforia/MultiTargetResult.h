@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     MultiTargetResult.h
 
-@brief
+\brief
     Header file for MultiTargetResult class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_MULTITARGETRESULT_H_
 #define _VUFORIA_MULTITARGETRESULT_H_
 
@@ -22,24 +23,34 @@ countries.
 namespace Vuforia
 {
 
-/// Result for a MultiTarget.
+/// Tracking data resulting from tracking a MultiTarget.
 class VUFORIA_API MultiTargetResult : public ObjectTargetResult
 {
 public:
 
-    /// Returns the TrackableResult class' type
+    /// Get the Type for class 'MultiTargetResult'.
     static Type getClassType();
 
-    /// Returns the corresponding Trackable that this result represents
+    /// Get the MultiTarget that participated in generating this result.
     virtual const MultiTarget& getTrackable() const = 0;
 
-    /// Returns the number of Trackables that form this MultiTarget
+    /// Get the number of the results that the Trackable parts that make up the MultiTarget generated.
     virtual int getNumPartResults() const = 0;
 
-    // Provides access to the TrackableResult for a specific part
+    /// Get a TrackableResult for a specific part of the MultiTarget.
+    /**
+     * \param idx The index of the part, in the range 0..getNumPartResults()-1
+     * \return A TrackableResult for the requested part, or null if the part is
+     * out of range.
+     */
     virtual const TrackableResult* getPartResult(int idx) const = 0;
-
-    // Provides access to the TrackableResult for a specific part
+    
+    /// Get a TrackableResult for a specific part of the MultiTarget.
+    /**
+     * \param name The name of the part.
+     * \return A TrackableResult for the requested part, or null if the part does
+     * not exist.
+     */
     virtual const TrackableResult* getPartResult(const char* name) const = 0;
 };
 

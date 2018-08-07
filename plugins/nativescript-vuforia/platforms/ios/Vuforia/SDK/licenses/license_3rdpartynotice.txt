@@ -1,9 +1,9 @@
-﻿Vuforia SDK v7.1.35
+﻿Vuforia SDK v7.2.23
 PTC Inc.
 =============================================================
 
 This Readme file contains certain notices of software components
-included with the Vuforia SDK v7.1.35  that
+included with the Vuforia SDK v7.2.23  that
 PTC Inc. is required to provide you. Notwithstanding anything in the
 notices in this file, your use of these software components together
 with the Vuforia SDK is subject to the terms of your license from
@@ -16,7 +16,7 @@ property of PTC Inc. or its affiliates.
 
 Software provided with this notice is NOT A CONTRIBUTION to any Open Source project.
 
-Copyright (c) 2012-2017 PTC Inc.
+Copyright (c) 2012-2018 PTC Inc.
 All rights reserved.
 
 PTC is a trademark of PTC Inc., registered in 

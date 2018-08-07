@@ -4,10 +4,10 @@ Copyright (c) 2017-2018 PTC Inc. All Rights Reserved.
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     HitTestResult.h
 
-@brief
+\brief
     Header file for HitTestResult class.
 ===============================================================================*/
 
@@ -22,17 +22,21 @@ countries.
 namespace Vuforia
 {
 
-/// HitTestResult represents the result of a hit test performed by SmartTerrain
+/// The result of a hit test performed by a SmartTerrain.
 class VUFORIA_API HitTestResult : private NonCopyable
 {
 public:
-    /// The position and orientation of the hit test result in the world coordinate system, represented as a pose matrix in row-major order.
+
+    /// Get the position and orientation of the hit result, as a pose matrix.
+    /**
+     * \note The matrix is in row-major order. You may need to use
+     * Tool::convertPose2GLMatrix() or similar if you are using OpenGL.
+     */
     virtual Matrix34F getPose() const = 0;
     
     virtual ~HitTestResult() {}
 };
 
 } // namespace Vuforia
-
 
 #endif // _VUFORIA_HITTESTRESULT_H_

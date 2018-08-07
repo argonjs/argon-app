@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     NonCopyable.h
 
-@brief
+\brief
     Header file for NonCopyable class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_NONCOPYABLE_H_
 #define _VUFORIA_NONCOPYABLE_H_
 
@@ -21,14 +22,16 @@ countries.
 namespace Vuforia
 {
 
-/// Base class for objects that can not be copied
+/// Base class for objects that cannot be copied.
 class VUFORIA_API NonCopyable
 {
 protected:
+
     NonCopyable()  {}  ///< Standard constructor
     ~NonCopyable()  {} ///< Standard destructor
 
 private: 
+
     NonCopyable(const NonCopyable &);             ///< Hidden copy constructor
     NonCopyable& operator= (const NonCopyable &); ///< Hidden assignment operator
 };

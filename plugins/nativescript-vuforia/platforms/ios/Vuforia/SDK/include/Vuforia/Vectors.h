@@ -1,24 +1,25 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     Vectors.h
 
-@brief
+\brief
     Header file for vector structs.
 ===============================================================================*/
+
 #ifndef _VUFORIA_VECTOR_H_
 #define _VUFORIA_VECTOR_H_
 
 namespace Vuforia 
 {
 
-/// 2D vector of float items
+/// 2D vector of real (float) numbers.
 struct Vec2F
 {
     Vec2F()  {}
@@ -39,7 +40,7 @@ struct Vec2F
 };
 
 
-/// 3D vector of float items
+/// 3D vector of real (float) numbers.
 struct Vec3F
 {
     Vec3F()  {}
@@ -61,7 +62,7 @@ struct Vec3F
 };
 
 
-/// 4D vector of float items
+/// 4D vector of real (float) numbers.
 struct Vec4F
 {
     Vec4F()  {}
@@ -84,7 +85,7 @@ struct Vec4F
 };
 
 
-/// 2D vector of int items
+/// 2D vector of integer numbers.
 struct Vec2I
 {
     Vec2I()  {}
@@ -104,7 +105,7 @@ struct Vec2I
 };
 
 
-/// 3D vector of int items
+/// 3D vector of integer numbers.
 struct Vec3I
 {
     Vec3I()  {}
@@ -118,7 +119,7 @@ struct Vec3I
 };
 
 
-/// 4D vector of int items
+/// 4D vector of integer numbers.
 struct Vec4I
 {
     Vec4I()  {}

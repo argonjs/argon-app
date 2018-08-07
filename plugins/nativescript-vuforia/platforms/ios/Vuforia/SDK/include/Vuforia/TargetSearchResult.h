@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     TargetSearchResult.h
 
-@brief
+\brief
     Header file for TargetSearchResult class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_TARGET_SEARCH_RESULT_H_
 #define _VUFORIA_TARGET_SEARCH_RESULT_H_
 
@@ -22,27 +23,33 @@ countries.
 namespace Vuforia
 {
 
-/// A search result of a found target returned by the TargetFinder
+/// A search result returned from a TargetFinder.
 class TargetSearchResult : private NonCopyable
 {
 public:
-    /// Returns the name of the target
+
+    /// Get the name of the target.
     virtual const char* getTargetName() const = 0;
 
-    /// Returns the system-wide unique id of the target.
+    /// Get the system-wide unique id of the target.
     virtual const char* getUniqueTargetId() const = 0;
 
-    /// Returns the width of the target (in 3D scene units)
+    /// Get the width of the target (in meters).
     virtual const float getTargetSize() const = 0;
 
-    /// Returns the metadata associated with this target
+    /// Get the meta data string associated with this target.
+    /**
+     * If tracking on this target is enabled via TargetFinder::enableTracking(),
+     * this string will be available via ImageTarget::getMetaData() on the
+     * associated ImageTarget.
+     */
     virtual const char* getMetaData() const = 0;
 
-    /// Returns the tracking rating for this target
+    /// Get the tracking quality rating for this target.
     /**
-     *  The tracking rating represents a 5-star rating describing the
-     *  suitability of this target for tracking on a scale from 0 to 5. A low
-     *  tracking rating may result in poor tracking or unstable augmentation.
+     * \returns An integer in the range 0..5 that reflects the expected tracking
+     * quality of this target. A low quality rating indicates that tracking may
+     * by poor or unstable for this target.
      */
     virtual unsigned char getTrackingRating() const = 0;
 };

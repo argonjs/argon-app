@@ -1,17 +1,18 @@
 /*===============================================================================
-Copyright (c) 2015-2016 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2012-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
 Vuforia is a trademark of PTC Inc., registered in the United States and other 
 countries.
 
-@file 
+\file
     ImageTargetResult.h
 
-@brief
+\brief
     Header file for ImageTargetResult class.
 ===============================================================================*/
+
 #ifndef _VUFORIA_IMAGETARGETRESULT_H_
 #define _VUFORIA_IMAGETARGETRESULT_H_
 
@@ -22,28 +23,40 @@ countries.
 namespace Vuforia
 {
 
-// Forward declarations:
+// Forward declarations
 class VirtualButtonResult;
 
-/// Result for an ImageTarget.
+/// Tracking data resulting from tracking an ImageTarget.
 class VUFORIA_API ImageTargetResult : public ObjectTargetResult
 {
 public:
 
-    /// Returns the TrackableResult class' type
+    /// Get the Type for class 'ImageTargetResult'.
     static Type getClassType();
 
-    /// Returns the corresponding Trackable that this result represents
+    /// Get the ImageTarget that participated in generating this result.
     virtual const ImageTarget& getTrackable() const = 0;
 
-    /// Returns the number of VirtualButtons defined for this ImageTarget
+    /// Get the number of <span>VirtualButton</span>s that the ImageTarget defines.
     virtual int getNumVirtualButtons() const = 0;
 
-    /// Returns the VirtualButtonResult for a specific VirtualButton
+    /// Get result data for a VirtualButton.
+    /**
+     * \param idx The index of the VirtualButton to get result data for, in the
+     * range 0..getNumVirtualButtons()-1
+     * \return The requested result, or null if idx is out of bounds or if there
+     * was no result for this button.
+     */
     virtual const VirtualButtonResult* getVirtualButtonResult(int idx) const = 0;
 
-    /// Returns the VirtualButtonResult for a specific VirtualButton
+    /// Get result data for a VirtualButton.
+    /**
+     * \param name The name of the VirtualButton to get result data for.
+     * \return The requested result, or null if no such VirtualButton generated
+     * a result.
+     */
     virtual const VirtualButtonResult* getVirtualButtonResult(const char* name) const = 0;
+
 };
 
 } // namespace Vuforia
