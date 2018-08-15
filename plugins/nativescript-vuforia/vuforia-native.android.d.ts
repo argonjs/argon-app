@@ -129,15 +129,6 @@ declare module com {
 			OpimizeQuality = -3
 		}
 
-		export const enum CoordinateSystemType {
-
-			Unknown = 0,
-
-			Camera = 1,
-
-			World = 2
-		}
-
 		export class CylinderTarget extends ObjectTarget {
 		}
 
@@ -431,13 +422,13 @@ declare module com {
 
 			getNormalizedViewport(viewID: View): Vec4F;
 
-			getProjectionMatrix(viewID: View, csType: CoordinateSystemType): Matrix34F;
+			getProjectionMatrix(viewID: View): Matrix34F;
 
 			getRenderingViews(): ViewList;
 
 			getVideoBackgroundMesh(viewID: View): Mesh;
 
-			getVideoBackgroundProjectionMatrix(viewID: View, csType: CoordinateSystemType): Matrix34F;
+			getVideoBackgroundProjectionMatrix(viewID: View): Matrix34F;
 
 			getViewport(viewID: View): Vec4I;
 		}

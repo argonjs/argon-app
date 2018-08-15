@@ -9,6 +9,7 @@
 #if !(TARGET_IPHONE_SIMULATOR)
 
 #import "VuforiaDevice.h"
+#import <Vuforia/Vuforia.h>
 #import <Vuforia/CameraCalibration.h>
 #import <Vuforia/ViewerParametersList.h>
 #import <Vuforia/View.h>

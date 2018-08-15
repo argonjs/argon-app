@@ -810,8 +810,8 @@ export class RenderingPrimitives {
         return createVec4(this.android.getNormalizedViewport(<number>viewID));
     }
     
-    getProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        var mat34 = this.android.getProjectionMatrix(<number>viewID, <number>csType);
+    getProjectionMatrix(viewID: def.View): def.Matrix44 {
+        var mat34 = this.android.getProjectionMatrix(<number>viewID);
         return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000);
     }
     
@@ -824,8 +824,8 @@ export class RenderingPrimitives {
         return new Mesh(mesh);
     }
     
-    getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        var mat34 = this.android.getVideoBackgroundProjectionMatrix(<number>viewID, <number>csType);
+    getVideoBackgroundProjectionMatrix(viewID: def.View): def.Matrix44 {
+        var mat34 = this.android.getVideoBackgroundProjectionMatrix(<number>viewID);
         return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000);
     }
     

@@ -52,12 +52,6 @@ declare module "nativescript-vuforia" {
         AR = 0,
         VR = 1
     }
-    
-    export enum CoordinateSystemType {
-        Unknown = 0,
-        Camera = 1,
-        World = 2
-    }
 
     export enum View {
         Singular = 0,
@@ -380,10 +374,10 @@ declare module "nativescript-vuforia" {
         getDistortionTextureViewport(viewID: View): Vec4;
         getEyeDisplayAdjustmentMatrix(viewID: View): Matrix44;
         getNormalizedViewport(viewID: View): Vec4;
-        getProjectionMatrix(viewID: View, csType: CoordinateSystemType): Matrix44;
+        getProjectionMatrix(viewID: View): Matrix44;
         getRenderingViews(): ViewList;
         getVideoBackgroundMesh(viewID: View): Mesh;
-        getVideoBackgroundProjectionMatrix(viewID: View, csType: CoordinateSystemType): Matrix44;
+        getVideoBackgroundProjectionMatrix(viewID: View): Matrix44;
         getViewport(viewID: View): Vec4;
     }
     

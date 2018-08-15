@@ -33,7 +33,6 @@ Pod::Spec.new do |s|
   s.header_dir = 'Vuforia'
   
   s.vendored_libraries = 'SDK/lib/arm/libVuforia.a'
-  s.vendored_frameworks = 'SDK/Vuforia.framework'
   
   other_frameworks =  [
     'AVFoundation',

@@ -18,9 +18,9 @@ videoView.on('creatingView', (evt)=>{
 videoView.on('loaded', ()=>{
     if (VUFORIA_AVAILABLE) VuforiaSession.onSurfaceCreated();
 })
-videoView.onLayout = function(left, top, right, bottom) {
+videoView.on('layoutChanged', () => {
     if (VUFORIA_AVAILABLE) configureVuforiaSurface();
-}
+})
 
 application.on(application.suspendEvent, ()=> {
     if (VUFORIA_AVAILABLE) {
@@ -720,8 +720,8 @@ export class RenderingPrimitives {
         return this.ios.getNormalizedViewport(<number>viewID);
     }
     
-    getProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        return convertPerspectiveProjection2GLMatrix(this.ios.getProjectionMatrixCoordinateSystem(<number>viewID, <number>csType), 0.01, 100000);
+    getProjectionMatrix(viewID: def.View): def.Matrix44 {
+        return convertPerspectiveProjection2GLMatrix(this.ios.getProjectionMatrix(<number>viewID), 0.01, 100000);
     }
     
     getRenderingViews(): ViewList {
@@ -733,8 +733,8 @@ export class RenderingPrimitives {
         return new Mesh(mesh);
     }
     
-    getVideoBackgroundProjectionMatrix(viewID: def.View, csType: def.CoordinateSystemType): def.Matrix44 {
-        return convertPerspectiveProjection2GLMatrix(this.ios.getVideoBackgroundProjectionMatrixCoordinateSystem(<number>viewID, <number>csType),  0.01, 100000);
+    getVideoBackgroundProjectionMatrix(viewID: def.View): def.Matrix44 {
+        return convertPerspectiveProjection2GLMatrix(this.ios.getVideoBackgroundProjectionMatrix(<number>viewID),  0.01, 100000);
     }
     
     getViewport(viewID: def.View): def.Vec4 {

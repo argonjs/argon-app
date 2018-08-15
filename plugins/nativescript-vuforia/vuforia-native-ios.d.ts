@@ -97,15 +97,6 @@ declare const enum VuforiaCameraDeviceMode {
 	OpimizeQuality = -3
 }
 
-declare const enum VuforiaCoordinateSystemType {
-
-	Unknown = 0,
-
-	Camera = 1,
-
-	World = 2
-}
-
 declare class VuforiaCylinderTarget extends VuforiaObjectTarget {
 }
 
@@ -520,13 +511,13 @@ declare class VuforiaRenderingPrimitives extends NSObject {
 
 	getNormalizedViewport(viewID: VuforiaView): VuforiaVec4F;
 
-	getProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
+	getProjectionMatrix(viewID: VuforiaView): VuforiaMatrix34;
 
 	getRenderingViews(): VuforiaViewList;
 
 	getVideoBackgroundMesh(viewID: VuforiaView): VuforiaMesh;
 
-	getVideoBackgroundProjectionMatrixCoordinateSystem(viewID: VuforiaView, csType: VuforiaCoordinateSystemType): VuforiaMatrix34;
+	getVideoBackgroundProjectionMatrix(viewID: VuforiaView): VuforiaMatrix34;
 
 	getViewport(viewID: VuforiaView): VuforiaVec4I;
 
