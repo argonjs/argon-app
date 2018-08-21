@@ -254,19 +254,13 @@ export class LayerView extends GridLayout {
                     break
                 case 'details.src': {
                     const src = this.details.src
-                    // if not using reality: protocol, needs a web view
-                    const needsWebView = src && !src.startsWith('reality')
+                    
+                    // if not reality:live, needs WebView
+                    const needsWebView = src && src !== 'reality:live'
 
                     if (needsWebView) {
-
                         webView.visibility = 'visible'
-
-                        // if (webView.url === src) {
-                        //     webView.reload();
-                        // } else {
-                            webView.src = <any>new WrappedValue(src);
-                        // }
-
+                        webView.src = <any>new WrappedValue(src)
                     } else {
                         webView.visibility = 'collapse'
                     }
