@@ -14,6 +14,8 @@ import config from './config';
 import {appModel} from './app-model'
 import {bind} from './decorators'
 
+import * as glMatrix from 'gl-matrix'
+
 interface XRView {
     type: 'lefteye'|'righteye'|'singular'|'postprocess',
     viewport: {x:number,y:number,width:number,height:number},
@@ -26,8 +28,12 @@ interface XRFrameState {
     index:number,
     time:number,
     views:Array<XRView>,
-    trackableResults:XRTrackableResults
-    immersiveFramebufferSize: {width:number,height:number}
+    trackableResults:XRTrackableResults,
+    hitTestResults: {
+        [id:string]: Array<{id:string, pose:number[]}>
+    },
+    immersiveSize: {width:number,height:number},
+    contentScaleFactor?: number,
 }
 
 export class XRDevice extends Observable {
@@ -57,6 +63,8 @@ export class XRDevice extends Observable {
 
     sendNextFrameState(state:XRFrameState) {
         for (const layer of this.browserView.layers) {
+            state.contentScaleFactor = this.browserView.focussedLayer === layer ? 
+                screen.mainScreen.scale : 1
             if (layer.xrEnabled) layer.webView.send('xr.frame', state)
         }
     }
@@ -99,7 +107,7 @@ export interface XRDataSetTrackables {
     }
 }
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.OptimizeSpeed;
+export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
  //platform.isAndroid ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
 
 export class XRVuforiaDevice extends XRDevice {
@@ -108,12 +116,16 @@ export class XRVuforiaDevice extends XRDevice {
     private _controllingLayer?: LayerView|null
     private _layerSwitcherCommandQueue = new CommandQueue
     
-    private _defaultState:XRVuforiaState
+    private _defaultState: XRVuforiaState
     
     private _eyeLevelPose = <vuforia.Matrix44>[1, 0, 0, 0,
                              0, 1, 0, 0,
                              0, 0, 1, 0,
                              0, 0, 0, 1 ]
+
+    private _pendingHitTests:Array<{id:string,x:number,y:number}> = []
+    private _tempHitAnchors:{[id:string]: vuforia.Anchor} = {}
+    private _addedAnchors:{[id:string]: vuforia.Anchor} = {}
 
     constructor(browserView:BrowserView, defaultKey:string) {
         super(browserView)
@@ -141,16 +153,19 @@ export class XRVuforiaDevice extends XRDevice {
 
         let needsViewConfiguration = true
         vuforia.videoView.on('layoutChanged', () => {
-            this.needsViewConfiguration = true
+            if (vuforia.videoView.ios) {
+                (<UIView>vuforia.videoView.ios).contentScaleFactor = Math.max(3, screen.mainScreen.scale);
+            }
+            needsViewConfiguration = true
         })
 
-        vuforia.api.setStateUpdateCallback((state) => {
+        vuforia.api.renderCallback = (state) => {
             const views = this._renderingViews
             if (!views) return
 
-            if (this.needsViewConfiguration) {
+            if (needsViewConfiguration) {
                 this.configureView()
-                this.needsViewConfiguration = false
+                needsViewConfiguration = false
             }
 
             const frame = state.getFrame()
@@ -185,30 +200,70 @@ export class XRVuforiaDevice extends XRDevice {
                 pose: this._eyeLevelPose
             }
 
+            const hitTestResults = {}
+
             vuforia.api.smartTerrain!.hitTest(state, {x:0.5, y:0.5}, 1.4, vuforia.HitTestHint.None)
             const hitTestResultCount = vuforia.api.smartTerrain!.getHitTestResultCount()
             if (hitTestResultCount > 0) {
                 const result = vuforia.api.smartTerrain!.getHitTestResult(0)
-                const id = 'xr.center-hit-test'
+                const id = 'xr.center-hit'
                 trackableResults[id] = {
                     id,
-                    name: 'Center Hit-Test Result',
+                    name: 'Center Hit',
                     pose: result.getPose()
                 }
             }
 
-            const immersiveFramebufferSize = browserView.getActualSize()
 
-            this.sendNextFrameState({
-                index,
-                time,
-                views,
-                trackableResults,
-                immersiveFramebufferSize
+            const smartTerrain = vuforia.api.smartTerrain!
+            // const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!
+            for (let pendingHitTest of this._pendingHitTests) {
+                smartTerrain.hitTest(state, pendingHitTest, 1.4, vuforia.HitTestHint.None)
+                const count = smartTerrain.getHitTestResultCount()
+                const hits:{id:string, transform:vuforia.Matrix44}[] = []
+                for (let i=0; i<count; i++) {
+                    const result = smartTerrain.getHitTestResult(i)
+                    const name =  'xr.hit_' + utils.createGuid()
+                    // const hitAnchor = positionalDeviceTracker.createAnchorFromHitTestResult(name, result)
+                    // if (!hitAnchor) continue;
+                    // const id = '' + hitAnchor.getId()
+                    const id = name
+                    hits.push({
+                        id,
+                        transform: result.getPose()
+                    })
+                    // this._tempHitAnchors[id] = hitAnchor;
+                    // destroy if not used
+                    setTimeout(()=>{
+                        const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!;
+                        if (positionalDeviceTracker && this._tempHitAnchors[id]) {
+                            positionalDeviceTracker.destroyAnchor(this._tempHitAnchors[id])
+                            delete this._tempHitAnchors[id]
+                        }
+                    }, 200)
+                }
+                hitTestResults[pendingHitTest.id] = hits
+            }
+            this._pendingHitTests.length = 0;
+
+
+            const immersiveSize = browserView.getActualSize()
+
+            // send frame state within promise callback
+            // to switch back to the main thread 
+            Promise.resolve().then(()=>{
+                this.sendNextFrameState({
+                    index,
+                    time,
+                    views,
+                    trackableResults,
+                    hitTestResults,
+                    immersiveSize
+                })
             })
 
             // console.log(trackableResults)
-        })
+        }
 
         this._setControllingLayer(null)
     }
@@ -233,21 +288,35 @@ export class XRVuforiaDevice extends XRDevice {
             ({id}:{id:string}) => this._handleObjectTrackerUnloadDataSet(layer, id)
 
         onMessage['xr.createMidAirAnchor'] = (data:{transform:vuforia.Matrix44}) => {
-            const anchor = vuforia.api.positionalDeviceTracker!.createAnchorFromPose(utils.createGuid(), data.transform);
+            const name = 'xr.midair_' + utils.createGuid() 
+            const anchor = vuforia.api.positionalDeviceTracker!.createAnchorFromPose(name, data.transform);
             if (!anchor) throw new Error('Unable to create anchor')
-            return Promise.resolve({id: ''+anchor.getId()})
+            const id = '' + anchor.getId()
+            this._addedAnchors[id] = anchor
+            return Promise.resolve({id})
         }
 
-        const tempHitAnchorsById:{[id:string]: vuforia.Anchor} = {}
-        const permanentHitAnchorsById:{[id:string]: vuforia.Anchor} = {}
+        onMessage['xr.hitTest'] = (data:{id:string,x:number,y:number}) => {
+            this._pendingHitTests.push(data)
+        }
 
-        onMessage['xr.createAnchorFromHit'] = (data:{hitId:string}) => {
+        onMessage['xr.createAnchorFromHit'] = (data:{id:string}) => {
             const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!
             if (!positionalDeviceTracker) throw new Error('Unable to get positional device tracker')
-            const hitAnchor = permanentHitAnchorsById[data.hitId] = tempHitAnchorsById[data.hitId]
-            if (!hitAnchor) throw new Error('Hit test has expired')
-            delete tempHitAnchorsById[data.hitId]
+            const id = data.id
+            const hitAnchor = this._addedAnchors[id] = this._tempHitAnchors[id]
+            if (!hitAnchor) throw new Error('Hit has expired')
+            delete this._tempHitAnchors[id]
             return Promise.resolve({id: ''+hitAnchor.getId()})
+        }
+
+        onMessage['xr.destroyAnchor'] = (data:{id:string}) => {
+            const id = data.id
+            const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!
+            if (positionalDeviceTracker && this._addedAnchors[id]) {
+                positionalDeviceTracker.destroyAnchor(this._addedAnchors[id])
+                delete this._addedAnchors[id]
+            }
         }
     }
 
@@ -461,6 +530,14 @@ export class XRVuforiaDevice extends XRDevice {
                         throw new Error('Unable to start camera');
                 }
 
+                const smartTerrain = vuforia.api.smartTerrain;
+                if (!smartTerrain || !smartTerrain.start())
+                    throw new Error('Vuforia: Unable to start SmartTerrain');
+
+                const positionalDeviceTracker = vuforia.api.positionalDeviceTracker;
+                if (!positionalDeviceTracker || !positionalDeviceTracker.start()) 
+                    throw new Error('Vuforia: Unable to start PositionalDeviceTracker');
+
                 if (layerState.hintValues) {
                     layerState.hintValues.forEach((value, hint, map) => {
                         vuforia.api.setHint(hint, value);
@@ -486,14 +563,6 @@ export class XRVuforiaDevice extends XRDevice {
                 }
                 return Promise.all(activatePromises)
             }).then(()=>{
-
-                const smartTerrain = vuforia.api.smartTerrain;
-                if (!smartTerrain || !smartTerrain.start())
-                    throw new Error('Vuforia: Unable to start SmartTerrain');
-
-                const positionalDeviceTracker = vuforia.api.positionalDeviceTracker;
-                if (!positionalDeviceTracker || !positionalDeviceTracker.start()) 
-                    throw new Error('Vuforia: Unable to start PositionalDeviceTracker');
 
                 const objectTracker = vuforia.api.objectTracker;
                 if (!objectTracker || !objectTracker.start()) 
@@ -814,10 +883,6 @@ export class XRVuforiaDevice extends XRDevice {
         // const scale = Math.min(widthRatio, heightRatio);
         
 
-        if (vuforia.videoView.ios) {
-            (<UIView>vuforia.videoView.ios).contentScaleFactor = Math.max(1, screen.mainScreen.scale);
-        }
-
         const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : screen.mainScreen.scale;
         
         const sizeX = videoWidth * scale * contentScaleFactor;
@@ -831,14 +896,16 @@ export class XRVuforiaDevice extends XRDevice {
         //     return;
         // }
 
+        const zoomFactor = this._effectiveZoomFactor
+
         // apply the video config
-        const config = this._config; 
-        config.enabled = this._cameraEnabled;
-        config.sizeX = sizeX;
-        config.sizeY = sizeY;
-        config.positionX = 0;
-        config.positionY = 0;
-        config.reflection = vuforia.VideoBackgroundReflection.Default;
+        const config = this._config 
+        config.enabled = this._cameraEnabled
+        config.sizeX = sizeX * zoomFactor
+        config.sizeY = sizeY * zoomFactor
+        config.positionX = 0
+        config.positionY = 0
+        config.reflection = vuforia.VideoBackgroundReflection.Default
         
         // console.log(`Vuforia configuring video background...
         //     contentScaleFactor: ${contentScaleFactor} orientation: ${orientation} 
@@ -852,14 +919,13 @@ export class XRVuforiaDevice extends XRDevice {
         // videoView.width = viewWidth;
         // videoView.height = viewHeight;
         
-        vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor)
+        // vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor)
 
         const renderer = vuforia.api.getRenderer();
         renderer.setVideoBackgroundConfig(config);
         const renderingPrimitives = vuforia.api.getDevice().getRenderingPrimitives()
         const renderingViews = renderingPrimitives.getRenderingViews()
         const numViews = renderingViews.getNumViews()
-        renderingPrimitives
 
         const renderingViewsJSON:Array<XRView> = this._renderingViews = []
 
@@ -878,26 +944,40 @@ export class XRVuforiaDevice extends XRDevice {
                     viewJSON.type = 'postprocess'; break;
             }
 
-            const viewport = renderingPrimitives.getViewport(view)
-            viewJSON.viewport = {
-                x: viewport.x / contentScaleFactor,
-                y: viewport.y / contentScaleFactor,
-                width: viewport.z / contentScaleFactor,
-                height: viewport.w / contentScaleFactor
+            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view)
+            glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [1,1,-1])
+
+            if (viewJSON.type === 'singular') {
+
+                // render augmentation at fullscreen even if video is zoomed in
+                viewJSON.viewport = {x:0,y:0,width:viewWidth,height:viewWidth}
+                viewJSON.normalizedViewport = {x:0,y:0,width:1,height:1}
+                glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,1])
+
+            } else {
+
+                const viewport = renderingPrimitives.getViewport(view)
+
+                viewJSON.viewport = {
+                    x: viewport.x / contentScaleFactor,
+                    y: viewport.y / contentScaleFactor,
+                    width: viewport.z / contentScaleFactor,
+                    height: viewport.w / contentScaleFactor
+                }
+    
+                // const normalizedViewport = renderingPrimitives.getNormalizedViewport(view)
+                viewJSON.normalizedViewport = {
+                    x: viewJSON.viewport.x / viewWidth,
+                    y: viewJSON.viewport.y / viewHeight,
+                    width: viewJSON.viewport.width / viewWidth,
+                    height: viewJSON.viewport.height / viewHeight
+                }
+
             }
 
-            const normalizedViewport = renderingPrimitives.getNormalizedViewport(view)
-            viewJSON.normalizedViewport = {
-                x: normalizedViewport.x,
-                y: normalizedViewport.y,
-                width: normalizedViewport.z,
-                height: normalizedViewport.w
-            }
-
-            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view);
             viewJSON.projectionMatrix = isFinite(projectionMatrix[0]) ? projectionMatrix : undefined
 
-            const eyeDisplayAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
+            const eyeDisplayAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view)
             viewJSON.eyeDisplayAdjustmentMatrix = isFinite(eyeDisplayAdjustmentMatrix[0]) ? eyeDisplayAdjustmentMatrix : undefined
             
             // if (isFinite(projectionMatrix[0])) {
@@ -915,18 +995,6 @@ export class XRVuforiaDevice extends XRDevice {
                 // );
                 // Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
 
-                // convert from the vuforia projection matrix (+X -Y +Z) to a more standard convention (+X +Y -Z)
-                // by negating the appropriate columns. 
-                // See https://developer.vuforia.com/library/articles/Solution/How-To-Use-the-Camera-Projection-Matrix
-                // projectionMatrix[0] *= -1; // x
-                // projectionMatrix[1] *= -1; // y
-                // projectionMatrix[2] *= -1; // z
-                // projectionMatrix[3] *= -1; // w
-
-                // projectionMatrix[8] *= -1;  // x
-                // projectionMatrix[9] *= -1;  // y
-                // projectionMatrix[10] *= -1; // z
-                // projectionMatrix[11] *= -1; // w
 
                 // Argon.Cesium.Matrix4.multiplyByScale(projectionMatrix, Cartesian3.fromElements(1,-1,-1, this._scratchCartesian), projectionMatrix)
 

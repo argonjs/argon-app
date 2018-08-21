@@ -25,7 +25,8 @@
 namespace  {
     // --- Data private to this unit ---
     
-    void (^mCallback)(VuforiaState *) = nil;
+    void (^mUpdateCallback)(VuforiaState *) = nil;
+    void (^mRenderCallback)(VuforiaState *) = nil;
     
     VuforiaVideoView *videoView = [[VuforiaVideoView alloc] init]; // hack: VuforiaVideoView is a singleton for now
     
@@ -36,6 +37,9 @@ namespace  {
     class VuforiaApplication_UpdateCallback : public Vuforia::UpdateCallback {
         virtual void Vuforia_onUpdate(Vuforia::State& state);
     } qcarUpdate;
+    
+    dispatch_queue_t frameRenderingQueue = dispatch_queue_create("edu.gatech.argon", DISPATCH_QUEUE_SERIAL);
+    dispatch_semaphore_t frameRenderingSemaphore = dispatch_semaphore_create(1);
 
 }
 
@@ -70,11 +74,13 @@ namespace  {
         });
     });
     
-//    Vuforia::registerCallback(&qcarUpdate);
-    // After Vuforia 7, the above method is buggy: e.g., Vuforia sometimes pauses processing frames
+    videoView.delegate = [VuforiaSession class];
+    Vuforia::registerCallback(&qcarUpdate);
+    
+    // After Vuforia 7, Vuforia sometimes pauses processing frames
     // and rendering the camera when a UIScrollView is scrolling.
     // So we setup our own render loop instead.
-    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(_update)];
+    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(_render)];
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes]; // make it work while scrolling
 }
 
@@ -82,14 +88,20 @@ namespace  {
 /// Deinitializes Vuforia
 + (void) deinit {
     Vuforia::deinit();
-    mCallback = nil;
+    mUpdateCallback = nil;
+    mRenderCallback = nil;
    [_displayLink invalidate];
    _displayLink = nil;
 }
 
 /// Registers an callback to be called when new tracking data is available
-+ (void) registerCallback: (void (^)(VuforiaState *))callback {
-    mCallback = callback;
++ (void) registerUpdateCallback: (void (^)(VuforiaState *))callback {
+    mUpdateCallback = callback;
+}
+
+/// Registers an callback to be called when new tracking data is available
++ (void) registerRenderCallback: (void (^)(VuforiaState *))callback {
+    mRenderCallback = callback;
 }
 
 /// Sets a hint for the Vuforia SDK
@@ -181,11 +193,32 @@ static float scaleFactorValue = 1;
     return scaleFactorValue;
 }
 
-+ (void) _update {
-    Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
-    Vuforia::State state = stateUpdater.updateState();
-    if (mCallback) mCallback([[VuforiaState alloc] initWithCpp:&state]);
-    [videoView renderFrame];
++ (void) _update:(const Vuforia::State &)state {
+//    if (mUpdateCallback) mUpdateCallback([[VuforiaState alloc] initWithCpp:&state]);
+}
+
+//+ (void) _render:(const Vuforia::State &)state {
+//
+//    if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
+//}
+
++ (void) _render {
+    dispatch_async(frameRenderingQueue, ^{
+        if (dispatch_semaphore_wait(frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0) {
+            return;
+        }
+        
+        @autoreleasepool {
+            Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
+            Vuforia::State state = stateUpdater.updateState();
+            [videoView renderFrame:state];
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
+            });
+        }
+        
+        dispatch_semaphore_signal(frameRenderingSemaphore);
+    });
 }
 
 @end
@@ -194,9 +227,7 @@ static float scaleFactorValue = 1;
 // Callback function called by the tracker when each tracking cycle has finished
 void VuforiaApplication_UpdateCallback::Vuforia_onUpdate(Vuforia::State& state)
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [VuforiaSession _update];
-    });
+    [VuforiaSession _update:state];
 }
 
 

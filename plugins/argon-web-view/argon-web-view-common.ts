@@ -84,7 +84,7 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
         const expectsResponse = data[3];
         const handler = this.messageHandlers[topic];
 
-        console.log('Received: \n' + console.log(message))
+        // console.log('Received: \n' + console.log(message))
 
         if (handler && !expectsResponse) {
             handler(message)

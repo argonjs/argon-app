@@ -129,8 +129,8 @@ export class API extends common.APIBase {
                         
                         vuforia.Vuforia.registerCallback(new vuforia.Vuforia.UpdateCallbackInterface({
                             Vuforia_onUpdate(state: vuforia.State) {
-                                if (api && api.callback)
-                                    api.callback(new State(state));
+                                if (api && api.updateCallback)
+                                    api.updateCallback(new State(state));
                             }
                         }));
 

@@ -61,7 +61,7 @@ export class LayerView extends GridLayout {
     xrEnabled = false
 
     @observable()
-    xrImmersiveMode:XRImmersiveMode = 'none'
+    xrImmersiveMode:XRImmersiveMode = 'augmentation'
 
     @observable()
     private needsTransparentBackground = false
@@ -107,7 +107,7 @@ export class LayerView extends GridLayout {
         }
 
         webView.on('urlChange', () => {
-            const uri = webView!.url
+            const uri = webView!.url || ''
             this.details.content = new BookmarkItem({uri})
         })
 
@@ -261,11 +261,11 @@ export class LayerView extends GridLayout {
 
                         webView.visibility = 'visible'
 
-                        if (webView.url === src) {
-                            webView.reload();
-                        } else {
+                        // if (webView.url === src) {
+                        //     webView.reload();
+                        // } else {
                             webView.src = <any>new WrappedValue(src);
-                        }
+                        // }
 
                     } else {
                         webView.visibility = 'collapse'

@@ -194,7 +194,8 @@ typedef NS_ENUM (NSInteger, VuforiaRotation) {
 + (void) deinit;
 
 /// Registers an callback to be called when new tracking data is available
-+ (void) registerCallback: (void (^)(VuforiaState *))callback;
++ (void) registerUpdateCallback: (void (^)(VuforiaState *))callback;
++ (void) registerRenderCallback: (void (^)(VuforiaState *))callback;
 
 /// Sets a hint for the Vuforia SDK
 /**

@@ -144,11 +144,8 @@ export abstract class APIBase implements def.API {
     abstract getScaleFactor() : number; 
     abstract onSurfaceChanged(width:number, height:number) : void;
     
-    protected callback:(state:def.State)=>void;
-
-    setStateUpdateCallback(cb:(state:def.State)=>void) {
-        this.callback = cb;
-    }
+    public renderCallback?:(state:def.State)=>void;
+    public updateCallback?:(state:def.State)=>void;
 
     getViewerScaleFactor() {
         // static const float VIRTUAL_FOV_Y_DEGS = 85.0f;

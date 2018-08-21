@@ -136,14 +136,14 @@
 
 
 @interface VuforiaState ()
-@property (nonatomic, assign) Vuforia::State *cpp;
+@property (nonatomic, assign) const Vuforia::State *cpp;
 @end
 
 @implementation VuforiaState
-- (id) initWithCpp:(void*)cpp {
+- (id) initWithCpp:(const void*)cpp {
     self = [super init];
     if (self) {
-        self.cpp = (Vuforia::State*)cpp;
+        self.cpp = (const Vuforia::State*)cpp;
     }
     return self;
 }

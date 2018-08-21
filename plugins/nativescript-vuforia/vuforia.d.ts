@@ -135,11 +135,13 @@ declare module "nativescript-vuforia" {
         initObjectTracker() : boolean;
         deinitObjectTracker() : boolean;
 
-        setStateUpdateCallback(cb:(state:State)=>void);
         getViewerScaleFactor() : number;
         setScaleFactor(f:number) : void;
         getScaleFactor() : number;
         onSurfaceChanged(width:number, height:number) : void;
+        
+        renderCallback?:(state:def.State)=>void;
+        updateCallback?:(state:def.State)=>void;
     }
     
     interface Vec2 {
@@ -160,7 +162,7 @@ declare module "nativescript-vuforia" {
         w: number
     }
     
-    interface Matrix44 {
+    interface Matrix44 extends Array<number> {
         '0': number;
         '1': number;
         '2': number;

@@ -77,9 +77,13 @@ export class API extends common.APIBase {
                     VuforiaSession.onSurfaceCreated();
                     configureVuforiaSurface();
                     setTimeout(configureVuforiaSurface, 500);
-                    VuforiaSession.registerCallback((state)=>{
-                        if (this.callback)
-                         this.callback(new State(state));
+                    VuforiaSession.registerUpdateCallback((state)=>{
+                        if (this.updateCallback)
+                         this.updateCallback(new State(state));
+                    });
+                    VuforiaSession.registerRenderCallback((state)=>{
+                        if (this.renderCallback)
+                         this.renderCallback(new State(state));
                     });
                     VuforiaSession.onResume();
                 }

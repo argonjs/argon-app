@@ -5,13 +5,15 @@
       "version": "4.0.1"
     },
     "tns-ios": {
-      "version": "4.3.0-2018-08-10-01"
+      "version": "4.3.0-2018-08-17-02"
     }
   },
   "dependencies": {
+    "@types/gl-matrix": "^2.4.1",
     "argon-private": "file:../argon-private/src",
     "argon-web-view": "file:plugins/argon-web-view",
     "domino": "^2.0.2",
+    "gl-matrix": "^2.7.1",
     "minimatch": "^3.0.4",
     "nativescript-geolocation": "^4.2.6",
     "nativescript-gradient": "^2.0.1",

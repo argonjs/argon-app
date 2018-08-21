@@ -21,7 +21,7 @@
 #if !(TARGET_IPHONE_SIMULATOR)
 
 #import <UIKit/UIKit.h>
-
+#import <Vuforia/State.h>
 #import "VuforiaGLResourceHandler.h"
 
 @interface VuforiaVideoView : UIView <VuforiaGLResourceHandler> {
@@ -41,10 +41,11 @@
     GLuint defaultFramebuffer;
     GLuint colorRenderbuffer;
     GLuint depthRenderbuffer;
-    
 }
 
-- (void) renderFrame;
+- (void) renderFrame:(Vuforia::State&)state;
+
+@property (nonatomic, weak) id delegate;
 
 @end
 

@@ -576,7 +576,8 @@ declare class VuforiaSession extends NSObject {
 
 	static onSurfaceCreated(): void;
 
-	static registerCallback(callback: (p1: VuforiaState) => void): void;
+	static registerUpdateCallback(callback: (p1: VuforiaState) => void): void;
+	static registerRenderCallback(callback: (p1: VuforiaState) => void): void;
 
 	static requiresAlpha(): boolean;
 

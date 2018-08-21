@@ -34,7 +34,8 @@ export class BookmarkItem extends Observable {
     constructor(json?: Partial<BookmarkItem>) {
         super()
         
-        if (!json || json.uri === undefined) throw new Error("Expected 'uri' value!")
+        if (!json || json.uri === undefined || json.uri === null) 
+            throw new Error("Expected 'uri' value!")
 
         if (BookmarkItem.collection.has(json.uri)) {
             const item = BookmarkItem.collection.get(json.uri)!

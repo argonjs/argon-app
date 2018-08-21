@@ -35,6 +35,8 @@
 #import <Vuforia/GLRenderer.h>
 #import <Vuforia/Mesh.h>
 #import <Vuforia/View.h>
+#import <Vuforia/TrackerManager.h>
+#import <Vuforia/StateUpdater.h>
 
 #import "VuforiaSession.h"
 #import "VuforiaCameraDevice.h"
@@ -229,10 +231,15 @@ namespace{
 // *** Vuforia will call this method periodically on a background thread ***
 //- (void)renderFrameVuforia
 //{
-//    [self renderFrame];
+//    Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
+//    Vuforia::State state = stateUpdater.updateState();
+//    [self renderFrame:state];
+//    if (self.delegate) {
+//        [self.delegate performSelector:@selector(_render:) withObject:(__bridge id)&state];
+//    }
 //}
 
--(void) renderFrame {
+-(void) renderFrame:(Vuforia::State&)state {
     
     if (![[VuforiaCameraDevice getInstance] isStarted]) return;
     
@@ -247,13 +254,10 @@ namespace{
     // [framebufferLock lock];
     [self setFramebuffer];
     
-    mRenderer.begin();
+    mRenderer.begin(state);
     
     // Clear colour and depth buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
     
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -276,23 +280,9 @@ namespace{
         // Set up the viewport
         Vuforia::Vec4I viewport = renderingPrimitives.getViewport(vw);
         glViewport(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
-        
-        //set scissor
-        glScissor(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
-        
-        Vuforia::Matrix44F projectionMatrix;
-        
-        Vuforia::Matrix34F projMatrix = renderingPrimitives.getProjectionMatrix(vw, NULL, NULL);
-        
-        Vuforia::Matrix44F rawProjectionMatrixGL = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(
-                                                                                                        projMatrix,
-                                                                                                        PROJECTION_NEAR_PLANE,
-                                                                                                        PROJECTION_FAR_PLANE);
-        
-        // Apply the appropriate eye adjustment to the raw projection matrix, and assign to the global variable
-        Vuforia::Matrix44F eyeAdjustmentGL = Vuforia::Tool::convert2GLMatrix(renderingPrimitives.getEyeDisplayAdjustmentMatrix(vw));
-        
-        multiplyMatrix(&rawProjectionMatrixGL.data[0], &eyeAdjustmentGL.data[0], &projectionMatrix.data[0]);
+
+//        //set scissor
+//        glScissor(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
         
         // Use texture unit 0 for the video background - this will hold the camera frame and we want to reuse for all views
         // So need to use a different texture unit for the augmentation
