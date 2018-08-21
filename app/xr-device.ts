@@ -860,14 +860,15 @@ export class XRVuforiaDevice extends XRDevice {
 
     public configureView(viewport?:{top:number,left:number,width:number,height:number}) {
     
-        const videoView = vuforia.videoView;
-        const viewWidth = viewport ? viewport.width : videoView.getActualSize().width;
-        const viewHeight = viewport ? viewport.height : videoView.getActualSize().height;
+        const videoView = vuforia.videoView
+        const viewWidth = viewport ? viewport.width : videoView.getActualSize().width
+        const viewHeight = viewport ? viewport.height : videoView.getActualSize().height
         
-        const cameraDevice = vuforia.api.getCameraDevice();
-        const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode);
-        let videoWidth = videoMode.width;
-        let videoHeight = videoMode.height;
+        const cameraDevice = vuforia.api.getCameraDevice()
+        cameraDevice.setFocusMode(vuforia.CameraDeviceFocusMode.ContinuousAuto)
+        const videoMode = cameraDevice.getVideoMode(vuforiaCameraDeviceMode)
+        let videoWidth = videoMode.width
+        let videoHeight = videoMode.height
         
         const screenOrientation = utils.screenOrientation;
         if (screenOrientation === 0 || screenOrientation === 180) {
