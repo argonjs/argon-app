@@ -2,5 +2,6 @@
 	"name": "argon-app",
 	"main": "app.js",
 	"version": "1.0",
-	"description": "The Argon Browser"
+	"description": "The Argon Browser",
+	"discardUncaughtJsExceptions": true
 }

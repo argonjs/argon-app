@@ -5,7 +5,7 @@
       "version": "4.0.1"
     },
     "tns-ios": {
-      "version": "4.3.0-2018-08-17-02"
+      "version": "4.2.0"
     }
   },
   "dependencies": {
@@ -23,7 +23,7 @@
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "nativescript-web-image-cache": "^4.2.6",
     "page-metadata-parser": "^1.1.2",
-    "tns-core-modules": "^4.2.0-2018-07-13-03",
+    "tns-core-modules": "^4.2.0",
     "urijs": "^1.17.1",
     "url": "^0.11.0"
   },
