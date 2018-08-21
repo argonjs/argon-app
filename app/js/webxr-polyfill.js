@@ -7097,7 +7097,7 @@ var ArgonWrapper = function (_EventHandlerBase) {
 
 			return new Promise(function (resolve) {
 				var id = createGuid();
-				_this4._send('xr.hitTest', { id: id, x: x, y: y });
+				_this4._send('xr.hitTest', { id: id, point: { x: x, y: y } });
 				_this4._pendingHitTestResolver.set(id, resolve);
 			});
 		}

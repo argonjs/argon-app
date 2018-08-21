@@ -64,8 +64,23 @@ export class XRDevice extends Observable {
     sendNextFrameState(state:XRFrameState) {
         for (const layer of this.browserView.layers) {
             state.contentScaleFactor = this.browserView.focussedLayer === layer ? 
-                screen.mainScreen.scale : 1
-            if (layer.xrEnabled) layer.webView.send('xr.frame', state)
+                screen.mainScreen.scale : Math.min(1, screen.mainScreen.scale/2)
+            
+            let shouldSend = false
+            
+            if (layer.xrEnabled) {
+                if (this.browserView.focussedLayer === layer || 
+                    this.browserView.realityLayer === layer ||
+                    layer.xrImmersiveMode === 'augmentation') {
+                    shouldSend = true
+                } else if (appModel.layerPresentation === 'overview') {
+                    shouldSend = true
+                    state.contentScaleFactor /= 2
+                }
+            }
+
+            if (shouldSend) 
+                layer.webView.send('xr.frame', state)
         }
     }
 }
@@ -123,7 +138,7 @@ export class XRVuforiaDevice extends XRDevice {
                              0, 0, 1, 0,
                              0, 0, 0, 1 ]
 
-    private _pendingHitTests:Array<{id:string,x:number,y:number}> = []
+    private _pendingHitTests:Array<{id:string,point:{x:number,y:number}}> = []
     private _tempHitAnchors:{[id:string]: vuforia.Anchor} = {}
     private _addedAnchors:{[id:string]: vuforia.Anchor} = {}
 
@@ -218,7 +233,7 @@ export class XRVuforiaDevice extends XRDevice {
             const smartTerrain = vuforia.api.smartTerrain!
             // const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!
             for (let pendingHitTest of this._pendingHitTests) {
-                smartTerrain.hitTest(state, pendingHitTest, 1.4, vuforia.HitTestHint.None)
+                smartTerrain.hitTest(state, pendingHitTest.point, 1.4, vuforia.HitTestHint.None)
                 const count = smartTerrain.getHitTestResultCount()
                 const hits:{id:string, transform:vuforia.Matrix44}[] = []
                 for (let i=0; i<count; i++) {
@@ -296,7 +311,13 @@ export class XRVuforiaDevice extends XRDevice {
             return Promise.resolve({id})
         }
 
-        onMessage['xr.hitTest'] = (data:{id:string,x:number,y:number}) => {
+        onMessage['xr.hitTest'] = (data:{id:string,point:{x:number,y:number}}) => {
+            // adjust hit point for screen rotation and zoom scale
+            const hitPoint = [data.point.x-0.5, data.point.y-0.5]
+            const screenRotation = glMatrix.mat2d.fromRotation(<any>[], - utils.screenOrientation * Math.PI / 180 - Math.PI / 2)
+            glMatrix.vec2.transformMat2d(<any>hitPoint, hitPoint, screenRotation)
+            data.point.x = Math.max(0, Math.min(hitPoint[0] / this._effectiveZoomFactor + 0.5, 1))
+            data.point.y = Math.max(0, Math.min(hitPoint[1] / this._effectiveZoomFactor + 0.5, 1))
             this._pendingHitTests.push(data)
         }
 
