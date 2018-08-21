@@ -162,6 +162,9 @@ export class BrowserView extends GridLayout {
         layer.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'details.immersiveMode':
+                    if (layer === this.focussedLayer && layer.details.immersiveMode === 'reality')  {
+                        appModel.realityLayer = layer.details
+                    }
                     this._sortLayers()
                     break;
                 case 'details.src':
@@ -180,6 +183,8 @@ export class BrowserView extends GridLayout {
         })
 
         layer.touchOverlay.on('tap', () => {
+            if (layer.details.immersiveMode === 'reality') 
+                appModel.realityLayer = layer.details
             appModel.focussedLayer = layer.details
             appModel.layerPresentation = 'stack'
         })

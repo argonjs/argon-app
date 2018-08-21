@@ -249,7 +249,7 @@ export class LayerView extends GridLayout {
         this.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'details.content.title':
-                case 'details.type':
+                case 'details.immersiveMode':
                     this._updateUI()
                     break
                 case 'details.src': {
@@ -319,7 +319,7 @@ export class LayerView extends GridLayout {
         if (this.details.immersiveMode === 'reality') {
             this.titleBar.backgroundColor = new Color(0xFF222222);
             this.titleLabel.color = new Color('white');        
-            this.titleLabel.text = title ? 'Reality' : 'Reality: ' + title
+            this.titleLabel.text = title ? 'Reality: ' + title : 'Reality'
         } else {
             this.titleBar.backgroundColor = new Color('white');
             this.titleLabel.color = new Color('black');

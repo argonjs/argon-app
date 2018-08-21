@@ -407,8 +407,8 @@ export class AppModel extends Observable {
 
     ensureLayersExists() {
         if (this.layers.length === 0) this.layers = new ObservableArray(...defaultLayers.slice())
-        const nonRealityLayer = this.layers.slice().find(layer => layer.immersiveMode !== 'reality')
-        if (!nonRealityLayer) {
+        const nonLiveRealityLayer = this.layers.slice().find(layer => layer.src !== 'reality:live')
+        if (!nonLiveRealityLayer) {
             this.layers.push(new LayerDetails())
         }
     }
