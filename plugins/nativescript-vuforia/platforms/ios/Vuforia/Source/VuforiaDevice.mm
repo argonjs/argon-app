@@ -279,7 +279,7 @@
 
 /// Returns the projection matrix to use for the given view
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID {
-    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, NULL);
+    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, true);
     return (VuforiaMatrix34&)m;
 }
 

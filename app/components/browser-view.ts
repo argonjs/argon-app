@@ -7,13 +7,11 @@ import { AnimationCurve } from 'ui/enums'
 import { PropertyChangeData, EventData } from 'data/observable'
 import * as application from 'application'
 
-import { appModel, LayerDetails } from '../app-model'
+import { appModel, XRLayerDetails } from '../app-model'
 import { bind } from '../decorators'
 import { bringToFront } from '../utils'
 
 import {LayerView, TITLE_BAR_HEIGHT} from './layer-view'
-
-import * as vuforia from 'nativescript-vuforia'
 
 export {LayerView}
 
@@ -33,11 +31,10 @@ export interface BrowserView extends GridLayout {
 
 export class BrowserView extends GridLayout {
 
-    videoView: View = vuforia.videoView;
     scrollView = new ScrollView()
     layerContainer = new GridLayout()
     layers = new Array<LayerView>()
-    layerMap = new Map<LayerDetails, LayerView>()
+    layerMap = new Map<XRLayerDetails, LayerView>()
 
     private _intervalId?: number
 
@@ -86,18 +83,14 @@ export class BrowserView extends GridLayout {
                     else this._onHideOverview()
                     break;
                 case 'layers':
-                    if (evt.oldValue) (evt.oldValue as ObservableArray<LayerDetails>).off('change', this._onLayerDetailsArrayChange)
+                    if (evt.oldValue) (evt.oldValue as ObservableArray<XRLayerDetails>).off('change', this._onLayerDetailsArrayChange)
                     appModel.layers.on('change', this._onLayerDetailsArrayChange)
                     this.layers.slice().forEach(layer => this._onDeleteLayer(layer.details))
                     appModel.layers.forEach(layer => this._onAddLayer(layer))
                     break;
                 case 'realityLayer':
                 case 'focussedLayer': {
-                    // const focussedLayer = this.focussedLayer
                     this._sortLayers()
-                    // if (focussedLayer && focussedLayer !== this.realityLayer) {
-                    //     bringToFront(focussedLayer);
-                    // }
                     break;
                 }
             }
@@ -105,10 +98,11 @@ export class BrowserView extends GridLayout {
 
         appModel.layers.on('change', this._onLayerDetailsArrayChange)
         appModel.layers.forEach((layer) => this._onAddLayer(layer))
+        this._sortLayers()
     }
 
     @bind
-    private _onLayerDetailsArrayChange(evt: ChangedData<LayerDetails>) {
+    private _onLayerDetailsArrayChange(evt: ChangedData<XRLayerDetails>) {
         switch (evt.action) {
             case ChangeType.Add:
                 for (let i = evt.index; i < evt.index + evt.addedCount; i++) {
@@ -135,55 +129,35 @@ export class BrowserView extends GridLayout {
                 this._onUpdateLayer(evt.removed[0], appModel.layers.getItem(evt.index))
                 break;
         }
+        
+        this._sortLayers()
     }
 
-    private _onAddLayer(details: LayerDetails) {
+    private _onAddLayer(details: XRLayerDetails) {
         const layer = new LayerView(details)
         this.layerContainer.addChild(layer)
         this.layerMap.set(details, layer)
         this.layers.push(layer)
-        this._sortLayers()
-
-        const setupLiveVideoView = () => {
-            if (this.videoView.parent)
-                (this.videoView.parent as GridLayout).removeChild(this.videoView)
-            layer.contentView.addChild(this.videoView)
-            // if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
-            // const videoViewLayout = new AbsoluteLayout();
-            // layer.contentView.addChild(videoViewLayout);
-            // videoViewLayout.addChild(this.videoView);
-        }
-
-        if (details.src === 'reality:live') {
-            setupLiveVideoView()
-            layer.closeButton.visibility = 'collapse';
-        }
 
         layer.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
-                case 'details.immersiveMode':
-                    if (layer === this.focussedLayer && layer.details.immersiveMode === 'reality')  {
+                case 'details.xrImmersiveMode':
+                    if (layer === this.focussedLayer && layer.details.xrImmersiveMode === 'reality')  {
                         appModel.realityLayer = layer.details
                     }
                     this._sortLayers()
                     break;
-                case 'details.src':
-                    if (details.src === 'reality:live') {
-                        setupLiveVideoView()
-                        layer.closeButton.visibility = 'collapse';
-                    } else {
-                        layer.closeButton.visibility = 'visible';
-                    }
             }
         })
 
         layer.closeButton.on('tap', () => {
             let foundIndex = appModel.layers.indexOf(layer.details)
             if (foundIndex > -1) appModel.layers.splice(foundIndex, 1)
+            if (appModel.layers.length === 0) appModel.layerPresentation = 'stack'
         })
 
         layer.touchOverlay.on('tap', () => {
-            if (layer.details.immersiveMode === 'reality') 
+            if (layer.details.xrImmersiveMode === 'reality') 
                 appModel.realityLayer = layer.details
             appModel.focussedLayer = layer.details
             appModel.layerPresentation = 'stack'
@@ -198,7 +172,7 @@ export class BrowserView extends GridLayout {
         })
     }
 
-    private _onDeleteLayer(details: LayerDetails) {
+    private _onDeleteLayer(details: XRLayerDetails) {
         const layer = this.layerMap.get(details)
         if (!layer) throw new Error('Attempted to delete a layer that was never added')
         this.layerContainer.removeChild(layer)
@@ -213,7 +187,7 @@ export class BrowserView extends GridLayout {
         })
     }
 
-    private _onUpdateLayer(oldDetails: LayerDetails, details: LayerDetails) {
+    private _onUpdateLayer(oldDetails: XRLayerDetails, details: XRLayerDetails) {
         const layer = this.layerMap.get(oldDetails)
         if (!layer) throw new Error('Attempted to update a layer that was never added')
         this.layerMap.delete(oldDetails)
@@ -224,13 +198,13 @@ export class BrowserView extends GridLayout {
     private _layerTypeSortRank = {
         'reality': 0,
         'augmentation': 1,
-        'none': 2
+        'none': 1
     }
 
     private _sortLayers() {
         this.layers.sort((a, b) => {
-            const aTypeRank = this._layerTypeSortRank[a.details.immersiveMode]
-            const bTypeRank = this._layerTypeSortRank[b.details.immersiveMode]
+            const aTypeRank = this._layerTypeSortRank[a.details.xrImmersiveMode]
+            const bTypeRank = this._layerTypeSortRank[b.details.xrImmersiveMode]
             let result = aTypeRank - bTypeRank
 
             if (result !== 0) return result
@@ -250,6 +224,8 @@ export class BrowserView extends GridLayout {
                 this._showLayerInStack(layer)
             }
         })
+
+        console.log('SORTED LAYERS')
     }
 
     // private _createRealityLayer() {
@@ -786,8 +762,8 @@ export class BrowserView extends GridLayout {
 
         let visible = false
         if (this.focussedLayer === layer) visible = true
-        if (this.focussedLayer && this.focussedLayer.xrImmersiveMode !== 'none') {
-            if (layer.xrImmersiveMode === 'augmentation') visible = true
+        if (this.focussedLayer && this.focussedLayer.details.xrImmersiveMode !== 'none') {
+            if (layer.details.xrImmersiveMode === 'augmentation') visible = true
             if (layer === this.realityLayer) visible = true
         }
 
@@ -795,7 +771,9 @@ export class BrowserView extends GridLayout {
             opacity: visible ? 1 : 0,
             backgroundColor: TRANSPARENT_BACKGROUND_COLOR,
             duration: OVERVIEW_ANIMATION_DURATION,
-        });
+        }).then(() => {
+            layer.opacity = visible ? 1 : 0
+        })
 
 
         layer.contentView && layer.contentView.animate({

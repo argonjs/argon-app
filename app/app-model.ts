@@ -28,6 +28,16 @@ export class BookmarkItem extends Observable {
 
     static collection = new Map<string, BookmarkItem>()
 
+    static REALITY_LIVE = new BookmarkItem({
+        uri: 'reality:live',
+        title: 'Live'
+    })
+
+    static NEW_LAYER = new BookmarkItem({
+        uri: '', 
+        title: 'New Layer'
+    })
+
     @serializable
     class = "BookmarkItem"
 
@@ -113,21 +123,16 @@ export class BookmarkItem extends Observable {
     }
 }
 
-export class LayerDetails extends Observable {
+export type XRImmersiveMode =  'reality' | 'augmentation' | 'none'
+
+export class XRLayerDetails extends Observable {
 
     @serializable
     class = "LayerDetails"
 
     @observable({ type: BookmarkItem })
     @serializable
-    content = new BookmarkItem({
-        uri:'', 
-        title:'New Layer'
-    })
-
-    @observable()
-    @serializable
-    immersiveMode: 'reality' | 'augmentation' | 'none' = 'augmentation'
+    content = BookmarkItem.NEW_LAYER
 
     @observable()
     @serializable
@@ -137,43 +142,55 @@ export class LayerDetails extends Observable {
     @serializable
     src = ''
 
-    constructor(json?: Partial<LayerDetails>) {
-        super()
+    @observable()
+    xrEnabled = false
 
-        this.on('propertyChange', (evt:PropertyChangeData) => {
-            switch(evt.propertyName) {
-                case 'content.uri': {
-                    const contentURI = this.content.uri
-                    if (contentURI.startsWith('reality:')) {
-                        this.immersiveMode = 'reality'
-                    } else if (contentURI === '') {
-                        this.immersiveMode = 'augmentation'
-                    } else {
-                        this.immersiveMode = 'none'
-                    }
-                }
+    @observable()    
+    @serializable
+    xrImmersiveMode:XRImmersiveMode = 'augmentation'
+
+    constructor(json?: Partial<XRLayerDetails>) {
+        super()
+        this.on('propertyChange', (evt: PropertyChangeData) => {
+            switch (evt.propertyName) {
+                case 'src':
+                    this.content = new BookmarkItem({uri:this.src})
+                    break
+                case 'content.uri':
+                    this._setImmersiveModeFromContentURI()
+                    break
+                default: 
+                    break
             }
         })
-
+        this.src = json && (json.src || json.content && json.content.uri) || ''
         if (json) Object.assign(this, json)
+    }
+
+    private _setImmersiveModeFromContentURI() {
+        const uri = this.content.uri
+        if (uri === 'reality:live') {
+            this.xrImmersiveMode = 'reality'
+        } else if (uri === '' || uri === 'about:blank') {
+            this.xrImmersiveMode = 'augmentation'
+        } else {
+            this.xrImmersiveMode = 'none'
+        }
+    }
+
+    onLoadStarted() {
+        this.xrEnabled = false
+        this._setImmersiveModeFromContentURI()
     }
 }
 
-export const defaultLayers = new ObservableArray<LayerDetails>([
-    new LayerDetails({
-        content: new BookmarkItem({
-            title: 'Live',
-            uri: 'reality:live'
-        })
+export const defaultLayerItems:Array<BookmarkItem> = [
+    BookmarkItem.REALITY_LIVE,
+    new BookmarkItem({
+        uri: 'https://examples.webxrexperiments.com'
     }),
-    new LayerDetails({
-        content: new BookmarkItem({
-            title: 'WebXR Samples',
-            uri: 'https://examples.webxrexperiments.com',
-            overrideTitle: true
-        })
-    })
-])
+    BookmarkItem.NEW_LAYER
+]
 
 export class AppModel extends Observable {
 
@@ -234,12 +251,12 @@ export class AppModel extends Observable {
 
     @observable()
     @serializable
-    layers = new ObservableArray(...defaultLayers.slice())
+    layers = new ObservableArray<XRLayerDetails>()
 
-    @observable({type: LayerDetails})
+    @observable({type: XRLayerDetails})
     realityLayer? = this.layers.getItem(0)
 
-    @observable({type: LayerDetails})
+    @observable({type: XRLayerDetails})
     focussedLayer? = this.layers.getItem(this.layers.length - 1)
 
     constructor() {
@@ -247,8 +264,6 @@ export class AppModel extends Observable {
         this.on('propertyChange', (evt:PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'layers': 
-                    this.realityLayer = this.layers.slice().find(layer => layer.immersiveMode === 'reality')
-                    this.focussedLayer = this.layers.getItem(this.layers.length - 1)
                     this.ensureLayersExists()
                     break
                 case 'layerPresentation': 
@@ -256,6 +271,7 @@ export class AppModel extends Observable {
                     break
             }
         })
+        this.ensureLayersExists()
     }
 
     setFavorite(bookmarkItem: BookmarkItem, makeFavorite: boolean) {
@@ -306,7 +322,7 @@ export class AppModel extends Observable {
 
     getLayerImmersiveMode(layer = this.focussedLayer) {
         if (!layer) return ''
-        return layer.immersiveMode
+        return layer.xrImmersiveMode
     }
 
     private _fixURI(uri) {
@@ -326,13 +342,10 @@ export class AppModel extends Observable {
 
     openURI(uri = '') {
         uri = this._fixURI(uri)
-        const bookmarkItem = new BookmarkItem({uri})
         if (!this.getLayerURI()) {
-            this.focussedLayer!.content = bookmarkItem
             this.focussedLayer!.src = uri
         } else {
-            const newLayer = new LayerDetails()
-            newLayer.content = bookmarkItem
+            const newLayer = new XRLayerDetails()
             this.layers.push(newLayer)
             this.focussedLayer = newLayer
             this.focussedLayer.src = uri
@@ -347,10 +360,7 @@ export class AppModel extends Observable {
 
         // reload current URI if empty string
         if (!uri) uri = appModel.getLayerURI(layer)
-        else uri = this._fixURI(uri)
-        
-        const bookmarkItem = new BookmarkItem({uri})
-        layer.content = bookmarkItem
+        else uri = uri !== BookmarkItem.REALITY_LIVE.uri ? this._fixURI(uri) : uri
         layer.src = uri
     }
 
@@ -385,7 +395,7 @@ export class AppModel extends Observable {
                 }
 
                 if (value.class === 'LayerDetails') {
-                    return new LayerDetails(value)
+                    return new XRLayerDetails(value)
                 }
 
                 return value
@@ -406,10 +416,40 @@ export class AppModel extends Observable {
     }
 
     ensureLayersExists() {
-        if (this.layers.length === 0) this.layers = new ObservableArray(...defaultLayers.slice())
-        const nonLiveRealityLayer = this.layers.slice().find(layer => layer.src !== 'reality:live')
-        if (!nonLiveRealityLayer) {
-            this.layers.push(new LayerDetails())
+
+        const ensureFocussedAndRealityLayerExist = (layers) => {
+            const focussedIdx = layers.indexOf(<any>this.focussedLayer)    
+            const realityIdx = layers.indexOf(<any>this.realityLayer)
+            
+            if (focussedIdx === -1)
+                this.focussedLayer = layers[layers.length-1]
+            
+            if (realityIdx === -1) 
+                this.realityLayer = layers.slice().find(layer => layer.xrImmersiveMode === 'reality')
+        }
+
+        if (this.layers.length === 0) {
+            let newLayers:Array<XRLayerDetails> = []
+
+            for (let bookmarkItem of defaultLayerItems) {
+                newLayers.push(new XRLayerDetails({content:bookmarkItem}))
+            }
+
+            ensureFocussedAndRealityLayerExist(newLayers)
+
+            // push all new layers at once so the BrowserView only sorts them once
+            this.layers.push(newLayers)
+
+        } else {
+
+            const nonRealityLayer = this.layers.slice().find(layer => layer.xrImmersiveMode !== 'reality')
+            
+            if (!nonRealityLayer) {
+                this.layers.push(new XRLayerDetails())
+            }
+
+            ensureFocussedAndRealityLayerExist(this.layers.slice())
+
         }
     }
 

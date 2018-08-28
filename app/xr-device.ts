@@ -68,10 +68,10 @@ export class XRDevice extends Observable {
             
             let shouldSend = false
             
-            if (layer.xrEnabled) {
+            if (layer.details.xrEnabled) {
                 if (this.browserView.focussedLayer === layer || 
                     this.browserView.realityLayer === layer ||
-                    layer.xrImmersiveMode === 'augmentation') {
+                    layer.details.xrImmersiveMode === 'augmentation') {
                     shouldSend = true
                 } else if (appModel.layerPresentation === 'overview') {
                     shouldSend = true
@@ -160,8 +160,15 @@ export class XRVuforiaDevice extends XRDevice {
                     }
                     break
                 case 'layerPresentation':
-                case 'focussedLayer.immersiveMode':
+                case 'focussedLayer.xrImmersiveMode':
                     this._updateCameraEnabled()
+                    break
+                case 'flashEnabled':
+                    vuforia.api.getCameraDevice().setFlashTorchMode(appModel.flashEnabled)
+                    break
+                case 'immersiveStereoEnabled': 
+                    vuforia.api.getDevice().setViewerActive(appModel.immersiveStereoEnabled)
+                    this.configureView()
                     break
             }
         })
@@ -230,32 +237,34 @@ export class XRVuforiaDevice extends XRDevice {
             }
 
 
+            // const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!;
+
             const smartTerrain = vuforia.api.smartTerrain!
-            // const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!
             for (let pendingHitTest of this._pendingHitTests) {
                 smartTerrain.hitTest(state, pendingHitTest.point, 1.4, vuforia.HitTestHint.None)
                 const count = smartTerrain.getHitTestResultCount()
-                const hits:{id:string, transform:vuforia.Matrix44}[] = []
+                const hits:{id:string, pose:vuforia.Matrix44}[] = []
                 for (let i=0; i<count; i++) {
                     const result = smartTerrain.getHitTestResult(i)
                     const name =  'xr.hit_' + utils.createGuid()
+                    // Disabling the followign because it eventually causes performance problems.
                     // const hitAnchor = positionalDeviceTracker.createAnchorFromHitTestResult(name, result)
                     // if (!hitAnchor) continue;
                     // const id = '' + hitAnchor.getId()
                     const id = name
                     hits.push({
                         id,
-                        transform: result.getPose()
+                        pose: result.getPose()
                     })
                     // this._tempHitAnchors[id] = hitAnchor;
                     // destroy if not used
-                    setTimeout(()=>{
-                        const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!;
-                        if (positionalDeviceTracker && this._tempHitAnchors[id]) {
-                            positionalDeviceTracker.destroyAnchor(this._tempHitAnchors[id])
-                            delete this._tempHitAnchors[id]
-                        }
-                    }, 200)
+                    // setTimeout(()=>{
+                    //     const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!;
+                    //     if (positionalDeviceTracker && this._tempHitAnchors[id]) {
+                    //         positionalDeviceTracker.destroyAnchor(this._tempHitAnchors[id])
+                    //         delete this._tempHitAnchors[id]
+                    //     }
+                    // }, 100)
                 }
                 hitTestResults[pendingHitTest.id] = hits
             }
@@ -302,9 +311,9 @@ export class XRVuforiaDevice extends XRDevice {
         onMessage['vuforia.objectTrackerUnloadDataSet'] = 
             ({id}:{id:string}) => this._handleObjectTrackerUnloadDataSet(layer, id)
 
-        onMessage['xr.createMidAirAnchor'] = (data:{transform:vuforia.Matrix44}) => {
+        onMessage['xr.createMidAirAnchor'] = (data:{pose:vuforia.Matrix44}) => {
             const name = 'xr.midair_' + utils.createGuid() 
-            const anchor = vuforia.api.positionalDeviceTracker!.createAnchorFromPose(name, data.transform);
+            const anchor = vuforia.api.positionalDeviceTracker!.createAnchorFromPose(name, data.pose);
             if (!anchor) throw new Error('Unable to create anchor')
             const id = '' + anchor.getId()
             this._addedAnchors[id] = anchor
@@ -361,7 +370,7 @@ export class XRVuforiaDevice extends XRDevice {
     @bind
     private _handlePinchGestureEventData(data: PinchGestureEventData) {
         if (appModel.layerPresentation !== 'stack' || 
-            appModel.focussedLayer && appModel.focussedLayer.immersiveMode === 'none')
+            appModel.focussedLayer && appModel.focussedLayer.xrImmersiveMode === 'none')
             return
 
         switch (data.state) {
@@ -391,7 +400,7 @@ export class XRVuforiaDevice extends XRDevice {
         const shouldEnableCamera = 
             appModel.layerPresentation !== 'stack' || 
             appModel.focussedLayer === undefined || 
-            appModel.focussedLayer.immersiveMode !== 'none'
+            appModel.focussedLayer.xrImmersiveMode !== 'none'
             
         if (shouldEnableCamera !== this._cameraEnabled) {
             this._cameraEnabled = shouldEnableCamera
@@ -626,7 +635,7 @@ export class XRVuforiaDevice extends XRDevice {
         const layerURI = layer && layer.details.content && layer.details.content.uri
         console.log("Vuforia: Set controlling layer to " + layerURI)
 
-        if (this._controllingLayer) {
+        if (this._controllingLayer !== undefined) {
             const previousLayer = this._controllingLayer;
             this._controllingLayer = undefined;
             this._layerSwitcherCommandQueue.push(() => {
@@ -904,27 +913,15 @@ export class XRVuforiaDevice extends XRDevice {
         // aspect fit
         // const scale = Math.min(widthRatio, heightRatio);
         
-
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : screen.mainScreen.scale;
-        
-        const sizeX = videoWidth * scale * contentScaleFactor;
-        const sizeY = videoHeight * scale * contentScaleFactor;
-
-        // possible optimization, needs further testing
-        // if (this._config.enabled === enabled &&
-        //     this._config.sizeX === sizeX &&
-        //     this._config.sizeY === sizeY) {
-        //     // No changes, skip configuration
-        //     return;
-        // }
-
-        const zoomFactor = this._effectiveZoomFactor
+        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : screen.mainScreen.scale
+        const sizeX = videoWidth * scale * contentScaleFactor
+        const sizeY = videoHeight * scale * contentScaleFactor
 
         // apply the video config
         const config = this._config 
         config.enabled = this._cameraEnabled
-        config.sizeX = sizeX * zoomFactor
-        config.sizeY = sizeY * zoomFactor
+        config.sizeX = sizeX
+        config.sizeY = sizeY
         config.positionX = 0
         config.positionY = 0
         config.reflection = vuforia.VideoBackgroundReflection.Default
@@ -940,8 +937,9 @@ export class XRVuforiaDevice extends XRDevice {
         // AbsoluteLayout.setTop(videoView, viewport.y);
         // videoView.width = viewWidth;
         // videoView.height = viewHeight;
-        
-        // vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor)
+
+        const zoomFactor = this._effectiveZoomFactor
+        vuforia.api && vuforia.api.setScaleFactor(zoomFactor)
 
         const renderer = vuforia.api.getRenderer();
         renderer.setVideoBackgroundConfig(config);
@@ -967,94 +965,29 @@ export class XRVuforiaDevice extends XRDevice {
             }
 
             const projectionMatrix = renderingPrimitives.getProjectionMatrix(view)
-            glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [1,1,-1])
+            glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,-1])
 
-            if (viewJSON.type === 'singular') {
+            const viewport = renderingPrimitives.getViewport(view)
 
-                // render augmentation at fullscreen even if video is zoomed in
-                viewJSON.viewport = {x:0,y:0,width:viewWidth,height:viewWidth}
-                viewJSON.normalizedViewport = {x:0,y:0,width:1,height:1}
-                glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,1])
+            viewJSON.viewport = {
+                x: viewport.x / contentScaleFactor,
+                y: viewport.y / contentScaleFactor,
+                width: viewport.z / contentScaleFactor,
+                height: viewport.w / contentScaleFactor
+            }
 
-            } else {
-
-                const viewport = renderingPrimitives.getViewport(view)
-
-                viewJSON.viewport = {
-                    x: viewport.x / contentScaleFactor,
-                    y: viewport.y / contentScaleFactor,
-                    width: viewport.z / contentScaleFactor,
-                    height: viewport.w / contentScaleFactor
-                }
-    
-                // const normalizedViewport = renderingPrimitives.getNormalizedViewport(view)
-                viewJSON.normalizedViewport = {
-                    x: viewJSON.viewport.x / viewWidth,
-                    y: viewJSON.viewport.y / viewHeight,
-                    width: viewJSON.viewport.width / viewWidth,
-                    height: viewJSON.viewport.height / viewHeight
-                }
-
+            viewJSON.normalizedViewport = {
+                x: viewJSON.viewport.x / viewWidth,
+                y: viewJSON.viewport.y / viewHeight,
+                width: viewJSON.viewport.width / viewWidth,
+                height: viewJSON.viewport.height / viewHeight
             }
 
             viewJSON.projectionMatrix = isFinite(projectionMatrix[0]) ? projectionMatrix : undefined
 
             const eyeDisplayAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view)
             viewJSON.eyeDisplayAdjustmentMatrix = isFinite(eyeDisplayAdjustmentMatrix[0]) ? eyeDisplayAdjustmentMatrix : undefined
-            
-            // if (isFinite(projectionMatrix[0])) {
-                // // Undo the video rotation since we already encode the interface orientation in our view pose
-                // // Note: the "base" rotation for vuforia's video (at least on iOS) is the landscape right orientation,
-                // // which is the orientation where the device is held in landscape with the home button on the right. 
-                // // This "base" video rotatation is -90 deg around +z from the portrait interface orientation
-                // // So, we want to undo this rotation which vuforia applies for us.  
-                // // TODO: calculate this matrix only when we have to (when the interface orientation changes)
-                // const inverseVideoRotationMatrix = Matrix4.fromTranslationQuaternionRotationScale(
-                //     Cartesian3.ZERO,
-                //     Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, (CesiumMath.PI_OVER_TWO - util.screenOrientation * Math.PI / 180), this._scratchVideoQuaternion),
-                //     ONE,
-                //     this._scratchVideoMatrix4
-                // );
-                // Argon.Cesium.Matrix4.multiply(projectionMatrix, inverseVideoRotationMatrix, projectionMatrix);
-
-
-                // Argon.Cesium.Matrix4.multiplyByScale(projectionMatrix, Cartesian3.fromElements(1,-1,-1, this._scratchCartesian), projectionMatrix)
-
-                // Scale the projection matrix to fit nicely within a subview of type SINGULAR
-                // (This scale will not apply when the user is wearing a monocular HMD, since a
-                // monocular HMD would provide a subview of type LEFTEYE or RIGHTEYE)
-                // if (subview.type == Argon.SubviewType.SINGULAR) {
-                //     const widthRatio = subviewWidth / videoMode.width;
-                //     const heightRatio = subviewHeight / videoMode.height;
-
-                //     // aspect fill
-                //     const scaleFactor = Math.max(widthRatio, heightRatio);
-                //     // or aspect fit
-                //     // const scaleFactor = Math.min(widthRatio, heightRatio);
-
-                //     // scale x-axis
-                //     projectionMatrix[0] *= scaleFactor; // x
-                //     projectionMatrix[1] *= scaleFactor; // y
-                //     projectionMatrix[2] *= scaleFactor; // z
-                //     projectionMatrix[3] *= scaleFactor; // w
-                //     // scale y-axis
-                //     projectionMatrix[4] *= scaleFactor; // x
-                //     projectionMatrix[5] *= scaleFactor; // y
-                //     projectionMatrix[6] *= scaleFactor; // z
-                //     projectionMatrix[7] *= scaleFactor; // w
-                // }
-
-                // subview.projectionMatrix = Matrix4.clone(projectionMatrix, subview.projectionMatrix);
-            // }
-
-
-            // const eyeAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view);
-            // let projectionMatrix = Argon.Cesium.Matrix4.multiply(rawProjectionMatrix, eyeAdjustmentMatrix, []);
-            // projectionMatrix = Argon.Cesium.Matrix4.fromRowMajorArray(projectionMatrix, projectionMatrix);
-            
-            // TODO: use eye adjustment matrix to set subview poses (for eye separation). See commented out code above...
         }
-
     }
 
 }

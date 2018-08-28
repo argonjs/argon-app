@@ -63,7 +63,7 @@
 namespace{
     
     const float PROJECTION_NEAR_PLANE = .01f;
-    const float PROJECTION_FAR_PLANE = 3000.0f;
+    const float PROJECTION_FAR_PLANE = 10000.0f;
     
     // Apply a scaling transformation
     void
@@ -243,6 +243,11 @@ namespace{
     
     if (![[VuforiaCameraDevice getInstance] isStarted]) return;
     
+    
+    if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+        return;
+    }
+    
     // test if the layout has changed
     if (self.mDoLayoutSubviews) {
         [self doLayoutSubviews];
@@ -316,8 +321,16 @@ namespace{
 {
     const Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
     
-    Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(
-                                                                            renderingPrimitives.getVideoBackgroundProjectionMatrix(viewId, Vuforia::COORDINATE_SYSTEM_CAMERA));
+    Vuforia::Matrix34F vbProjectionMatrix34 = renderingPrimitives.getVideoBackgroundProjectionMatrix(viewId,true);
+    Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(vbProjectionMatrix34);
+
+//    Vuforia::Matrix44F vbProjectionMatrix =
+//        Vuforia::Tool::convertPerspectiveProjection2GLMatrix(
+//            vbProjectionMatrix34,
+//            PROJECTION_NEAR_PLANE,
+//            PROJECTION_FAR_PLANE
+//        );
+    
     
     // Scale the video background as necessary
     float scaleFactor = [VuforiaSession scaleFactor];

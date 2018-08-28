@@ -8,10 +8,12 @@ import { Progress } from 'ui/progress';
 import { ArgonWebView } from 'argon-web-view';
 import { PropertyChangeData, WrappedValue, EventData } from 'data/observable';
 import * as gradient from 'nativescript-gradient'
-import { appModel, LayerDetails, BookmarkItem } from '../app-model'
+import { appModel, XRLayerDetails, BookmarkItem, XRImmersiveMode } from '../app-model'
 import { observable } from '../decorators'
 import * as application from 'application'
 import * as fileSystem from 'file-system'
+import * as vuforia from 'nativescript-vuforia'
+
 
 export const TITLE_BAR_HEIGHT = 30;
 
@@ -42,8 +44,6 @@ export interface XRHitResult {
     transform: Array<number>
 }
 
-export type XRImmersiveMode =  'reality' | 'augmentation' | 'none'
-
 export interface LayerView {
     on(eventNames: string, callback: (data: EventData) => void, thisArg?: any);
     on(event: "xrHitTest", callback: (data: XRHitTestData) => void, thisArg?: any);
@@ -56,12 +56,6 @@ let WEBXR_SOURCE = WEBXR_FILE.readTextSync()
 let WEBXR_LAST_MODIFIED = WEBXR_FILE.lastModified
 
 export class LayerView extends GridLayout {
-
-    @observable()
-    xrEnabled = false
-
-    @observable()
-    xrImmersiveMode:XRImmersiveMode = 'augmentation'
 
     @observable()
     private needsTransparentBackground = false
@@ -77,15 +71,16 @@ export class LayerView extends GridLayout {
 
     visualIndex = 0
 
-    @observable({type:LayerDetails})
-    details: LayerDetails
+    @observable({type:XRLayerDetails})
+    details: XRLayerDetails
 
-    constructor(details: LayerDetails) {
+    constructor(details: XRLayerDetails) {
         super()
 
-        this.horizontalAlignment = 'left';
-        this.verticalAlignment = 'top';
-        this.clipToBounds = false;
+        this.horizontalAlignment = 'left'
+        this.verticalAlignment = 'top'
+        this.clipToBounds = false
+        this.opacity = 0
 
         const webView = new ArgonWebView() 
         webView.visibility = 'collapse'
@@ -107,25 +102,25 @@ export class LayerView extends GridLayout {
         }
 
         webView.on('urlChange', () => {
-            const uri = webView!.url || ''
+            let uri = webView!.url || ''
+            if (uri === 'about:blank') uri = ''
             this.details.content = new BookmarkItem({uri})
         })
 
         webView.on('loadStarted', () => {
-            this.xrEnabled = false
-            this.xrImmersiveMode = 'none'
+            this.details.onLoadStarted()
         })
 
         webView.messageHandlers['xr.start'] = () => {
-            this.xrEnabled = true
+            this.details.xrEnabled = true
         }
 
         webView.messageHandlers['xr.stop'] = () => {
-            this.xrEnabled = true
+            this.details.xrEnabled = true
         }
         
         webView.messageHandlers['xr.setImmersiveMode'] = (options:{mode:XRImmersiveMode}) => {
-            this.xrImmersiveMode = options.mode
+            this.details.xrImmersiveMode = options.mode
         }
 
         webView.messageHandlers['xr.hitTest'] = (options:{x:number,y:number}) => {
@@ -246,6 +241,16 @@ export class LayerView extends GridLayout {
             }
         });
 
+        const setupLiveVideoView = () => {
+            if (vuforia.videoView.parent)
+                (vuforia.videoView.parent as GridLayout).removeChild(vuforia.videoView)
+            this.contentView.insertChild(vuforia.videoView, 0)
+        }
+
+        if (details.content.uri.toLowerCase() === BookmarkItem.REALITY_LIVE.uri) {
+            setupLiveVideoView()
+        }
+
         this.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'details.content.title':
@@ -254,24 +259,27 @@ export class LayerView extends GridLayout {
                     break
                 case 'details.src': {
                     const src = this.details.src
-                    
-                    // if not reality:live, needs WebView
-                    const needsWebView = src && src !== 'reality:live'
-
-                    if (needsWebView) {
-                        webView.visibility = 'visible'
-                        webView.src = <any>new WrappedValue(src)
-                    } else {
-                        webView.visibility = 'collapse'
+                    if (src !== BookmarkItem.REALITY_LIVE.uri) {
+                        webView.src = src !== webView.src ? src : <any>new WrappedValue(src)
                     }
-
                     break
                 }
-                case 'xrEnabled':
-                case 'xrImmersiveMode': {
+                case 'details.content.uri': {
+                    const uri = this.details.content.uri
+                    if (uri === BookmarkItem.REALITY_LIVE.uri || uri == 'about:blank' || uri === '') {
+                        webView.visibility = 'collapse'
+                        if (uri.toLowerCase() === BookmarkItem.REALITY_LIVE.uri) {
+                            setupLiveVideoView()
+                        }
+                    } else {
+                        webView.visibility = 'visible'
+                    }
+                    break
+                }
+                case 'details.xrEnabled':
+                case 'details.xrImmersiveMode': {
                     this.needsTransparentBackground = 
-                        this.xrEnabled && this.xrImmersiveMode !== 'none'
-                    this.details.immersiveMode = this.xrImmersiveMode
+                        this.details.xrEnabled && this.details.xrImmersiveMode !== 'none'
                     break
                 }
                 case 'needsTransparentBackground': {
@@ -301,16 +309,14 @@ export class LayerView extends GridLayout {
             }
         })
 
-        if (!details.src && details.content && details.content.uri) {
-            details.src = details.content.uri
-        }
         this.details = details
+        this.details.log = webView.log
     }
 
     private _updateUI() {
         const title = this.details.content ? this.details.content.title : ''
 
-        if (this.details.immersiveMode === 'reality') {
+        if (this.details.xrImmersiveMode === 'reality') {
             this.titleBar.backgroundColor = new Color(0xFF222222);
             this.titleLabel.color = new Color('white');        
             this.titleLabel.text = title ? 'Reality: ' + title : 'Reality'
@@ -320,7 +326,7 @@ export class LayerView extends GridLayout {
             this.titleLabel.text = title
         }
 
-        if (this.details.immersiveMode === 'none') {
+        if (this.details.xrImmersiveMode === 'none') {
             this.marginTop = appModel.safeAreaInsets.top
         } else {
             this.marginTop = 0

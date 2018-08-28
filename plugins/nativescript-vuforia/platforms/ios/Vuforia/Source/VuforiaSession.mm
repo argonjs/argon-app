@@ -203,6 +203,11 @@ static float scaleFactorValue = 1;
 //}
 
 + (void) _render {
+    
+    if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+        return;
+    }
+    
     dispatch_async(frameRenderingQueue, ^{
         if (dispatch_semaphore_wait(frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0) {
             return;

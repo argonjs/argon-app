@@ -733,6 +733,10 @@ export function onSearchBarClear(args) {
     }
 }
 
+export function onFlashToggle(args) {
+    appModel.flashEnabled = !appModel.flashEnabled
+}
+
 if (application.ios) {
     const textFieldEditHandler = (notification: NSNotification) => {
         const iosSearchBar = (searchBar.ios as UISearchBar);

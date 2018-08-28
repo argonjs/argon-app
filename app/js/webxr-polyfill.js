@@ -76,7 +76,95 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Quaternion = __webpack_require__(2);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/*
+EventHandlerBase is the base class that implements the EventHandler interface methods for dispatching and receiving events.
+*/
+var EventHandlerBase = function () {
+	function EventHandlerBase() {
+		_classCallCheck(this, EventHandlerBase);
+
+		this._listeners = new Map(); // string type -> [listener, ...]
+	}
+
+	_createClass(EventHandlerBase, [{
+		key: 'addEventListener',
+		value: function addEventListener(type, listener) {
+			var listeners = this._listeners.get(type);
+			if (Array.isArray(listeners) === false) {
+				listeners = [];
+				this._listeners.set(type, listeners);
+			}
+			listeners.push(listener);
+		}
+	}, {
+		key: 'removeEventListener',
+		value: function removeEventListener(type, listener) {
+			var listeners = this._listeners.get(type);
+			if (Array.isArray(listeners) === false) {
+				return;
+			}
+			for (var i = 0; i < listeners.length; i++) {
+				if (listeners[i] === listener) {
+					listeners.splice(i, 1);
+					return;
+				}
+			}
+		}
+	}, {
+		key: 'dispatchEvent',
+		value: function dispatchEvent(event) {
+			var eventAttributeName = 'on' + event.type;
+			if (typeof this[eventAttributeName] === 'function') this[eventAttributeName](event);
+			var listeners = this._listeners.get(event.type);
+			if (Array.isArray(listeners) === false) return;
+			var _iteratorNormalCompletion = true;
+			var _didIteratorError = false;
+			var _iteratorError = undefined;
+
+			try {
+				for (var _iterator = listeners[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var listener = _step.value;
+
+					listener(event);
+				}
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion && _iterator.return) {
+						_iterator.return();
+					}
+				} finally {
+					if (_didIteratorError) {
+						throw _iteratorError;
+					}
+				}
+			}
+		}
+	}]);
+
+	return EventHandlerBase;
+}();
+
+exports.default = EventHandlerBase;
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
@@ -374,7 +462,7 @@ exports.default = MatrixMath;
 MatrixMath.PI_OVER_180 = Math.PI / 180.0;
 
 /***/ }),
-/* 1 */
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -386,83 +474,181 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _XRCoordinateSystem2 = __webpack_require__(5);
+
+var _XRCoordinateSystem3 = _interopRequireDefault(_XRCoordinateSystem2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/*
-EventHandlerBase is the base class that implements the EventHandler interface methods for dispatching and receiving events.
-*/
-var EventHandlerBase = function () {
-	function EventHandlerBase() {
-		_classCallCheck(this, EventHandlerBase);
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-		this._listeners = new Map(); // string type -> [listener, ...]
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/*
+XRAnchors provide per-frame coordinates which the Reality attempts to pin "in place".
+In a Virtual Reality these coordinates do not change. 
+In a Reality based on environment mapping sensors, the anchors may change pose on a per-frame bases as the system refines its map.
+*/
+var XRAnchor = function (_XRCoordinateSystem) {
+	_inherits(XRAnchor, _XRCoordinateSystem);
+
+	function XRAnchor(uid) {
+		_classCallCheck(this, XRAnchor);
+
+		var _this = _possibleConstructorReturn(this, (XRAnchor.__proto__ || Object.getPrototypeOf(XRAnchor)).call(this));
+
+		_this._uid = uid || XRAnchor._generateUID();
+		_this._isTrackable = false;
+		_this.__isTracking = false;
+		return _this;
 	}
 
-	_createClass(EventHandlerBase, [{
-		key: 'addEventListener',
-		value: function addEventListener(type, listener) {
-			var listeners = this._listeners.get(type);
-			if (Array.isArray(listeners) === false) {
-				listeners = [];
-				this._listeners.set(type, listeners);
-			}
-			listeners.push(listener);
+	_createClass(XRAnchor, [{
+		key: 'uid',
+		get: function get() {
+			return this._uid;
+		}
+
+		/**
+   * If true, this anchor corresponds to a movable object that can be tracked.
+   * This property value does not change for the lifetime of an XRAnchor instance.
+   */
+
+	}, {
+		key: 'isTrackable',
+		get: function get() {
+			return this._isTrackable;
+		}
+
+		/**
+   * If true, then this anchor is actively being tracked.
+   * 
+   * If this anchor is not trackable, then `isTracking` always false. 
+   * If this anchor is trackable, `isTracking` can change at any time. 
+   * 
+   * Changes to tracking state correspond to 'found' and 'lost' events:
+   *  - "found" : anchor is now being tracked (isTracking is true)
+   *  - "lost"  : anchor is no longer being tracked (isTracking is false)
+   * 
+   * When tracking is lost, getTransformTo() reports as if the anchor is stationary
+   */
+
+	}, {
+		key: 'isTracking',
+		get: function get() {
+			return this.__isTracking;
+		}
+
+		// backwards compatability
+
+	}, {
+		key: 'coordinateSystem',
+		get: function get() {
+			return this;
 		}
 	}, {
-		key: 'removeEventListener',
-		value: function removeEventListener(type, listener) {
-			var listeners = this._listeners.get(type);
-			if (Array.isArray(listeners) === false) {
-				return;
-			}
-			for (var i = 0; i < listeners.length; i++) {
-				if (listeners[i] === listener) {
-					listeners.splice(i, 1);
-					return;
-				}
+		key: '_isTracking',
+		set: function set(value) {
+			var isTracking = this.__isTracking;
+			this.__isTracking = value;
+			if (isTracking === false && value === true) {
+				this.dispatchEvent(new CustomEvent('found'));
+			} else if (isTracking === true && value === false) {
+				this.dispatchEvent(new CustomEvent('lost'));
 			}
 		}
-	}, {
-		key: 'dispatchEvent',
-		value: function dispatchEvent(event) {
-			var eventAttributeName = 'on' + event.type;
-			if (typeof this[eventAttributeName] === 'function') this[eventAttributeName](event);
-			var listeners = this._listeners.get(event.type);
-			if (Array.isArray(listeners) === false) return;
-			var _iteratorNormalCompletion = true;
-			var _didIteratorError = false;
-			var _iteratorError = undefined;
-
-			try {
-				for (var _iterator = listeners[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-					var listener = _step.value;
-
-					listener(event);
-				}
-			} catch (err) {
-				_didIteratorError = true;
-				_iteratorError = err;
-			} finally {
-				try {
-					if (!_iteratorNormalCompletion && _iterator.return) {
-						_iterator.return();
-					}
-				} finally {
-					if (_didIteratorError) {
-						throw _iteratorError;
-					}
-				}
-			}
+	}], [{
+		key: '_generateUID',
+		value: function _generateUID() {
+			return 'anchor-' + new Date().getTime() + '-' + Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 		}
 	}]);
 
-	return EventHandlerBase;
-}();
+	return XRAnchor;
+}(_XRCoordinateSystem3.default);
 
-exports.default = EventHandlerBase;
+exports.default = XRAnchor;
 
 /***/ }),
-/* 2 */
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.setMatrixArrayType = setMatrixArrayType;
+exports.toRadian = toRadian;
+exports.equals = equals;
+/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+/**
+ * Common utilities
+ * @module glMatrix
+ */
+
+// Configuration Constants
+var EPSILON = exports.EPSILON = 0.000001;
+var ARRAY_TYPE = exports.ARRAY_TYPE = typeof Float32Array !== 'undefined' ? Float32Array : Array;
+var RANDOM = exports.RANDOM = Math.random;
+
+/**
+ * Sets the type of array used when creating new vectors and matrices
+ *
+ * @param {Type} type Array type, such as Float32Array or Array
+ */
+function setMatrixArrayType(type) {
+  exports.ARRAY_TYPE = ARRAY_TYPE = type;
+}
+
+var degree = Math.PI / 180;
+
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+function toRadian(a) {
+  return a * degree;
+}
+
+/**
+ * Tests whether or not the arguments have approximately the same value, within an absolute
+ * or relative tolerance of glMatrix.EPSILON (an absolute tolerance is used for values less
+ * than or equal to 1.0, and a relative tolerance is used for larger values)
+ *
+ * @param {Number} a The first number to test.
+ * @param {Number} b The second number to test.
+ * @returns {Boolean} True if the numbers are approximately equal, false otherwise.
+ */
+function equals(a, b) {
+  return Math.abs(a - b) <= EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
+}
+
+/***/ }),
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -734,192 +920,6 @@ var Quaternion = function () {
 exports.default = Quaternion;
 
 /***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _XRCoordinateSystem2 = __webpack_require__(5);
-
-var _XRCoordinateSystem3 = _interopRequireDefault(_XRCoordinateSystem2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
-XRAnchors provide per-frame coordinates which the Reality attempts to pin "in place".
-In a Virtual Reality these coordinates do not change. 
-In a Reality based on environment mapping sensors, the anchors may change pose on a per-frame bases as the system refines its map.
-*/
-var XRAnchor = function (_XRCoordinateSystem) {
-	_inherits(XRAnchor, _XRCoordinateSystem);
-
-	function XRAnchor(uid) {
-		_classCallCheck(this, XRAnchor);
-
-		var _this = _possibleConstructorReturn(this, (XRAnchor.__proto__ || Object.getPrototypeOf(XRAnchor)).call(this));
-
-		_this._uid = uid || XRAnchor._generateUID();
-		_this._isTrackable = false;
-		_this.__isTracking = false;
-		return _this;
-	}
-
-	_createClass(XRAnchor, [{
-		key: 'uid',
-		get: function get() {
-			return this._uid;
-		}
-
-		/**
-   * If true, this anchor corresponds to a movable object that can be tracked.
-   * This property value does not change for the lifetime of an XRAnchor instance.
-   */
-
-	}, {
-		key: 'isTrackable',
-		get: function get() {
-			return this._isTrackable;
-		}
-
-		/**
-   * If true, then this anchor is actively being tracked.
-   * 
-   * If this anchor is not trackable, then `isTracking` always false. 
-   * If this anchor is trackable, `isTracking` can change at any time. 
-   * 
-   * Changes to tracking state correspond to 'found' and 'lost' events:
-   *  - "found" : anchor is now being tracked (isTracking is true)
-   *  - "lost"  : anchor is no longer being tracked (isTracking is false)
-   * 
-   * When tracking is lost, getTransformTo() reports as if the anchor is stationary
-   */
-
-	}, {
-		key: 'isTracking',
-		get: function get() {
-			return this.__isTracking;
-		}
-
-		// backwards compatability
-
-	}, {
-		key: 'coordinateSystem',
-		get: function get() {
-			return this;
-		}
-	}, {
-		key: '_isTracking',
-		set: function set(value) {
-			var isTracking = this.__isTracking;
-			this.__isTracking = value;
-			if (isTracking === false && value === true) {
-				this.dispatchEvent(new CustomEvent('found'));
-			} else if (isTracking === true && value === false) {
-				this.dispatchEvent(new CustomEvent('lost'));
-			}
-		}
-	}], [{
-		key: '_generateUID',
-		value: function _generateUID() {
-			return 'anchor-' + new Date().getTime() + '-' + Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-		}
-	}]);
-
-	return XRAnchor;
-}(_XRCoordinateSystem3.default);
-
-exports.default = XRAnchor;
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.setMatrixArrayType = setMatrixArrayType;
-exports.toRadian = toRadian;
-exports.equals = equals;
-/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-/**
- * Common utilities
- * @module glMatrix
- */
-
-// Configuration Constants
-var EPSILON = exports.EPSILON = 0.000001;
-var ARRAY_TYPE = exports.ARRAY_TYPE = typeof Float32Array !== 'undefined' ? Float32Array : Array;
-var RANDOM = exports.RANDOM = Math.random;
-
-/**
- * Sets the type of array used when creating new vectors and matrices
- *
- * @param {Type} type Array type, such as Float32Array or Array
- */
-function setMatrixArrayType(type) {
-  exports.ARRAY_TYPE = ARRAY_TYPE = type;
-}
-
-var degree = Math.PI / 180;
-
-/**
- * Convert Degree To Radian
- *
- * @param {Number} a Angle in Degrees
- */
-function toRadian(a) {
-  return a * degree;
-}
-
-/**
- * Tests whether or not the arguments have approximately the same value, within an absolute
- * or relative tolerance of glMatrix.EPSILON (an absolute tolerance is used for values less
- * than or equal to 1.0, and a relative tolerance is used for larger values)
- *
- * @param {Number} a The first number to test.
- * @param {Number} b The second number to test.
- * @returns {Boolean} True if the numbers are approximately equal, false otherwise.
- */
-function equals(a, b) {
-  return Math.abs(a - b) <= EPSILON * Math.max(1.0, Math.abs(a), Math.abs(b));
-}
-
-/***/ }),
 /* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -932,15 +932,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
-var _Quaternion = __webpack_require__(2);
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -1052,7 +1052,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -1201,7 +1201,7 @@ var XRSession = function (_EventHandlerBase) {
 		}
 
 		/**
-   * Return a promise that resolves (at the next frame) to a new mid-air anchor at the current device pose
+   * Return a promise that resolves (at the next frame) to a new XRAnchor at the current device pose
    */
 
 	}, {
@@ -1323,11 +1323,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
-var _Quaternion = __webpack_require__(2);
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
@@ -1401,11 +1401,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -1706,13 +1706,13 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
-var _MatrixMath = __webpack_require__(0);
+var _XRHitAnchor = __webpack_require__(16);
 
-var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
+var _XRHitAnchor2 = _interopRequireDefault(_XRHitAnchor);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1740,7 +1740,6 @@ var Reality = function (_EventHandlerBase) {
 		_this._isShared = isShared;
 		_this._isPassthrough = isPassthrough;
 		_this._anchors = new Map();
-		_this._hits = [];
 		return _this;
 	}
 
@@ -1807,44 +1806,26 @@ var Reality = function (_EventHandlerBase) {
 
 	}, {
 		key: '_afterAnimationFrame',
-		value: function _afterAnimationFrame() {
-			var _iteratorNormalCompletion = true;
-			var _didIteratorError = false;
-			var _iteratorError = undefined;
-
-			try {
-				for (var _iterator = this._hits[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-					var hit = _step.value;
-
-					hit._expired = true;
-				}
-			} catch (err) {
-				_didIteratorError = true;
-				_iteratorError = err;
-			} finally {
-				try {
-					if (!_iteratorNormalCompletion && _iterator.return) {
-						_iterator.return();
-					}
-				} finally {
-					if (_didIteratorError) {
-						throw _iteratorError;
-					}
-				}
-			}
-
-			this._hits = [];
-		}
-
-		/*
-  Create an anchor hung in space
-  */
-
+		value: function _afterAnimationFrame() {}
 	}, {
 		key: '_addAnchor',
 		value: function _addAnchor(anchor) {
-			// returns DOMString anchor UID
 			throw new Error('Exending classes should implement _addAnchor');
+		}
+	}, {
+		key: '_createMidAirAnchor',
+		value: function _createMidAirAnchor() {
+			var anchor = new XRAnchor();
+			anchor._transform = this._session._device._pose._transform;
+			this._addAnchor(anchor);
+			return anchor;
+		}
+	}, {
+		key: '_createAnchorFromHit',
+		value: function _createAnchorFromHit(hit) {
+			var anchor = new _XRHitAnchor2.default(hit);
+			this._addAnchor(anchor);
+			return anchor;
 		}
 
 		/*
@@ -1951,19 +1932,19 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
-var _mat = __webpack_require__(17);
+var _mat = __webpack_require__(18);
 
 var mat4 = _interopRequireWildcard(_mat);
 
-var _quat = __webpack_require__(18);
+var _quat = __webpack_require__(19);
 
 var quat = _interopRequireWildcard(_quat);
 
@@ -2865,7 +2846,7 @@ exports.str = str;
 exports.exactEquals = exactEquals;
 exports.equals = equals;
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
@@ -3681,7 +3662,7 @@ var _XRViewport = __webpack_require__(22);
 
 var _XRViewport2 = _interopRequireDefault(_XRViewport);
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
@@ -3987,7 +3968,7 @@ exports.XRAnchorOffset = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _XRAnchor = __webpack_require__(3);
+var _XRAnchor = __webpack_require__(2);
 
 var _XRAnchor2 = _interopRequireDefault(_XRAnchor);
 
@@ -4022,10 +4003,17 @@ var XRFrame = function () {
    * Return a new mid-air anchor with the current device pose
    */
 		value: function createMidAirAnchor() {
-			var anchor = new _XRAnchor2.default();
-			anchor._transform = this._session._device._pose._transform;
-			this._session.reality._addAnchor(anchor);
-			return anchor;
+			return this._session.reality._createMidAirAnchor();
+		}
+
+		/**
+   * Return a new anchor at the given hit position
+   */
+
+	}, {
+		key: 'createAnchorFromHit',
+		value: function createAnchorFromHit(hit) {
+			return this._session.reality._createAnchorFromHit(hit);
 		}
 
 		/**
@@ -4289,6 +4277,84 @@ var XRAnchorOffset = exports.XRAnchorOffset = function () {
 
 
 Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _MatrixMath = __webpack_require__(1);
+
+var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
+
+var _XRAnchor2 = __webpack_require__(2);
+
+var _XRAnchor3 = _interopRequireDefault(_XRAnchor2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var XRHitAnchor = function (_XRAnchor) {
+    _inherits(XRHitAnchor, _XRAnchor);
+
+    function XRHitAnchor(hit) {
+        _classCallCheck(this, XRHitAnchor);
+
+        var _this = _possibleConstructorReturn(this, (XRHitAnchor.__proto__ || Object.getPrototypeOf(XRHitAnchor)).call(this));
+
+        _this._transform = hit._transform;
+        _this._type = hit._type;
+        _this._target = hit._target;
+
+        _this._localTransform = null;
+        if (_this._target && _this._target.isTrackable) {
+            _this._localTransform = _this.getTransformTo(_this._target);
+        }
+        return _this;
+    }
+
+    _createClass(XRHitAnchor, [{
+        key: 'type',
+        get: function get() {
+            return this._type;
+        }
+    }, {
+        key: 'target',
+        get: function get() {
+            return this._target;
+        }
+    }, {
+        key: '_transform',
+        get: function get() {
+            if (this._target && this._localTransform) {
+                this.__transform = _MatrixMath2.default.mat4_multiply(this.__transform || new Float32Array(16), this._target._transform, this._localTransform);
+            }
+            return this.__transform;
+        },
+        set: function set(value) {
+            this._localTransform = null; // setting a global transform removes the local transform
+            if (this._checkValueNull(value)) return;
+            this.__transform.set(value);
+        }
+    }]);
+
+    return XRHitAnchor;
+}(_XRAnchor3.default);
+
+exports.default = XRHitAnchor;
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 
@@ -4330,7 +4396,7 @@ var XRLightEstimate = function () {
 exports.default = XRLightEstimate;
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4385,7 +4451,7 @@ exports.multiplyScalarAndAdd = multiplyScalarAndAdd;
 exports.exactEquals = exactEquals;
 exports.equals = equals;
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
@@ -6191,7 +6257,7 @@ var mul = exports.mul = multiply;
 var sub = exports.sub = subtract;
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6217,7 +6283,7 @@ exports.fromMat3 = fromMat3;
 exports.fromEuler = fromEuler;
 exports.str = str;
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
@@ -6888,7 +6954,7 @@ var setAxes = exports.setAxes = function () {
 }();
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6900,19 +6966,19 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
-var _mat = __webpack_require__(17);
+var _mat = __webpack_require__(18);
 
 var mat4 = _interopRequireWildcard(_mat);
 
-var _quat = __webpack_require__(18);
+var _quat = __webpack_require__(19);
 
 var quat = _interopRequireWildcard(_quat);
 
@@ -6920,7 +6986,7 @@ var _vec = __webpack_require__(11);
 
 var vec3 = _interopRequireWildcard(_vec);
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
@@ -7064,10 +7130,10 @@ var ArgonWrapper = function (_EventHandlerBase) {
 		}
 	}, {
 		key: "createMidAirAnchor",
-		value: function createMidAirAnchor(uid, transform) {
+		value: function createMidAirAnchor(uid, pose) {
 			var _this2 = this;
 
-			return this._request('xr.createMidAirAnchor', { transform: transform }).then(function (_ref) {
+			return this._request('xr.createMidAirAnchor', { pose: pose }).then(function (_ref) {
 				var id = _ref.id;
 
 				_this2._anchorTrackableIdMap.set(uid, id);
@@ -7076,13 +7142,10 @@ var ArgonWrapper = function (_EventHandlerBase) {
 	}, {
 		key: "createAnchorFromHit",
 		value: function createAnchorFromHit(uid, id) {
-			var _this3 = this;
-
-			return this._request('xr.createHitAnchor', { id: id }).then(function (_ref2) {
-				var id = _ref2.id;
-
-				_this3._anchorTrackableIdMap.set(uid, id);
-			});
+			return this._request('xr.createMidAirAnchor', { id: id, pose: pose });
+			// return this._request('xr.createHitAnchor', {id}).then(({id})=>{
+			// 	this._anchorTrackableIdMap.set(uid, id)
+			// })
 		}
 	}, {
 		key: "getAnchorTransform",
@@ -7093,12 +7156,12 @@ var ArgonWrapper = function (_EventHandlerBase) {
 	}, {
 		key: "requestHitTest",
 		value: function requestHitTest(x, y) {
-			var _this4 = this;
+			var _this3 = this;
 
 			return new Promise(function (resolve) {
 				var id = createGuid();
-				_this4._send('xr.hitTest', { id: id, point: { x: x, y: y } });
-				_this4._pendingHitTestResolver.set(id, resolve);
+				_this3._send('xr.hitTest', { id: id, point: { x: x, y: y } });
+				_this3._pendingHitTestResolver.set(id, resolve);
 			});
 		}
 	}, {
@@ -7109,12 +7172,12 @@ var ArgonWrapper = function (_EventHandlerBase) {
 	}, {
 		key: "_init",
 		value: function _init() {
-			var _this5 = this;
+			var _this4 = this;
 
 			// handle incoming messages and allow a promise to be returned as a result
 			window['__ARGON_PORT__'] = {
 				postMessage: function postMessage(messageData) {
-					if (_this5._isClosed) return;
+					if (_this4._isClosed) return;
 
 					var data = typeof messageData === 'string' ? JSON.parse(messageData) : messageData;
 
@@ -7122,7 +7185,7 @@ var ArgonWrapper = function (_EventHandlerBase) {
 					var topic = data[1];
 					var message = data[2] || {};
 					var expectsResponse = data[3];
-					var handler = _this5._messageHandlers[topic];
+					var handler = _this4._messageHandlers[topic];
 
 					if (handler && !expectsResponse) {
 						handler(message);
@@ -7131,19 +7194,19 @@ var ArgonWrapper = function (_EventHandlerBase) {
 							return resolve(handler(message));
 						});
 						Promise.resolve(response).then(function (response) {
-							if (_this5._isClosed) return;
-							_this5._send(topic + ':resolve:' + id, response);
+							if (_this4._isClosed) return;
+							_this4._send(topic + ':resolve:' + id, response);
 						}).catch(function (error) {
-							if (_this5._isClosed) return;
+							if (_this4._isClosed) return;
 							var errorMessage = void 0;
 							if (typeof error === 'string') errorMessage = error;else if (typeof error.message === 'string') errorMessage = error.message;
-							_this5._send(topic + ':reject:' + id, { reason: errorMessage });
+							_this4._send(topic + ':reject:' + id, { reason: errorMessage });
 						});
 					} else {
 						var errorMessage = 'ArgonWrapper is unable to handle message for topic ' + topic;
 						console.log(errorMessage);
 						if (expectsResponse) {
-							_this5._send(topic + ':reject:' + id, { reason: errorMessage });
+							_this4._send(topic + ':reject:' + id, { reason: errorMessage });
 						}
 					}
 				}
@@ -7163,20 +7226,20 @@ var ArgonWrapper = function (_EventHandlerBase) {
 	}, {
 		key: "_request",
 		value: function _request(topic, message) {
-			var _this6 = this;
+			var _this5 = this;
 
 			var id = createGuid();
 			var resolveTopic = topic + ':resolve:' + id;
 			var rejectTopic = topic + ':reject:' + id;
 			var result = new Promise(function (resolve, reject) {
-				_this6._messageHandlers[resolveTopic] = function (message) {
-					delete _this6._messageHandlers[resolveTopic];
-					delete _this6._messageHandlers[rejectTopic];
+				_this5._messageHandlers[resolveTopic] = function (message) {
+					delete _this5._messageHandlers[resolveTopic];
+					delete _this5._messageHandlers[rejectTopic];
 					resolve(message);
 				};
-				_this6._messageHandlers[rejectTopic] = function (message) {
-					delete _this6._messageHandlers[resolveTopic];
-					delete _this6._messageHandlers[rejectTopic];
+				_this5._messageHandlers[rejectTopic] = function (message) {
+					delete _this5._messageHandlers[resolveTopic];
+					delete _this5._messageHandlers[rejectTopic];
 					console.warn("Request '" + topic + "' rejected with reason:\n" + message.reason);
 					reject(new Error(message.reason));
 				};
@@ -7239,7 +7302,7 @@ function createGuid() {
 }
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7255,13 +7318,9 @@ var _XRCoordinateSystem2 = __webpack_require__(5);
 
 var _XRCoordinateSystem3 = _interopRequireDefault(_XRCoordinateSystem2);
 
-var _XRAnchor = __webpack_require__(3);
+var _XRAnchor = __webpack_require__(2);
 
 var _XRAnchor2 = _interopRequireDefault(_XRAnchor);
-
-var _XRHitAnchor = __webpack_require__(21);
-
-var _XRHitAnchor2 = _interopRequireDefault(_XRHitAnchor);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7274,7 +7333,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 /*
 XRHit contains the result of a hit test.
 
-In order to retain the point of contact beyond a single frame, createAnchor() must be called before the next frame.
+In order to retain the point of contact beyond a single frame, 
+XRFrame.createAnchorFromHit() must be used.
 */
 var XRHit = function (_XRCoordinateSystem) {
 	_inherits(XRHit, _XRCoordinateSystem);
@@ -7285,28 +7345,12 @@ var XRHit = function (_XRCoordinateSystem) {
 		var _this = _possibleConstructorReturn(this, (XRHit.__proto__ || Object.getPrototypeOf(XRHit)).call(this));
 
 		_this._uid = uid || _XRAnchor2.default._generateUID();
-		_this._target = null;
-		_this._type = null;
-		_this._expired = false;
+		_this._targetAnchor = null;
+		_this._type = 'unknown';
 		return _this;
 	}
 
 	_createClass(XRHit, [{
-		key: 'createAnchor',
-
-
-		/** 
-   * Create an XRHitAnchor at the point of contact 
-   */
-		value: function createAnchor() {
-			if (this._expired) throw new Error('createAnchor must be called before the next frame is fired');
-
-			var anchor = new _XRHitAnchor2.default(this);
-			// notify the Reality to create an anchor from this hit
-			this.dispatchEvent(new CustomEvent('_createAnchor', { detail: anchor }));
-			return anchor;
-		}
-	}, {
 		key: 'uid',
 		get: function get() {
 			return this._uid;
@@ -7339,89 +7383,11 @@ var XRHit = function (_XRCoordinateSystem) {
 exports.default = XRHit;
 
 
-XRHit.OTHER = "other";
+XRHit.UNKNOWN = "unknown";
 XRHit.FLOOR = "floor";
 XRHit.PLATFORM = "platform";
 XRHit.CEILING = "ceiling";
 XRHit.WALL = "wall";
-
-/***/ }),
-/* 21 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _MatrixMath = __webpack_require__(0);
-
-var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
-
-var _XRAnchor2 = __webpack_require__(3);
-
-var _XRAnchor3 = _interopRequireDefault(_XRAnchor2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var XRHitAnchor = function (_XRAnchor) {
-    _inherits(XRHitAnchor, _XRAnchor);
-
-    function XRHitAnchor(hit) {
-        _classCallCheck(this, XRHitAnchor);
-
-        var _this = _possibleConstructorReturn(this, (XRHitAnchor.__proto__ || Object.getPrototypeOf(XRHitAnchor)).call(this));
-
-        _this._transform = hit._transform;
-        _this._type = hit._type;
-        _this._target = hit._target;
-
-        _this._localTransform = null;
-        if (_this._target && _this._target.isTrackable) {
-            _this._localTransform = _this.getTransformTo(_this._target);
-        }
-        return _this;
-    }
-
-    _createClass(XRHitAnchor, [{
-        key: 'type',
-        get: function get() {
-            return this._type;
-        }
-    }, {
-        key: 'target',
-        get: function get() {
-            return this._target;
-        }
-    }, {
-        key: '_transform',
-        get: function get() {
-            if (this._target && this._localTransform) {
-                this.__transform = _MatrixMath2.default.mat4_multiply(this.__transform || new Float32Array(16), this._target._transform, this._localTransform);
-            }
-            return this.__transform;
-        },
-        set: function set(value) {
-            this._localTransform = null; // setting a global transform removes the local transform
-            if (this._checkValueNull(value)) return;
-            this.__transform.set(value);
-        }
-    }]);
-
-    return XRHitAnchor;
-}(_XRAnchor3.default);
-
-exports.default = XRHitAnchor;
 
 /***/ }),
 /* 22 */
@@ -7501,7 +7467,7 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -7598,7 +7564,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -7606,7 +7572,7 @@ var _Vector = __webpack_require__(13);
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
-var _Quaternion = __webpack_require__(2);
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
@@ -7713,11 +7679,11 @@ var _XRPointCloud = __webpack_require__(35);
 
 var _XRPointCloud2 = _interopRequireDefault(_XRPointCloud);
 
-var _XRLightEstimate = __webpack_require__(16);
+var _XRLightEstimate = __webpack_require__(17);
 
 var _XRLightEstimate2 = _interopRequireDefault(_XRLightEstimate);
 
-var _XRAnchor = __webpack_require__(3);
+var _XRAnchor = __webpack_require__(2);
 
 var _XRAnchor2 = _interopRequireDefault(_XRAnchor);
 
@@ -7725,11 +7691,11 @@ var _XRPlaneAnchor = __webpack_require__(36);
 
 var _XRPlaneAnchor2 = _interopRequireDefault(_XRPlaneAnchor);
 
-var _XRHit = __webpack_require__(20);
+var _XRHit = __webpack_require__(21);
 
 var _XRHit2 = _interopRequireDefault(_XRHit);
 
-var _XRHitAnchor = __webpack_require__(21);
+var _XRHitAnchor = __webpack_require__(16);
 
 var _XRHitAnchor2 = _interopRequireDefault(_XRHitAnchor);
 
@@ -7773,7 +7739,7 @@ var _XRWebGLLayer = __webpack_require__(39);
 
 var _XRWebGLLayer2 = _interopRequireDefault(_XRWebGLLayer);
 
-var _EventHandlerBase2 = __webpack_require__(1);
+var _EventHandlerBase2 = __webpack_require__(0);
 
 var _EventHandlerBase3 = _interopRequireDefault(_EventHandlerBase2);
 
@@ -7956,27 +7922,19 @@ var _Reality2 = __webpack_require__(9);
 
 var _Reality3 = _interopRequireDefault(_Reality2);
 
-var _XRAnchor = __webpack_require__(3);
+var _XRAnchor = __webpack_require__(2);
 
 var _XRAnchor2 = _interopRequireDefault(_XRAnchor);
 
-var _XRLightEstimate = __webpack_require__(16);
+var _XRLightEstimate = __webpack_require__(17);
 
 var _XRLightEstimate2 = _interopRequireDefault(_XRLightEstimate);
-
-var _MatrixMath = __webpack_require__(0);
-
-var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
-
-var _Quaternion = __webpack_require__(2);
-
-var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
 var _ARKitWrapper = __webpack_require__(10);
 
 var _ARKitWrapper2 = _interopRequireDefault(_ARKitWrapper);
 
-var _ArgonWrapper = __webpack_require__(19);
+var _ArgonWrapper = __webpack_require__(20);
 
 var _ArgonWrapper2 = _interopRequireDefault(_ArgonWrapper);
 
@@ -7984,11 +7942,7 @@ var _ARCoreCameraRenderer = __webpack_require__(30);
 
 var _ARCoreCameraRenderer2 = _interopRequireDefault(_ARCoreCameraRenderer);
 
-var _XRCoordinateSystem = __webpack_require__(5);
-
-var _XRCoordinateSystem2 = _interopRequireDefault(_XRCoordinateSystem);
-
-var _XRHit = __webpack_require__(20);
+var _XRHit = __webpack_require__(21);
 
 var _XRHit2 = _interopRequireDefault(_XRHit);
 
@@ -8286,13 +8240,7 @@ var CameraReality = function (_Reality) {
 
 						var hit = new _XRHit2.default();
 						hit._transform = hitResult.world_transform;
-						if (hitResult.uuid && (hit._target = _this4._getAnchor(hitResult.uuid)) === null) {
-							console.log('unknown anchor', hitResult.uuid); // this anchor should already exist
-						}
-						hit.addEventListener('_createAnchor', function (evt) {
-							var anchor = evt.detail;
-							_this4._anchors.set(anchor.uid, anchor);
-						});
+						hit._targetAnchor = _this4._getAnchor(hitResult.uuid);
 
 						resolve([hit]);
 					});
@@ -8310,25 +8258,12 @@ var CameraReality = function (_Reality) {
 					});
 
 					var hits = [];
-
-					var _loop = function _loop(i) {
+					for (var i = 0; i < hitResults.length; i++) {
 						var hitResult = hitResults[i];
 						var hit = new _XRHit2.default();
+						hit._targetAnchor = _this4._getAnchor(hitResult.uuid);
 						hit._transform = hitResult.modelMatrix;
-						if (hitResult.uuid && (hit._target = _this4._getAnchor(hitResult.uuid)) === null) {
-							console.log('unknown anchor', hitResult.uuid); // this anchor should already exist
-						}
-						hit.addEventListener('_createAnchor', function (evt) {
-							var anchor = evt.detail;
-							_this4._anchors.set(anchor.uid, anchor);
-							_this4._argonWrapper.createAnchorFromHit(anchor.uid, hitResult.uuid);
-						});
-						_this4._hits.push(hit);
 						hits[i] = hit;
-					};
-
-					for (var i = 0; i < hitResults.length; i++) {
-						_loop(i);
 					}
 					resolve(hits);
 				} else if (_this4._argonWrapper !== null) {
@@ -8338,25 +8273,12 @@ var CameraReality = function (_Reality) {
 							return;
 						}
 						var hits = [];
-
-						var _loop2 = function _loop2(i) {
-							var hitResult = hitResults[i]; // {id:string, transform:Float32Array[16]}
-							var hit = new _XRHit2.default();
-							hit._transform = hitResult.transform;
-							if (hitResult.anchorId && (hit._target = _this4._getAnchor(hitResult.anchorId)) === null) {
-								console.log('unknown anchor', hitResult.anchorId); // this anchor should already exist
-							}
-							hit.addEventListener('_createAnchor', function (evt) {
-								var anchor = evt.detail;
-								_this4._anchors.set(anchor.uid, anchor);
-								_this4._argonWrapper.createAnchorFromHit(anchor.uid, hitResult.id);
-							});
-							_this4._hits.push(hit);
-							hits[i] = hit;
-						};
-
-						for (var i = 0; i < hitResults.length; i++) {
-							_loop2(i);
+						for (var _i = 0; _i < hitResults.length; _i++) {
+							var _hitResult = hitResults[_i]; // {id:string, transform:Float32Array[16]}
+							var _hit = new _XRHit2.default(_hitResult.id);
+							_hit._transform = _hitResult.pose;
+							_this4._hits.push(_hit);
+							hits[_i] = _hit;
 						}
 						resolve(hits);
 					});
@@ -8435,13 +8357,13 @@ var CameraReality = function (_Reality) {
 					return null;
 				}
 				var _hitTestResults = [];
-				for (var _i = 0; _i < _hits.length; _i++) {
-					var _result = _hitTestResults[_i] = new _XRHit2.default();
-					_result._transform = _hits[_i].modelMatrix;
+				for (var _i2 = 0; _i2 < _hits.length; _i2++) {
+					var _result = _hitTestResults[_i2] = new _XRHit2.default();
+					_result._transform = _hits[_i2].modelMatrix;
 				}
 				return _hitTestResults;
 			} else if (this._argonWrapper !== null) {
-				var centerHitTransform = this._argonWrapper.getEntityTransform('xr.center_hit_test');
+				var centerHitTransform = this._argonWrapper.getEntityTransform('xr.center_hit');
 				if (!centerHitTransform) return null;
 				var _hitTestResults2 = [];
 				var hitTestResult = _hitTestResults2[0] = new _XRHit2.default();
@@ -8520,7 +8442,7 @@ exports.multiplyScalarAndAdd = multiplyScalarAndAdd;
 exports.exactEquals = exactEquals;
 exports.equals = equals;
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
@@ -9396,7 +9318,7 @@ exports.str = str;
 exports.exactEquals = exactEquals;
 exports.equals = equals;
 
-var _common = __webpack_require__(4);
+var _common = __webpack_require__(3);
 
 var glMatrix = _interopRequireWildcard(_common);
 
@@ -10364,7 +10286,7 @@ var _XRTracker2 = __webpack_require__(32);
 
 var _XRTracker3 = _interopRequireDefault(_XRTracker2);
 
-var _XRAnchor2 = __webpack_require__(3);
+var _XRAnchor2 = __webpack_require__(2);
 
 var _XRAnchor3 = _interopRequireDefault(_XRAnchor2);
 
@@ -10798,7 +10720,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _XRAnchor2 = __webpack_require__(3);
+var _XRAnchor2 = __webpack_require__(2);
 
 var _XRAnchor3 = _interopRequireDefault(_XRAnchor2);
 
@@ -11088,11 +11010,11 @@ var _XRFieldOfView = __webpack_require__(24);
 
 var _XRFieldOfView2 = _interopRequireDefault(_XRFieldOfView);
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
-var _Quaternion = __webpack_require__(2);
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
@@ -11108,7 +11030,7 @@ var _ARKitWrapper = __webpack_require__(10);
 
 var _ARKitWrapper2 = _interopRequireDefault(_ARKitWrapper);
 
-var _ArgonWrapper = __webpack_require__(19);
+var _ArgonWrapper = __webpack_require__(20);
 
 var _ArgonWrapper2 = _interopRequireDefault(_ArgonWrapper);
 
@@ -11563,11 +11485,11 @@ var _XRFieldOfView = __webpack_require__(24);
 
 var _XRFieldOfView2 = _interopRequireDefault(_XRFieldOfView);
 
-var _MatrixMath = __webpack_require__(0);
+var _MatrixMath = __webpack_require__(1);
 
 var _MatrixMath2 = _interopRequireDefault(_MatrixMath);
 
-var _Quaternion = __webpack_require__(2);
+var _Quaternion = __webpack_require__(4);
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
