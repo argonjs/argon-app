@@ -165,6 +165,14 @@ export class API extends common.APIBase {
         return VuforiaSession.scaleFactor();
     }
 
+    setTargetFPS(f:number) {
+        VuforiaSession.setTargetFPS(f)
+    }
+
+    getTargetFPS() : number {
+        return VuforiaSession.targetFPS()
+    }
+
     onSurfaceChanged(width:number, height:number) : void {
         VuforiaSession.onSurfaceChangedWidthHeight(width, height);
         const orientation:UIInterfaceOrientation = utils.ios.getter(UIApplication, UIApplication.sharedApplication).statusBarOrientation;

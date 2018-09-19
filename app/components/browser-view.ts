@@ -71,11 +71,6 @@ export class BrowserView extends GridLayout {
             }
         }
 
-        application.on(application.orientationChangedEvent, () => {
-            this.requestLayout();
-            this.scrollView.scrollToVerticalOffset(0, false);
-        })
-
         appModel.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'layerPresentation':
@@ -99,6 +94,8 @@ export class BrowserView extends GridLayout {
         appModel.layers.on('change', this._onLayerDetailsArrayChange)
         appModel.layers.forEach((layer) => this._onAddLayer(layer))
         this._sortLayers()
+
+        this.on
     }
 
     @bind

@@ -24,7 +24,6 @@ Pod::Spec.new do |s|
   s.homepage         = "https://github.com/<GITHUB_USERNAME>/Vuforia"
   s.source           = { :path => "." }
 
-  s.platform     = :ios, '8.0'
   s.requires_arc = true
 
   s.source_files = 'Source/**/*.{h,m,mm}', 'SDK/include/**/*'

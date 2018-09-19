@@ -75,6 +75,7 @@ export namespace AppRootView {
             const RootViewController = <typeof UIViewController>UIViewController['extend']({
                 ...UILayoutViewController.prototype,
                 owner: new WeakRef(rootView),
+
                 preferredScreenEdgesDeferringSystemGestures() {
                     return  app.model.uiMode !== 'hidden' || 
                             app.model.layerPresentation !== 'stack' ? 
@@ -112,6 +113,10 @@ export namespace AppRootView {
             
                     view.View.measureChild(<any>null, owner, widthSpec, heightSpec);
                     view.View.layoutChild(<any>null, owner, left, top, width + left, height + top);
+                }
+            }, {
+                exposedMethods: {
+                    preferredScreenEdgesDeferringSystemGestures: {returns: interop.types.uint32}
                 }
             })
 

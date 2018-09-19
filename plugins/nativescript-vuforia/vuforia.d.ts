@@ -77,7 +77,7 @@ declare module "nativescript-vuforia" {
 	export enum CameraDeviceMode {
 		Default = -1,
 		OptimizeSpeed = -2,
-		OpimizeQuality = -3
+		OptimizeQuality = -3
 	}
     
     export enum CameraDeviceFocusMode {
@@ -139,6 +139,9 @@ declare module "nativescript-vuforia" {
         setScaleFactor(f:number) : void;
         getScaleFactor() : number;
         onSurfaceChanged(width:number, height:number) : void;
+
+        setTargetFPS(f:number) : void;
+        getTargetFPS() : number;
         
         renderCallback?:(state:def.State)=>void;
         updateCallback?:(state:def.State)=>void;

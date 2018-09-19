@@ -76,7 +76,7 @@ export enum ViewerParamtersTrayAlignment {
 export enum CameraDeviceMode {
     Default = -1,
     OptimizeSpeed = -2,
-    OpimizeQuality = -3
+    OptimizeQuality = -3
 }
 
 export enum CameraDeviceFocusMode {
@@ -143,6 +143,9 @@ export abstract class APIBase implements def.API {
     abstract setScaleFactor(f:number);
     abstract getScaleFactor() : number; 
     abstract onSurfaceChanged(width:number, height:number) : void;
+
+    abstract setTargetFPS(f:number);
+    abstract getTargetFPS() : number;
     
     public renderCallback?:(state:def.State)=>void;
     public updateCallback?:(state:def.State)=>void;

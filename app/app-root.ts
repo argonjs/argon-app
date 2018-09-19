@@ -28,7 +28,7 @@ import { XRDevice, XRVuforiaDevice } from './xr-device'
 //import * as orientationModule from 'nativescript-screen-orientation';
 // var orientationModule = require("nativescript-screen-orientation");
 
-export { appModel as model }
+export const model = appModel
 
 export let xrDevice: XRDevice
 export let rootView: GridLayout
@@ -64,7 +64,7 @@ export const updateUI = () => {
     if (!didFirstLayout) return
 
     // console.log('updatingUI')
-    // console.log(JSON.stringify(appModel.safeAreaInsets))
+    // console.log(JSON.stringify(model.safeAreaInsets))
     // console.log(JSON.stringify(rootView.getActualSize()))
 
     // fix layout when extended status bar shown on ios
@@ -82,30 +82,30 @@ export const updateUI = () => {
         uiLabel.sizeToFit()
     }
 
-    const layerImmersiveMode = appModel.getLayerImmersiveMode()
+    const layerImmersiveMode = model.getLayerImmersiveMode()
 
     if (screenOrientation === 90 || screenOrientation === -90) {
         hideSystemUI()
-    } else if (appModel.uiMode !== 'hidden' || 
-                appModel.layerPresentation === 'overview' || 
+    } else if (model.uiMode !== 'hidden' || 
+                model.layerPresentation === 'overview' || 
                 layerImmersiveMode === 'none') {
         showSystemUI()
     } else {
         hideSystemUI()
     }
 
-    if (appModel.uiMode !== 'full') {
+    if (model.uiMode !== 'full') {
         setEditingSearchBarText(false)
     }
 
     if (isPanningOverlay || isAnimatingOverlay) return
-    if (appModel.uiMode === 'full') transitionToFullUI()
-    if (appModel.uiMode === 'expanded') transitionToExpandedUI()
-    if (appModel.uiMode === 'hidden') transitionToHiddenUI()
+    if (model.uiMode === 'full') transitionToFullUI()
+    if (model.uiMode === 'expanded') transitionToExpandedUI()
+    if (model.uiMode === 'hidden') transitionToHiddenUI()
 }
 
 const getOverlayFullModeTop = () => {
-    return appModel.safeAreaInsets.top + appModel.overlayTop
+    return model.safeAreaInsets.top + model.overlayTop
 }
 
 const getOverlayExpandedModeTop = () => {
@@ -185,10 +185,10 @@ application.on('iosRootViewDidTransitionToSize', () => setTimeout(() => {
 }) )
 
 application.on(application.resumeEvent, () => {
-    if (appModel.uiMode === 'hidden' && appModel.layerPresentation !== 'overview') {
+    if (model.uiMode === 'hidden' && model.layerPresentation !== 'overview') {
         menuView.translateY = 0
         menuView.opacity = 0
-        appModel.uiMode = 'expanded'
+        model.uiMode = 'expanded'
     }
     setTimeout(()=>updateUI(),100)
 })
@@ -201,8 +201,10 @@ export function onRootViewLoaded(args) {
 
     checkAndroidWebViewVersion()
 
+    appModel.uiMode = 'expanded'
+
     rootView = args.object
-    rootView.bindingContext = appModel
+    rootView.bindingContext = model
     rootView.onLayout = function (...args) {
         GridLayout.prototype.onLayout.apply(this, args)
         setTimeout(() => updateUI())
@@ -229,8 +231,6 @@ export function onRootViewLoaded(args) {
 
     menuView = rootView.getViewById<View>('menu');
 
-    // xrDevice = new XRDevice(browserView)
-
     if (!xrDevice) {
         const vuforiaLicenseKey = getInternalVuforiaKey()
         if (!vuforiaLicenseKey) {
@@ -238,9 +238,10 @@ export function onRootViewLoaded(args) {
             setTimeout(()=>alert(config.MISSING_VUFORIA_KEY_MESSAGE),0)
         }
         xrDevice = vuforiaLicenseKey && vuforia.api ? 
-            new XRVuforiaDevice(browserView, vuforiaLicenseKey) : 
-            new XRDevice(browserView)
+            new XRVuforiaDevice(vuforiaLicenseKey) : 
+            new XRDevice()
     }
+    xrDevice.browserView = browserView
 
     // permissionMenuView = rootView.getViewById<View>('permissionMenu');
 
@@ -263,7 +264,7 @@ export function onRootViewLoaded(args) {
                 updateSafeAreaInsets()
             }
         }, 'safeAreaInsets', NSKeyValueObservingOptions.Initial, <any>null)
-        appModel.safeAreaInsets = rootViewController.view.safeAreaInsets
+        model.safeAreaInsets = rootViewController.view.safeAreaInsets
 
         // hack to allow fullscreen layout
         // see https://github.com/NativeScript/NativeScript/blob/2fc1d8a8d4cf64e98eb98296e21564ac9b508f95/tns-core-modules/ui/core/view/view.ios.ts#L636
@@ -300,10 +301,10 @@ export function onRootViewLoaded(args) {
     // setup bottom-ui dragging
 
     if (overlayScrollView.ios) {
-        (overlayScrollView.ios as UIScrollView).scrollEnabled = appModel.overlayScrollEnabled
-        appModel.on('propertyChange', (evt: PropertyChangeData) => {
+        (overlayScrollView.ios as UIScrollView).scrollEnabled = model.overlayScrollEnabled
+        model.on('propertyChange', (evt: PropertyChangeData) => {
             if (evt.propertyName === 'overlayScrollEnabled') {
-                (overlayScrollView.ios as UIScrollView).scrollEnabled = appModel.overlayScrollEnabled;
+                (overlayScrollView.ios as UIScrollView).scrollEnabled = model.overlayScrollEnabled;
             }
         })
     }
@@ -311,7 +312,7 @@ export function onRootViewLoaded(args) {
     if (overlayScrollView.android) {
         (overlayScrollView.android as android.widget.ScrollView).setOnTouchListener(new android.view.View.OnTouchListener({
             onTouch: function (view, motionEvent) {
-                return appModel.overlayScrollEnabled;
+                return model.overlayScrollEnabled;
             }
         }))
     }
@@ -329,7 +330,7 @@ export function onRootViewLoaded(args) {
     let startedPanAboveScrollView = false
     let androidVelocityTracker: android.view.VelocityTracker;
 
-    overlayView.on(GestureTypes.pan, (evt: PanGestureEventData) => {
+    const handlePanGesture = (evt: PanGestureEventData) => {
 
         let scrollY = getScrollY()
 
@@ -350,16 +351,16 @@ export function onRootViewLoaded(args) {
         panEventCount++
 
         if (startedPanAboveScrollView || scrollY === 0 && evt.deltaY > 0 && panEventCount < 10) {
-            appModel.overlayScrollEnabled = false
+            model.overlayScrollEnabled = false
         }
         // console.log("scrollY " + scrollY)
         // console.log("deltaY " + evt.deltaY)
         // console.log("isAnimating " + isAnimatingOverlay)
-        // console.log("isScrollEnabled " + appModel.overlayScrollEnabled)
+        // console.log("isScrollEnabled " + model.overlayScrollEnabled)
 
-        if (appModel.overlayScrollEnabled || 
+        if (model.overlayScrollEnabled || 
             isAnimatingOverlay || 
-            appModel.layerPresentation === 'overview') 
+            model.layerPresentation === 'overview') 
             return;
 
         isPanningOverlay = true
@@ -374,12 +375,12 @@ export function onRootViewLoaded(args) {
         }
 
         overlayView.translateY = startViewTranslateY + evt.deltaY
-        if (overlayView.translateY < appModel.overlayTop) {
-            overlayView.translateY = appModel.overlayTop - Math.pow(Math.abs(overlayView.translateY - appModel.overlayTop), 0.5)
+        if (overlayView.translateY < model.overlayTop) {
+            overlayView.translateY = model.overlayTop - Math.pow(Math.abs(overlayView.translateY - model.overlayTop), 0.5)
             if (overlayView.translateY < 0) overlayView.translateY = 0
         }
 
-        if (appModel.uiMode === 'hidden') {
+        if (model.uiMode === 'hidden') {
             const hiddenTop = getOverlayHiddenModeTop()                
             const displacementY = overlayView.translateY - hiddenTop
             overlayInnerView.opacity = Math.max(Math.min(-displacementY / 40, 1), 0.1)
@@ -391,27 +392,27 @@ export function onRootViewLoaded(args) {
             const expandedTop = getOverlayExpandedModeTop()
             const hiddenTop = getOverlayHiddenModeTop()
 
-            if (appModel.uiMode === 'full') {
+            if (model.uiMode === 'full') {
                 if (velocityY < 20 || overlayView.translateY < fullTop + 20) {
-                    appModel.uiMode = 'full'
+                    model.uiMode = 'full'
                 } else {
-                    appModel.uiMode = 'expanded'
+                    model.uiMode = 'expanded'
                 }
-            } else if (appModel.uiMode === 'expanded') {
+            } else if (model.uiMode === 'expanded') {
                 const displacementY = overlayView.translateY - expandedTop
                 if (Math.abs(displacementY) < 20 && Math.abs(velocityY) < 20) {
-                    appModel.uiMode = 'expanded'
+                    model.uiMode = 'expanded'
                 } else if (displacementY < -20 || velocityY < -20) {
-                    appModel.uiMode = 'full'
+                    model.uiMode = 'full'
                 } else if (displacementY > 20 || velocityY > 20) {
-                    appModel.uiMode = 'hidden'
+                    model.uiMode = 'hidden'
                   }
             } else { // hidden
                 const displacementY = overlayView.translateY - hiddenTop 
                 if (displacementY < -20 || velocityY < -20) {
-                    appModel.uiMode = 'expanded' 
+                    model.uiMode = 'expanded' 
                 } else {
-                    appModel.uiMode = 'hidden'
+                    model.uiMode = 'hidden'
                 }
             }
 
@@ -421,7 +422,53 @@ export function onRootViewLoaded(args) {
             
             updateUI()
         }
-    })
+    }
+
+    overlayView.on(GestureTypes.pan, handlePanGesture)
+
+    // if (rootView.ios) {
+    //     class EdgePanGestureTarget extends NSObject {
+    //         handleEdgePan() {
+    //             // if (model.uiMode == 'hidden' && !isPanningOverlay) {
+    //                 let state:GestureStateTypes = GestureStateTypes.began
+    //                 switch (recognizer.state) {
+    //                     case UIGestureRecognizerState.Began: 
+    //                         state = GestureStateTypes.began; break;
+    //                     case UIGestureRecognizerState.Ended: 
+    //                         state = GestureStateTypes.ended; break;
+    //                     case UIGestureRecognizerState.Changed: 
+    //                         state = GestureStateTypes.changed; break;
+    //                     case UIGestureRecognizerState.Failed: 
+    //                     case UIGestureRecognizerState.Cancelled: 
+    //                         state = GestureStateTypes.cancelled; break;
+    //                     default: break;
+    //                 }
+
+    //                 handlePanGesture({
+    //                     deltaX: recognizer.translationInView(iosRootView).x,
+    //                     deltaY: recognizer.translationInView(iosRootView).y,
+    //                     state, 
+    //                     view: rootView,
+    //                     ios: recognizer,
+    //                     android: null,
+    //                     type: GestureTypes.pan,
+    //                     eventName: '' + GestureTypes.pan,
+    //                     object: rootView
+    //                 })
+    //             // }
+    //         }
+    //         static ObjCExposedMethods = {
+    //             'handleEdgePan': { returns: interop.types.void, params: [] }
+    //         } 
+    //     }
+
+    //     const iosRootView = rootView.ios as UIView
+    //     const target = rootView['_edgePanGestureTarget'] = EdgePanGestureTarget.alloc().init()
+    //     const action = 'handleEdgePan'
+    //     const recognizer = UIScreenEdgePanGestureRecognizer.alloc().initWithTargetAction(target, action)
+    //     recognizer.edges = UIRectEdge.Bottom
+    //     iosRootView.addGestureRecognizer(recognizer)
+    // }
 
     if (!didFirstLayout) {
         overlayView.translateY = Math.max(screen.mainScreen.heightDIPs, screen.mainScreen.widthDIPs)
@@ -438,12 +485,12 @@ export function onRootViewLoaded(args) {
 export function updateSafeAreaInsets() {
     if (rootView.ios) {
         const safeAreaInsets = (rootView.viewController as UIViewController).view.safeAreaInsets
-        if (appModel.safeAreaInsets.top !== safeAreaInsets.top ||
-            appModel.safeAreaInsets.bottom !== safeAreaInsets.bottom ||
-            appModel.safeAreaInsets.left !== safeAreaInsets.left ||
-            appModel.safeAreaInsets.right !== safeAreaInsets.right) {
+        if (model.safeAreaInsets.top !== safeAreaInsets.top ||
+            model.safeAreaInsets.bottom !== safeAreaInsets.bottom ||
+            model.safeAreaInsets.left !== safeAreaInsets.left ||
+            model.safeAreaInsets.right !== safeAreaInsets.right) {
             // console.log(JSON.stringify(safeAreaInsets))
-            appModel.safeAreaInsets = safeAreaInsets
+            model.safeAreaInsets = safeAreaInsets
             updateUI()
         }
     }
@@ -452,7 +499,7 @@ export function updateSafeAreaInsets() {
 export function setEditingSearchBarText(value: boolean) {
     if (value && !isEditingURL) {
 
-        appModel.uiMode = 'full'
+        model.uiMode = 'full'
 
         if (searchBar.ios) {
             const iosSearchBar = searchBar.ios as UISearchBar
@@ -475,7 +522,7 @@ export function setEditingSearchBarText(value: boolean) {
             iosSearchBar.setShowsCancelButtonAnimated(false, true);
         }
 
-        searchBar.bind({ targetProperty: "text", sourceProperty: "focussedLayer.content.uri" }, appModel)
+        searchBar.bind({ targetProperty: "text", sourceProperty: "focussedLayer.content.uri" }, model)
         searchBar.dismissSoftInput();
 
     }
@@ -495,14 +542,14 @@ export function showSystemUI() {
         decorView.setSystemUiVisibility(uiOptions);
     }
 
-    if (appModel.getLayerImmersiveMode() === 'none' && appModel.uiMode === 'full') {
+    if (model.getLayerImmersiveMode() === 'none' && model.uiMode === 'full') {
         topView.animate({
             scale: {x:1,y:0},
             curve: AnimationCurve.easeInOut,
             duration: OVERLAY_ANIMATION_DURATION / 2
         })
         browserView.animate({
-            translate:{x:0,y:-appModel.safeAreaInsets.top},
+            translate:{x:0,y:-model.safeAreaInsets.top},
             curve: AnimationCurve.easeInOut,
             duration: OVERLAY_ANIMATION_DURATION / 2
         })
@@ -553,7 +600,7 @@ export function hideSystemUI() {
 
 
 function transitionToFullUI() {
-    appModel.uiMode = 'full'
+    model.uiMode = 'full'
     
     isAnimatingOverlay = true
     overlayView.animate({
@@ -564,10 +611,10 @@ function transitionToFullUI() {
         duration: OVERLAY_ANIMATION_DURATION,
         curve: OVERLAY_ANIMATION_CURVE
     }).then(() => {
-        appModel.overlayScrollEnabled = true
+        model.overlayScrollEnabled = true
         isAnimatingOverlay = false
     }).catch(() => {
-        appModel.overlayScrollEnabled = true
+        model.overlayScrollEnabled = true
         isAnimatingOverlay = false
     })
 
@@ -593,11 +640,11 @@ function transitionToFullUI() {
 }
 
 function transitionToExpandedUI() {
-    appModel.uiMode = 'expanded'
+    model.uiMode = 'expanded'
 
     setEditingSearchBarText(false)
     isAnimatingOverlay = true
-    appModel.overlayScrollEnabled = false
+    model.overlayScrollEnabled = false
 
     const overlayTop = getOverlayExpandedModeTop()
 
@@ -636,11 +683,11 @@ function transitionToExpandedUI() {
 }
 
 function transitionToHiddenUI() {
-    appModel.uiMode = 'hidden'
+    model.uiMode = 'hidden'
 
     setEditingSearchBarText(false)
     isAnimatingOverlay = true
-    appModel.overlayScrollEnabled = false
+    model.overlayScrollEnabled = false
 
     overlayView.animate({
         translate: {
@@ -678,7 +725,7 @@ function transitionToHiddenUI() {
 
 export function onBookmarkItemTap(args) {
     const item = (args.object as View).bindingContext as BookmarkItem
-    appModel.loadURI(item.uri)
+    model.loadURI(item.uri)
 }
 
 // set bookmark labels to a max of 2 lines
@@ -720,7 +767,7 @@ export function onSearchBarTap(args) {
 }
 
 export function onSearchBarSubmit(args) {
-    appModel.loadURI(searchBar.text)
+    model.loadURI(searchBar.text)
 }
 
 export function onSearchBarClear(args) {
@@ -734,7 +781,7 @@ export function onSearchBarClear(args) {
 }
 
 export function onFlashToggle(args) {
-    appModel.flashEnabled = !appModel.flashEnabled
+    model.flashEnabled = !model.flashEnabled
 }
 
 if (application.ios) {
@@ -754,19 +801,19 @@ export function onAddChannel(args) {
 }
 
 export function onReload(args) {
-    appModel.loadURI(appModel.getLayerURI())
+    model.loadURI(model.getLayerURI())
 }
 
 export function onOverview(args) {
-    appModel.layerPresentation = 'overview'
-    appModel.uiMode = 'hidden'
+    model.layerPresentation = 'overview'
+    model.uiMode = 'hidden'
     updateUI()
 }
 
 export function onViewerToggle(args) {
-    appModel.immersiveStereoEnabled = !appModel.immersiveStereoEnabled
+    model.immersiveStereoEnabled = !model.immersiveStereoEnabled
 }
 
 export function onDebugToggle(args) {
-    appModel.debugEnabled = !appModel.debugEnabled
+    model.debugEnabled = !model.debugEnabled
 }

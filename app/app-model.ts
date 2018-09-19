@@ -131,11 +131,9 @@ export class XRLayerDetails extends Observable {
     class = "LayerDetails"
 
     @observable({ type: BookmarkItem })
-    @serializable
     content = BookmarkItem.NEW_LAYER
 
     @observable()
-    @serializable
     log?: ObservableArray<LogItem>
 
     @observable({ equals: () => false })
@@ -145,9 +143,15 @@ export class XRLayerDetails extends Observable {
     @observable()
     xrEnabled = false
 
-    @observable()    
+    @observable()
     @serializable
     xrImmersiveMode:XRImmersiveMode = 'augmentation'
+
+    @observable()
+    xrAverageCPUTime:number = 0
+
+    @observable()
+    renderBufferScaleFactor = 1
 
     constructor(json?: Partial<XRLayerDetails>) {
         super()
@@ -180,6 +184,7 @@ export class XRLayerDetails extends Observable {
 
     onLoadStarted() {
         this.xrEnabled = false
+        this.xrAverageCPUTime = 0
         this._setImmersiveModeFromContentURI()
     }
 }
@@ -193,6 +198,12 @@ export const defaultLayerItems:Array<BookmarkItem> = [
 ]
 
 export class AppModel extends Observable {
+
+    @observable()
+    globalRenderBufferScaleFactor = 0.5
+
+    @observable()
+    currentFrame = -1
 
     @observable()
     safeAreaInsets: { top: number, left: number, bottom: number, right: number } =
@@ -457,9 +468,7 @@ export class AppModel extends Observable {
 
 const APP_MODEL_KEY = 'app_model'
 
-export const appModel = new AppModel().load()
-
-if (appModel.uiMode === 'hidden') appModel.uiMode = 'expanded'
+export const appModel:AppModel = new AppModel().load()
 
 application.on(application.suspendEvent, ()=>{
     appModel.save()

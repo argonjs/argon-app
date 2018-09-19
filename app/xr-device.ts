@@ -12,7 +12,7 @@ import * as vuforia from 'nativescript-vuforia';
 import * as minimatch from 'minimatch'
 import config from './config';
 import {appModel} from './app-model'
-import {bind} from './decorators'
+import {observable, bind} from './decorators'
 
 import * as glMatrix from 'gl-matrix'
 
@@ -38,15 +38,72 @@ interface XRFrameState {
 
 export class XRDevice extends Observable {
 
-    constructor(public browserView:BrowserView) {
-        super()
-        
-        browserView.on('layerAdded', this.onLayerAdded, this)
-        browserView.on('layerDeleted', this.onLayerDeleted, this)
+    @observable()
+    targetFPS = 60
 
-        browserView.layers.forEach((layer)=>{
-            this.onLayerAdded({layer})
+    @observable()
+    browserView:BrowserView
+
+    constructor() {
+        super()
+
+        this.on('propertyChange', (evt:PropertyChangeData)=>{
+            if (evt.propertyName === 'browserView') {
+                const oldBrowserView = evt.oldValue;
+                if (oldBrowserView) {
+                    oldBrowserView.off('layerAdded', this.onLayerAdded)
+                    oldBrowserView.off('layerDeleted', this.onLayerDeleted)
+                }
+                this.browserView.on('layerAdded', this.onLayerAdded, this)
+                this.browserView.on('layerDeleted', this.onLayerDeleted, this)
+                this.browserView.layers.forEach((layer)=>{
+                    this.onLayerAdded({layer})
+                })
+            }
         })
+
+        setInterval(()=>{
+
+            if (!this.browserView) return
+
+            const averageSendFrameTime = this._averageSendFrameTime
+
+            if (this._framesOver10msCount === 0) {
+                this.targetFPS = 60
+            } else if (this._framesOver20msCount === 0) {
+                this.targetFPS = 30
+            } else if (this._framesOver30msCount === 0) {
+                this.targetFPS = 24
+            }
+
+            const frameBudget = 1 / this.targetFPS * 1000 
+            
+            console.log('TARGET FPS: ' + this.targetFPS)
+            console.log('AVERAGE CPU TIME FOR SENDING FRAME STATE: ' + this._averageSendFrameTime)
+            let layerIndex = 0
+            for (const layer of this.browserView.layers) {
+
+                const totalCPUTime = averageSendFrameTime + layer.details.xrAverageCPUTime
+                const budgetPercent = totalCPUTime / frameBudget
+                const layerScaleFactor = layer.details.renderBufferScaleFactor
+
+                if (budgetPercent < 0.3) {
+                    layer.details.renderBufferScaleFactor = Math.min(layerScaleFactor * 2, 1)
+                } else if (budgetPercent > 0.7) {
+                    layer.details.renderBufferScaleFactor = Math.max(layerScaleFactor * 0.5, 0.25)
+                }
+                
+                console.log(`AVERAGE CPU FRAME TIME FOR LAYER -${layerIndex}-: ${layer.details.xrAverageCPUTime}`)
+                console.log(`FRAME BUDGET PERCENT FOR LAYER -${layerIndex}-: ${budgetPercent}`)
+                console.log(`RENDER BUFFER SCALE FOR LAYER -${layerIndex}-: ${layer.details.renderBufferScaleFactor}`)
+                layerIndex++
+            }
+
+            console.log('FRAMES OVER 10ms Count: ' + this._framesOver10msCount)
+            console.log('FRAMES OVER 20ms Count: ' + this._framesOver20msCount)
+            console.log('FRAMES OVER 30ms Count: ' + this._framesOver30msCount)
+            
+        }, 10000) // optimize performance every 10 seconds
     }
 
     onLayerAdded(evt:{layer:LayerView}) {
@@ -61,8 +118,29 @@ export class XRDevice extends Observable {
 
     onLayerPropertyChange(evt:PropertyChangeData) {}
 
+    _cpuFrameTimes:number[] = []
+    _frameStartTime = 0
+    _averageSendFrameTime = 0
+    _framesOver10msCount = 0
+    _framesOver20msCount = 0
+    _framesOver30msCount = 0
+
+    startFrameTimer() {
+        this._frameStartTime = performance.now()
+    }
+
+    _sum = ( p, c ) => p + c
+
     sendNextFrameState(state:XRFrameState) {
-        for (const layer of this.browserView.layers) {
+       
+        let highestCPUTime = 0 
+        const layers = this.browserView.layers
+ 
+       // go in reverse so foreground layer receives updates first
+        for (let i = layers.length - 1; i >= 0; i--) {
+
+            const layer = layers[i]
+
             state.contentScaleFactor = this.browserView.focussedLayer === layer ? 
                 screen.mainScreen.scale : Math.min(1, screen.mainScreen.scale/2)
             
@@ -77,11 +155,31 @@ export class XRDevice extends Observable {
                     shouldSend = true
                     state.contentScaleFactor /= 2
                 }
+
+                state.contentScaleFactor *= appModel.globalRenderBufferScaleFactor * layer.details.renderBufferScaleFactor
+                
+                const totalCPUTime = this._averageSendFrameTime + layer.details.xrAverageCPUTime
+                if (totalCPUTime > highestCPUTime) highestCPUTime = totalCPUTime
             }
 
             if (shouldSend) 
                 layer.webView.send('xr.frame', state)
         }
+
+        const endFrameTime = performance.now()
+
+        this._cpuFrameTimes.push(endFrameTime - this._frameStartTime)
+        if (this._cpuFrameTimes.length > 60) this._cpuFrameTimes.shift()
+
+        const cpuTimes = this._cpuFrameTimes
+        this._averageSendFrameTime = cpuTimes.reduce(this._sum, 0) / cpuTimes.length
+
+        highestCPUTime > 10 ? this._framesOver10msCount += 1 : this._framesOver10msCount -= 0.5
+        highestCPUTime > 20 ? this._framesOver20msCount +=1 : this._framesOver20msCount -= 0.5
+        highestCPUTime > 30 ? this._framesOver30msCount +=1 : this._framesOver30msCount -= 0.5
+        this._framesOver10msCount = Math.min(Math.max(0, this._framesOver10msCount), 1000)
+        this._framesOver20msCount = Math.min(Math.max(0, this._framesOver20msCount), 1000)
+        this._framesOver30msCount = Math.min(Math.max(0, this._framesOver30msCount), 1000)
     }
 }
 
@@ -122,8 +220,9 @@ export interface XRDataSetTrackables {
     }
 }
 
-export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
- //platform.isAndroid ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OpimizeQuality;
+// export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
+//  platform.isAndroid ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OptimizeQuality;
+export const vuforiaCameraDeviceMode = vuforia.CameraDeviceMode.OptimizeSpeed
 
 export class XRVuforiaDevice extends XRDevice {
 
@@ -138,23 +237,40 @@ export class XRVuforiaDevice extends XRDevice {
                              0, 0, 1, 0,
                              0, 0, 0, 1 ]
 
-    private _pendingHitTests:Array<{id:string,point:{x:number,y:number}}> = []
+    private _pendingHitTests:{[id:string]: {repeatCount:number, point:{x:number,y:number}}} = {}
     private _tempHitAnchors:{[id:string]: vuforia.Anchor} = {}
     private _addedAnchors:{[id:string]: vuforia.Anchor} = {}
 
-    constructor(browserView:BrowserView, defaultKey:string) {
-        super(browserView)
-        this._defaultState = new XRVuforiaState(Promise.resolve(defaultKey))
+    constructor(defaultKey:string) {
+        super()
 
-        browserView.on('pinch', this._handlePinchGestureEventData)
-        // this._handlePinchGestureEventData
+        vuforia.api.setTargetFPS(this.targetFPS)
+        this.on('propertyChange', (evt:PropertyChangeData) => {
+            if (evt.propertyName === 'targetFPS') {
+                vuforia.api.setTargetFPS(this.targetFPS)
+            }
+        })
+
+        this._defaultState = new XRVuforiaState(Promise.resolve(defaultKey))
+        
+
+
+        this.on('propertyChange', (evt:PropertyChangeData)=>{
+            if (evt.propertyName === 'browserView') {
+                const oldBrowserView = evt.oldValue;
+                if (oldBrowserView) {
+                    oldBrowserView.off('pinch', this._handlePinchGestureEventData)
+                }
+                this.browserView.on('pinch', this._handlePinchGestureEventData)
+            }
+        })
 
         this._updateCameraEnabled()
 
         appModel.on('propertyChange', (evt:PropertyChangeData)=>{
             switch (evt.propertyName) {
                 case 'focussedLayer': 
-                    const focussedLayer = browserView.layerMap.get(appModel.focussedLayer!) || null
+                    const focussedLayer = this.browserView.layerMap.get(appModel.focussedLayer!) || null
                     if (focussedLayer == null || this.layerState.has(focussedLayer)) {
                         this._setControllingLayer(focussedLayer)
                     }
@@ -182,6 +298,9 @@ export class XRVuforiaDevice extends XRDevice {
         })
 
         vuforia.api.renderCallback = (state) => {
+
+            this.startFrameTimer()
+
             const views = this._renderingViews
             if (!views) return
 
@@ -201,7 +320,7 @@ export class XRVuforiaDevice extends XRDevice {
                 const trackableResult = <vuforia.TrackableResult>state.getTrackableResult(i)
                 const trackable = trackableResult.getTrackable()
                 const pose = trackableResult.getPose()
-                let id = '' + trackable.getId()
+                let id = 'vuforia.trackable_' + trackable.getId()
                 let name = trackable.getName()
 
                 if (trackable instanceof vuforia.DeviceTrackable) {
@@ -240,7 +359,10 @@ export class XRVuforiaDevice extends XRDevice {
             // const positionalDeviceTracker = vuforia.api.positionalDeviceTracker!;
 
             const smartTerrain = vuforia.api.smartTerrain!
-            for (let pendingHitTest of this._pendingHitTests) {
+            for (let id in this._pendingHitTests) {
+
+                const pendingHitTest = this._pendingHitTests[id]
+
                 smartTerrain.hitTest(state, pendingHitTest.point, 1.4, vuforia.HitTestHint.None)
                 const count = smartTerrain.getHitTestResultCount()
                 const hits:{id:string, pose:vuforia.Matrix44}[] = []
@@ -266,16 +388,20 @@ export class XRVuforiaDevice extends XRDevice {
                     //     }
                     // }, 100)
                 }
-                hitTestResults[pendingHitTest.id] = hits
+                hitTestResults[id] = hits
+                
+                pendingHitTest.repeatCount--
+                if (pendingHitTest.repeatCount <= 0) {
+                    delete this._pendingHitTests[id]
+                }
             }
-            this._pendingHitTests.length = 0;
 
 
-            const immersiveSize = browserView.getActualSize()
+            const immersiveSize = this.browserView.getActualSize()
 
             // send frame state within promise callback
             // to switch back to the main thread 
-            Promise.resolve().then(()=>{
+            // Promise.resolve().then(()=>{
                 this.sendNextFrameState({
                     index,
                     time,
@@ -284,7 +410,7 @@ export class XRVuforiaDevice extends XRDevice {
                     hitTestResults,
                     immersiveSize
                 })
-            })
+            // })
 
             // console.log(trackableResults)
         }
@@ -327,7 +453,10 @@ export class XRVuforiaDevice extends XRDevice {
             glMatrix.vec2.transformMat2d(<any>hitPoint, hitPoint, screenRotation)
             data.point.x = Math.max(0, Math.min(hitPoint[0] / this._effectiveZoomFactor + 0.5, 1))
             data.point.y = Math.max(0, Math.min(hitPoint[1] / this._effectiveZoomFactor + 0.5, 1))
-            this._pendingHitTests.push(data)
+            this._pendingHitTests[data.id] = {
+                point: data.point,
+                repeatCount: 10
+            }
         }
 
         onMessage['xr.createAnchorFromHit'] = (data:{id:string}) => {
@@ -353,10 +482,7 @@ export class XRVuforiaDevice extends XRDevice {
     onLayerDeleted(evt:{layer:LayerView}) { 
         super.onLayerDeleted(evt)
         this._destroyLayerState(evt.layer)
-        if (this._controllingLayer === evt.layer) {
-            this._controllingLayer = undefined
-            this._selectControllingLayer()
-        }
+        this._selectControllingLayer()
     }
 
     onLayerPropertyChange(evt:PropertyChangeData) {
@@ -503,6 +629,7 @@ export class XRVuforiaDevice extends XRDevice {
                 }
                 return Promise.reject(new Error('Vuforia: Unable to set the license key'));
             }
+
 
             console.log('Vuforia: initializing...');
 
@@ -771,7 +898,7 @@ export class XRVuforiaDevice extends XRDevice {
         for (let i=0; i < numTrackables; i++) {
             const trackable = <vuforia.Trackable>dataSet.getTrackable(i);
             trackables[trackable.getName()] = {
-                id: "vuforia_trackable_" + trackable.getId(),
+                id: "vuforia.trackable_" + trackable.getId(),
                 size: trackable instanceof vuforia.ObjectTarget ? trackable.getSize() : {x:0,y:0,z:0}
             }
         }
@@ -874,12 +1001,11 @@ export class XRVuforiaDevice extends XRDevice {
     }
 
     private _destroyLayerState(layer:LayerView) : Promise<void> {
-
         const destroyState = () => {
             this.layerState.delete(layer);
         }
-
         if (this._controllingLayer === layer) {
+            this._controllingLayer = undefined
             return this._pauseLayerCommands(layer).then(destroyState)
         } else {
             return Promise.resolve().then(destroyState)
@@ -913,7 +1039,7 @@ export class XRVuforiaDevice extends XRDevice {
         // aspect fit
         // const scale = Math.min(widthRatio, heightRatio);
         
-        const contentScaleFactor = videoView.ios ? videoView.ios.contentScaleFactor : screen.mainScreen.scale
+        const contentScaleFactor = screen.mainScreen.scale
         const sizeX = videoWidth * scale * contentScaleFactor
         const sizeY = videoHeight * scale * contentScaleFactor
 

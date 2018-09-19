@@ -56,10 +56,6 @@ let WEBXR_SOURCE = WEBXR_FILE.readTextSync()
 let WEBXR_LAST_MODIFIED = WEBXR_FILE.lastModified
 
 export class LayerView extends GridLayout {
-
-    @observable()
-    private needsTransparentBackground = false
-    // private backgroundFadeTimerId?:number
     
     webView: ArgonWebView
     contentView: GridLayout
@@ -83,7 +79,6 @@ export class LayerView extends GridLayout {
         this.opacity = 0
 
         const webView = new ArgonWebView() 
-        webView.visibility = 'collapse'
         webView.horizontalAlignment = 'stretch'
         webView.verticalAlignment = 'stretch'
 
@@ -121,6 +116,10 @@ export class LayerView extends GridLayout {
         
         webView.messageHandlers['xr.setImmersiveMode'] = (options:{mode:XRImmersiveMode}) => {
             this.details.xrImmersiveMode = options.mode
+        }
+
+        webView.messageHandlers['xr.averageCPUTime'] = (options:{time:number}) => {
+            this.details.xrAverageCPUTime = options.time
         }
 
         webView.messageHandlers['xr.hitTest'] = (options:{x:number,y:number}) => {
@@ -234,29 +233,14 @@ export class LayerView extends GridLayout {
 
         appModel.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
-                case 'safeAreaInsets': 
-                case 'uiMode': 
+                case 'safeAreaInsets':
                     this._updateUI() 
                     break
             }
-        });
-
-        const setupLiveVideoView = () => {
-            if (vuforia.videoView.parent)
-                (vuforia.videoView.parent as GridLayout).removeChild(vuforia.videoView)
-            this.contentView.insertChild(vuforia.videoView, 0)
-        }
-
-        if (details.content.uri.toLowerCase() === BookmarkItem.REALITY_LIVE.uri) {
-            setupLiveVideoView()
-        }
+        })
 
         this.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
-                case 'details.content.title':
-                case 'details.immersiveMode':
-                    this._updateUI()
-                    break
                 case 'details.src': {
                     const src = this.details.src
                     if (src !== BookmarkItem.REALITY_LIVE.uri) {
@@ -264,56 +248,30 @@ export class LayerView extends GridLayout {
                     }
                     break
                 }
+                case 'details.xrImmersiveMode':
+                case 'details.content.title': 
                 case 'details.content.uri': {
-                    const uri = this.details.content.uri
-                    if (uri === BookmarkItem.REALITY_LIVE.uri || uri == 'about:blank' || uri === '') {
-                        webView.visibility = 'collapse'
-                        if (uri.toLowerCase() === BookmarkItem.REALITY_LIVE.uri) {
-                            setupLiveVideoView()
-                        }
-                    } else {
-                        webView.visibility = 'visible'
-                    }
+                    this._updateUI()
                     break
-                }
-                case 'details.xrEnabled':
-                case 'details.xrImmersiveMode': {
-                    this.needsTransparentBackground = 
-                        this.details.xrEnabled && this.details.xrImmersiveMode !== 'none'
-                    break
-                }
-                case 'needsTransparentBackground': {
-                    // if (this.backgroundFadeTimerId !== undefined) {
-                    //     clearTimeout(this.backgroundFadeTimerId)
-                    // }
-                    // this.backgroundFadeTimerId = setTimeout(()=>{
-                        const transparent = this.needsTransparentBackground
-                        if (this.webView.ios) {
-                            const wkWebView = this.webView.ios as WKWebView
-                            const transparentColor = UIColor.colorWithCIColor(CIColor.clearColor)
-                            const whiteColor = UIColor.colorWithCIColor(CIColor.whiteColor)
-                            const color = transparent ? transparentColor : whiteColor;
-                            wkWebView.opaque = !transparent
-                            wkWebView.scrollView.opaque = !transparent
-                            wkWebView.scrollView.backgroundColor = color
-                            wkWebView.backgroundColor = color  
-                        }
-                        if (this.webView.android) {
-                            const androidWebView = this.webView.android as android.webkit.WebView
-                            const color = transparent ? android.graphics.Color.TRANSPARENT : android.graphics.Color.WHITE
-                            androidWebView['setBackgroundColor'](color)
-                        }
-                        // this.backgroundFadeTimerId = undefined
-                    // }, 200)
                 }
             }
         })
 
+        this.on('loaded', () => {
+            this._updateUI()
+        })
+
         this.details = details
         this.details.log = webView.log
+        this._updateUI()
     }
 
     private _updateUI() {
+
+        if (!this.isLoaded) return
+
+        // update title bar
+
         const title = this.details.content ? this.details.content.title : ''
 
         if (this.details.xrImmersiveMode === 'reality') {
@@ -326,10 +284,47 @@ export class LayerView extends GridLayout {
             this.titleLabel.text = title
         }
 
+        // update top margin
+
         if (this.details.xrImmersiveMode === 'none') {
             this.marginTop = appModel.safeAreaInsets.top
         } else {
             this.marginTop = 0
+        }
+
+        // update webview transparency
+
+        const transparent = this.details.xrEnabled && this.details.xrImmersiveMode !== 'none'
+
+        if (this.webView.ios) {
+            const wkWebView = this.webView.ios as WKWebView
+            const transparentColor = UIColor.colorWithCIColor(CIColor.clearColor)
+            const whiteColor = UIColor.colorWithCIColor(CIColor.whiteColor)
+            const color = transparent ? transparentColor : whiteColor;
+            wkWebView.opaque = !transparent
+            wkWebView.scrollView.opaque = !transparent
+            wkWebView.scrollView.backgroundColor = color
+            wkWebView.backgroundColor = color  
+        }
+
+        if (this.webView.android) {
+            const androidWebView = this.webView.android as android.webkit.WebView
+            const color = transparent ? android.graphics.Color.TRANSPARENT : android.graphics.Color.WHITE
+            androidWebView['setBackgroundColor'](color)
+        }
+
+        // update webview or video visibility
+        
+        const uri = this.details.content.uri
+        if (uri === BookmarkItem.REALITY_LIVE.uri || uri == 'about:blank' || uri === '') {
+            this.webView.visibility = 'collapse'
+            if (uri.toLowerCase() === BookmarkItem.REALITY_LIVE.uri) {
+                if (vuforia.videoView.parent)
+                    (vuforia.videoView.parent as GridLayout).removeChild(vuforia.videoView)
+                this.contentView.insertChild(vuforia.videoView, 0)
+            }
+        } else {
+            this.webView.visibility = 'visible'
         }
     }
 }

@@ -209,6 +209,14 @@ export class API extends common.APIBase {
         return plugin.VuforiaSession.scaleFactor();
     }
 
+    setTargetFPS(f:number) {
+
+    }
+
+    getTargetFPS() : number {
+        return 60
+    }
+
     onSurfaceChanged(width:number, height:number) : void {
         vuforia.Vuforia.onSurfaceChanged(width, height);
         /*

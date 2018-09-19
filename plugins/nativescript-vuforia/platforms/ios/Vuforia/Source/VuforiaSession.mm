@@ -38,9 +38,9 @@ namespace  {
         virtual void Vuforia_onUpdate(Vuforia::State& state);
     } qcarUpdate;
     
-    dispatch_queue_t frameRenderingQueue = dispatch_queue_create("edu.gatech.argon", DISPATCH_QUEUE_SERIAL);
-    dispatch_semaphore_t frameRenderingSemaphore = dispatch_semaphore_create(1);
-
+    
+    dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INTERACTIVE, DISPATCH_QUEUE_PRIORITY_HIGH);
+    dispatch_queue_t frameRenderingQueue = dispatch_queue_create("nativescript_vuforia_render_queue", attr);
 }
 
 @implementation VuforiaSession : NSObject
@@ -62,7 +62,7 @@ namespace  {
  returns 100 when initialization completes (negative number on error).
  */
 + (void) initDone: (void (^)(VuforiaInitResult))done {
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         
         NSInteger initResult = 0;
         do {
@@ -82,16 +82,20 @@ namespace  {
     // So we setup our own render loop instead.
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(_render)];
     [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes]; // make it work while scrolling
+    [_displayLink setPreferredFramesPerSecond:roundf(targetFPS)];
 }
 
 
 /// Deinitializes Vuforia
 + (void) deinit {
-    Vuforia::deinit();
+    Vuforia::onPause();
+    dispatch_async(frameRenderingQueue, ^{
+        Vuforia::deinit();
+    });
     mUpdateCallback = nil;
     mRenderCallback = nil;
-   [_displayLink invalidate];
-   _displayLink = nil;
+    [_displayLink invalidate];
+    _displayLink = nil;
 }
 
 /// Registers an callback to be called when new tracking data is available
@@ -193,6 +197,19 @@ static float scaleFactorValue = 1;
     return scaleFactorValue;
 }
 
+static float targetFPS = 60;
+
++ (void) setTargetFPS:(float)f {
+    targetFPS = f;
+    if (_displayLink != nil) {
+        [_displayLink setPreferredFramesPerSecond:roundf(f)];
+    }
+}
+
++ (float) targetFPS {
+    return targetFPS;
+}
+
 + (void) _update:(const Vuforia::State &)state {
 //    if (mUpdateCallback) mUpdateCallback([[VuforiaState alloc] initWithCpp:&state]);
 }
@@ -202,28 +219,58 @@ static float scaleFactorValue = 1;
 //    if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
 //}
 
+static bool isRendering = false;
+
 + (void) _render {
     
     if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
         return;
     }
-    
+
     dispatch_async(frameRenderingQueue, ^{
-        if (dispatch_semaphore_wait(frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0) {
-            return;
-        }
-        
         @autoreleasepool {
-            Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
+            
+            if (isRendering) {
+                return;
+            }
+            
+            isRendering = true;
+            
+            Vuforia::TrackerManager &trackerManager = Vuforia::TrackerManager::getInstance();
+            Vuforia::StateUpdater &stateUpdater = trackerManager.getStateUpdater();
             Vuforia::State state = stateUpdater.updateState();
             [videoView renderFrame:state];
-            dispatch_sync(dispatch_get_main_queue(), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
                 if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
+                isRendering = false;
             });
+            
         }
-        
-        dispatch_semaphore_signal(frameRenderingSemaphore);
     });
+
+    
+    
+//    Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
+//    __block Vuforia::State state = stateUpdater.updateState();
+//    if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
+//
+//    dispatch_async(frameRenderingQueue, ^{//
+//        @autoreleasepool {
+//            [videoView renderFrame:state];
+//            isRendering = false;
+//        }
+//    });
+    
+    
+    
+
+//    Vuforia::StateUpdater &stateUpdater = Vuforia::TrackerManager::getInstance().getStateUpdater();
+//    __block Vuforia::State state = stateUpdater.updateState();
+//    if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
+//    dispatch_async(frameRenderingQueue, ^{//
+//            [videoView renderFrame:state];
+//            isRendering = false;
+//    });
 }
 
 @end

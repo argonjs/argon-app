@@ -260,6 +260,12 @@ typedef NS_ENUM (NSInteger, VuforiaRotation) {
 /// Get the scale factor for rendering the video
 + (float) scaleFactor;
 
+/// Set the target FPS for the render loop
++ (void) setTargetFPS:(float)f;
+
+/// Get the target FPS for the render loop
++ (float) targetFPS;
+
 @end
 
 #endif
