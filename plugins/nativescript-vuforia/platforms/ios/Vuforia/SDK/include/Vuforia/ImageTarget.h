@@ -20,6 +20,7 @@ countries.
 #include <Vuforia/Trackable.h>
 #include <Vuforia/ObjectTarget.h>
 #include <Vuforia/Vectors.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -41,22 +42,40 @@ public:
     /// Get the Type for class "ImageTarget".
     static Type getClassType();
 
-    /// Get the number of VirtualButton objects associated with this ImageTarget.
+    /// Get the number of VirtualButton objects associated with this ImageTarget. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getVirtualButtons() API instead.
+     */
     virtual int getNumVirtualButtons() const = 0;
 
-    /// Get (by index) one of the VirtualButton objects associated with this ImageTarget.
+    /// Get (by index) one of the VirtualButton objects associated with this ImageTarget. (DEPRECATED)
     /**
      * \param idx The index of the VirtualButton to get, in the range
      * 0..getNumVirtualButtons()-1.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getVirtualButtons() API instead.
      */
     virtual VirtualButton* getVirtualButton(int idx) = 0;
 
-    /// Get (by index) one of the VirtualButton objects associated with this ImageTarget.
+    /// Get (by index) one of the VirtualButton objects associated with this ImageTarget. (DEPRECATED)
     /**
      * \param idx The index of the VirtualButton to get, in the range
      * 0..getNumVirtualButtons()-1.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getVirtualButtons() API instead.
      */
     virtual const VirtualButton* getVirtualButton(int idx) const = 0;
+
+    /// Provides write access to the list of virtual buttons defined for
+    /// this ImageTarget.
+    virtual List<VirtualButton> getVirtualButtons() = 0;
+
+    /// Provides read-only access to the list of virtual buttons defined
+    /// for this ImageTarget.
+    virtual List<const VirtualButton> getVirtualButtons() const = 0;
 
     /// Get (by name) one of the VirtualButton objects associated with this ImageTarget.
     /**
@@ -97,7 +116,7 @@ public:
      * A meta data string can be assigned to Cloud Recognition targets as part
      * of the web interface or API. This method retrieves this string.
      *
-     * @return The meta data string associated with this ImageTarget (as set via
+     * \returns The meta data string associated with this ImageTarget (as set via
      * the Cloud Recognition API).
      */
     virtual const char* getMetaData() const = 0;

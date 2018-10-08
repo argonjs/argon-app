@@ -35,16 +35,24 @@ public:
     virtual const MultiTarget& getTrackable() const = 0;
 
     /// Get the number of the results that the Trackable parts that make up the MultiTarget generated.
+    /// (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getPartResults() API instead.
+     */
     virtual int getNumPartResults() const = 0;
 
-    /// Get a TrackableResult for a specific part of the MultiTarget.
+    /// Get a TrackableResult for a specific part of the MultiTarget. (DEPRECATED)
     /**
      * \param idx The index of the part, in the range 0..getNumPartResults()-1
      * \return A TrackableResult for the requested part, or null if the part is
      * out of range.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getPartResults() API instead.
      */
     virtual const TrackableResult* getPartResult(int idx) const = 0;
-    
+
     /// Get a TrackableResult for a specific part of the MultiTarget.
     /**
      * \param name The name of the part.
@@ -52,6 +60,10 @@ public:
      * not exist.
      */
     virtual const TrackableResult* getPartResult(const char* name) const = 0;
+    
+    /// Provides read-only access to the list of TrackableResults of all parts
+    /// forming this MultiTargetResult.
+    virtual List<const TrackableResult> getPartResults() const = 0;
 };
 
 } // namespace Vuforia

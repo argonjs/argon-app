@@ -104,8 +104,8 @@ export enum PixelFormat {
 }
 
 export enum TrackableResultStatus {
-    Unknown = 0,
-    Undefined = 1,
+    NoPose = 0, Unknown = 0,
+    Limited = 1, Undefined = 1,
     Detected = 2,
     Tracked = 3,
     ExtendedTracked = 4

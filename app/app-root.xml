@@ -117,7 +117,7 @@
                             <GridLayout width="100%" height="{{safeAreaInsets, safeAreaInsets.bottom}}" />
                         </FlexboxLayout>
 
-                        <GridLayout height="1px" opacity="{{ focussedLayer.content ? '1' : '0' }}" backgroundColor="#BBBBBB" flexShrink="0" />
+                        <GridLayout height="1px" opacity="{{ focussedLayer.content && uiMode == 'full' ? '1' : '0' }}" backgroundColor="#BBBBBB" flexShrink="0" />
 
                         <Label text="Favorites" marginTop="16" marginBottom="16" fontWeight="bold" />
                         <Repeater id="favorites" items="{{ favorites }}" flexShrink="0" flexGrow="2">

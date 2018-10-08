@@ -20,6 +20,7 @@ countries.
 #include <Vuforia/NonCopyable.h>
 #include <Vuforia/System.h>
 #include <Vuforia/Vuforia.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -97,19 +98,35 @@ public:
     virtual bool load(const char* path, STORAGE_TYPE storageType) = 0;
 
     /// Get the total number of Trackable objects using this data set.
+    /// (DEPRECATED)
     /**
      * Trackable instances that are themselves part of other Trackable instances
      * (e.g. an ImageTarget that is part of a MultiTarget) are not counted here.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming %Vuforia release. Use the getTrackables() API instead.
      */
     virtual int getNumTrackables() const = 0;
 
-    /// Get one of the Trackable objects that uses this data set.
+    /// Get one of the Trackable objects that uses this data set. (DEPRECATED)
     /**
      * Trackable instances that are themselves a part of other Trackable instances
      * (e.g. an ImageTarget that is part of a MultiTarget) are not returned here.
      * To access such instances, use MultiTarget::getPart() instead.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming %Vuforia release. Use the getTrackables() API instead.
      */
     virtual Trackable* getTrackable(int idx) = 0;
+
+    /// Returns a list of trackable objects in this data set.
+    /**
+     * Trackables that are part of other trackables (e.g. an ImageTarget that
+     * is part of a MultiTarget) are not delivered by this method.
+     * Such trackables can be accesses via the trackable they are part of.
+     * E.g. use MultiTarget::getParts() to access the respective ImageTargets.
+     */
+    virtual List<Trackable> getTrackables() = 0;
 
     /// Create a Trackable from the given TrackableSource and register it with this DataSet.
     /**

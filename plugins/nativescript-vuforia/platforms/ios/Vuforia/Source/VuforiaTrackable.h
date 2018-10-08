@@ -72,12 +72,16 @@
 
 /// Status of a TrackableResults
 typedef NS_ENUM (NSInteger, VuforiaTrackableResultStatus) {
-    VuforiaTrackableResultStatusUnknown,            ///< The state of the TrackableResult is unknown
-    VuforiaTrackableResultStatusUndefined,          ///< The state of the TrackableResult is not defined
-    ///< (this TrackableResult does not have a state)
-    VuforiaTrackableResultStatusDetected,           ///< The TrackableResult was detected
-    VuforiaTrackableResultStatusTracked,            ///< The TrackableResult was tracked
-    VuforiaTrackableResultStatusExtendedTracked    ///< The Trackable Result was extended tracked
+//    NO_POSE,            ///< No pose was delivered for the trackable.
+//    LIMITED,            ///< The trackable is being tracked in a limited form.
+//    DETECTED,           ///< The trackable was detected.
+//    TRACKED,            ///< The trackable is being tracked.
+//    EXTENDED_TRACKED    ///< The trackable is being tracked using extended tracking.
+    VuforiaTrackableResultStatusNoPose,
+    VuforiaTrackableResultStatusLimited,
+    VuforiaTrackableResultStatusDetected,
+    VuforiaTrackableResultStatusTracked,
+    VuforiaTrackableResultStatusExtendedTracked
 };
 
 @interface VuforiaTrackableResult : NSObject

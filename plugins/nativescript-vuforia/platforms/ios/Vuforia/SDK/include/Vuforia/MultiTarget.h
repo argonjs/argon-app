@@ -20,6 +20,7 @@ countries.
 #include <Vuforia/Trackable.h>
 #include <Vuforia/ObjectTarget.h>
 #include <Vuforia/Matrices.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -65,22 +66,38 @@ public:
     /// Get the Type for class "MultiTarget".
     static Type getClassType();
 
-    /// Get the number of <span>Trackable</span>s that make up this MultiTarget.
+    /// Get the number of <span>Trackable</span>s that make up this MultiTarget. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getParts() API instead.
+     */
     virtual int getNumParts() const = 0;
 
-    /// Get a Trackable part by index.
+    /// Get a Trackable part by index. (DEPRECATED)
     /**
      * \param idx The index of the part to get, in the range 0..getNumParts()-1.
      * \returns The requested part, or NULL if the requested index is out of range.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getParts() API instead.
      */
     virtual Trackable* getPart(int idx) = 0;
 
-    /// Get a Trackable part by index.
+    /// Get a Trackable part by index. (DEPRECATED)
     /**
      * \param idx The index of the part to get, in the range 0..getNumParts()-1.
      * \returns The requested part, or NULL if the requested index is out of range.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getParts() API instead.
      */
     virtual const Trackable* getPart(int idx) const = 0;
+
+    /// Returns the list of Trackables that form the MultiTarget.
+    virtual List<Trackable> getParts() = 0;
+
+    /// Provides read-only access to the list of Trackables that form the MultiTarget.
+    virtual List<const Trackable> getParts() const = 0;
 
     /// Get a Trackable part by name.
     /**

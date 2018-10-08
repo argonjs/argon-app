@@ -1356,14 +1356,11 @@ var XRDevicePose = function () {
 	_createClass(XRDevicePose, [{
 		key: 'getViewMatrix',
 		value: function getViewMatrix(view) {
-			if (view.viewMatrix) {
-				return new Float32Array(view.viewMatrix);
-			} else if (view.eyeDisplacementMatrix) {
-				return _MatrixMath2.default.mat4_multiply(new Float32Array(16), this.__transform, view.eyeDisplacementMatrix);
-				// return MatrixMath.mat4_invert(transform, transform)
+			if (view.eyeDisplacementMatrix) {
+				var transform = _MatrixMath2.default.mat4_multiply(new Float32Array(16), this.__transform, view.eyeDisplacementMatrix);
+				return _MatrixMath2.default.mat4_invert(transform, transform);
 			} else {
-				return new Float32Array(this.__transform);
-				// return MatrixMath.mat4_invert(transform, transform)
+				return _MatrixMath2.default.mat4_invert(new Float32Array(16), this.__transform);
 			}
 		}
 	}, {
@@ -2846,6 +2843,8 @@ var XRView = function () {
 		this._eyeDisplacement = eyeDisplacementMatrix;
 		this._normalizedViewport = normalizedViewport;
 		this._eye = eye;
+
+		this._didPrintViewMatrixWarning = false;
 	}
 
 	_createClass(XRView, [{
@@ -2853,14 +2852,6 @@ var XRView = function () {
 		value: function setProjectionMatrix(array16) {
 			for (var i = 0; i < 16; i++) {
 				this._projectionMatrix[i] = array16[i];
-			}
-		}
-	}, {
-		key: 'setViewMatrix',
-		value: function setViewMatrix(array16) {
-			if (!this._viewMatrix) this._viewMatrix = new Float32Array(16);
-			for (var i = 0; i < 16; i++) {
-				this._viewMatrix[i] = array16[i];
 			}
 		}
 	}, {
@@ -2886,6 +2877,10 @@ var XRView = function () {
 	}, {
 		key: 'viewMatrix',
 		get: function get() {
+			if (!this._didPrintViewMatrixWarning) {
+				this._didPrintViewMatrixWarning = true;
+				console.warn('XRView.viewMatrix is deprecated. Use XRDevicePose.getViewMatrix(), which is inverted from this value');
+			}
 			return this._viewMatrix;
 		}
 	}]);
@@ -3197,7 +3192,7 @@ var XRFrame = function () {
 			var poseModelMatrix = this._session._device._pose.getTransformTo(frameOfReference);
 			var devicePose = poseModelMatrix ? new _XRDevicePose2.default(poseModelMatrix) : null;
 
-			// compute view.viewMatrix property for backwards compatability
+			// compute inverted view.viewMatrix property for backwards compatability
 			if (devicePose) {
 				var _iteratorNormalCompletion = true;
 				var _didIteratorError = false;
@@ -3208,6 +3203,7 @@ var XRFrame = function () {
 						var view = _step.value;
 
 						view._viewMatrix = devicePose.getViewMatrix(view);
+						_MatrixMath2.default.mat4_invert(view._viewMatrix, view._viewMatrix);
 					}
 				} catch (err) {
 					_didIteratorError = true;
@@ -5350,13 +5346,27 @@ var XRPolyfill = function (_EventHandlerBase) {
 				});
 			});
 		}
+	}, {
+		key: 'requestSession',
+		value: function requestSession(paramters) {
+			return this.requestDevice().then(function (device) {
+				return device.requestSession(parameters);
+			});
+		}
+	}, {
+		key: 'supportsSession',
+		value: function supportsSession(parameters) {
+			return this.requestDevice().then(function (device) {
+				return device.supportsSession(parameters);
+			});
+		}
 
 		// For backwards compatability. TO BE REMOVED.
 
 	}, {
 		key: 'getDisplays',
 		value: function getDisplays() {
-			console.warn('getDisplays() is deprecated, running in compatability mode. ' + 'All session requests will treat "immersive" parameter as true, and document ' + 'will remain visible during "flat" immersive sessions.' + 'Switch to requestDevice() for normal functionality');
+			console.warn('getDisplays() is deprecated, running in compatability mode. ' + 'All session requests will treat "immersive" parameter as true, and document ' + 'will remain visible during "flat" immersive sessions.' + 'Switch to requestSession() for normal functionality');
 			return this.requestDevice().then(function (device) {
 				device._forceImmersive = true;
 				device._keepDocumentBodyVisible = true;
@@ -11113,6 +11123,14 @@ var FlatDevice = function (_XRDevice) {
 		_this.__workingMatrix = new Float32Array(16);
 		_this.__IDENTITY = _MatrixMath2.default.mat4_generateIdentity();
 
+		_this._immersiveViewportStyle = document.createElement('style');
+		_this._immersiveViewportStyle.type = 'text/css';
+		_this._immersiveViewportStyle.innerHTML = '\n\t\t\thtml {\n\t\t\t\tposition: static !important;\n\t\t\t\theight: 100vh !important;\n\t\t\t\twidth: 100vw !important;\n\t\t\t}\n\t\t\t.xr-hidden {\n\t\t\t\tdisplay: none !important;\n\t\t\t}\n\t\t';
+		_this._immersiveViewportSettings = document.createElement('meta');
+		_this._immersiveViewportSettings.id = 'immersive-viewport-settings';
+		_this._immersiveViewportSettings.name = 'viewport';
+		_this._immersiveViewportSettings.content = 'width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover';
+
 		_this._onWindowResize = function () {
 			if (_this.baseLayer && _this._arKitWrapper === null) {
 				_this.baseLayer.framebufferWidth = _this.baseLayer.context.canvas.clientWidth;
@@ -11197,32 +11215,28 @@ var FlatDevice = function (_XRDevice) {
 			}
 
 			this.baseLayer = baseLayer;
+
 			if (baseLayer) {
 				baseLayer._context.canvas.style.width = "100%";
 				baseLayer._context.canvas.style.height = "100%";
 				baseLayer.framebufferWidth = this._xr._sessionEls.clientWidth;
 				baseLayer.framebufferHeight = this._xr._sessionEls.clientHeight;
-
 				if (!this._keepDocumentBodyVisible) {
-					document.body.style.display = 'none';
-					document.documentElement.style.height = '0';
+					document.body.classList.add('xr-hidden');
 				}
 				this._xr._realityEls.style.display = '';
 				this._xr._sessionEls.style.display = '';
 				this._xr._sessionEls.appendChild(baseLayer.context.canvas);
-
-				var immersiveViewportSettings = document.createElement('meta');
-				immersiveViewportSettings.id = 'immersive-viewport-settings';
-				immersiveViewportSettings.name = 'viewport';
-				immersiveViewportSettings.content = 'width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover';
-				document.head.appendChild(immersiveViewportSettings);
+				document.head.appendChild(this._immersiveViewportSettings);
+				document.head.appendChild(this._immersiveViewportStyle);
 			} else {
-				delete document.body.style.display;
-				delete document.documentElement.style.height;
+				if (!this._keepDocumentBodyVisible) {
+					document.body.classList.remove('xr-hidden');
+				}
 				this._xr._realityEls.style.display = 'none';
 				this._xr._sessionEls.style.display = 'none';
-				var _immersiveViewportSettings = document.queryElement('#immersive-viewport-settings');
-				document.head.removeChild(_immersiveViewportSettings);
+				document.head.removeChild(this._immersiveViewportSettings);
+				document.head.removeChild(this._immersiveViewportStyle);
 			}
 
 			if (this._argonWrapper) {

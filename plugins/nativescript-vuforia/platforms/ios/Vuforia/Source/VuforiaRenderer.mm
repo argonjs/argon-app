@@ -17,7 +17,6 @@
 /// Configures the layout of the video background (location/size on screen
 +(void)setVideoBackgroundConfig:(VuforiaVideoBackgroundConfig)cfg {
     Vuforia::VideoBackgroundConfig c;
-    c.mEnabled = cfg.enabled;
     c.mPosition.data[0] = cfg.positionX;
     c.mPosition.data[1] = cfg.positionY;
     c.mSize.data[0] = cfg.sizeX;
@@ -29,7 +28,6 @@
 +(VuforiaVideoBackgroundConfig)getVideoBackgroundConfig {
     Vuforia::VideoBackgroundConfig c = Vuforia::Renderer::getInstance().getVideoBackgroundConfig();
     VuforiaVideoBackgroundConfig cfg = {
-        .enabled = c.mEnabled,
         .positionX = c.mPosition.data[0],
         .positionY = c.mPosition.data[1],
         .sizeX = c.mSize.data[0],

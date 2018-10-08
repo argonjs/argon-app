@@ -239,7 +239,7 @@ namespace{
 //    }
 //}
 
--(void) renderFrame:(Vuforia::State&)state {
+-(void) renderFrame:(Vuforia::State&)state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives {
     
     if (![[VuforiaCameraDevice getInstance] isStarted]) return;
     
@@ -254,11 +254,14 @@ namespace{
         self.mDoLayoutSubviews = NO;
     }
     
-    Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
+    //    Vuforia::Device& device = Vuforia::Device::getInstance();
+//    Vuforia::RenderingPrimitives renderingPrimitives = device.getRenderingPrimitives();
+    
     
     // [framebufferLock lock];
     [self setFramebuffer];
     
+    Vuforia::Renderer& mRenderer = Vuforia::Renderer::getInstance();
     mRenderer.begin(state);
     
     // Clear colour and depth buffers
@@ -267,9 +270,9 @@ namespace{
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+
     
-    Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
-    Vuforia::ViewList& viewList = renderingPrimitives.getRenderingViews();
+    Vuforia::ViewList& viewList = renderingPrimitives->getRenderingViews();
     
     // Iterate over the ViewList
     for (int viewIdx = 0; viewIdx < viewList.getNumViews(); viewIdx++) {
@@ -283,7 +286,7 @@ namespace{
         }
         
         // Set up the viewport
-        Vuforia::Vec4I viewport = renderingPrimitives.getViewport(vw);
+        Vuforia::Vec4I viewport = renderingPrimitives->getViewport(vw);
         glViewport(viewport.data[0], viewport.data[1], viewport.data[2], viewport.data[3]);
 
 //        //set scissor
@@ -305,7 +308,7 @@ namespace{
                 return;
             }
         }
-        [self renderVideoBackgroundWithViewId:vw textureUnit:vbVideoTextureUnit viewPort:viewport];
+        [self renderVideoBackgroundWithViewId:vw renderingPrimitives:renderingPrimitives textureUnit:vbVideoTextureUnit viewPort:viewport];
         
         glDisable(GL_SCISSOR_TEST);
         
@@ -317,11 +320,10 @@ namespace{
     //[framebufferLock unlock];
 }
 
-- (void) renderVideoBackgroundWithViewId:(Vuforia::VIEW) viewId textureUnit:(int) vbVideoTextureUnit viewPort:(Vuforia::Vec4I) viewport
+- (void) renderVideoBackgroundWithViewId:(Vuforia::VIEW) viewId renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives textureUnit:(int) vbVideoTextureUnit viewPort:(Vuforia::Vec4I) viewport
 {
-    const Vuforia::RenderingPrimitives renderingPrimitives = Vuforia::Device::getInstance().getRenderingPrimitives();
     
-    Vuforia::Matrix34F vbProjectionMatrix34 = renderingPrimitives.getVideoBackgroundProjectionMatrix(viewId,true);
+    Vuforia::Matrix34F vbProjectionMatrix34 = renderingPrimitives->getVideoBackgroundProjectionMatrix(viewId,true);
     Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(vbProjectionMatrix34);
 
 //    Vuforia::Matrix44F vbProjectionMatrix =
@@ -349,7 +351,7 @@ namespace{
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     
-    const Vuforia::Mesh& vbMesh = renderingPrimitives.getVideoBackgroundMesh(viewId);
+    const Vuforia::Mesh& vbMesh = renderingPrimitives->getVideoBackgroundMesh(viewId);
     // Load the shader and upload the vertex/texcoord/index data
     glUseProgram(vbShaderProgramID);
     glVertexAttribPointer(vbVertexHandle, 3, GL_FLOAT, false, 0, vbMesh.getPositionCoordinates());

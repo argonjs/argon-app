@@ -98,18 +98,21 @@
 
 /// Starts extended tracking for this Trackable. Returns true if successful
 -(bool) startExtendedTracking {
-    if (self.isConst) return NO;
-    else return self.trackable->startExtendedTracking();
+    return YES;
+//    if (self.isConst) return NO;
+//    else return self.trackable->startExtendedTracking();
 }
 
 -(bool) stopExtendedTracking {
-    if (self.isConst) return NO;
-    else return self.trackable->stopExtendedTracking();
+    return YES;
+//    if (self.isConst) return NO;
+//    else return self.trackable->stopExtendedTracking();
 }
 
 /// Returns true if extended tracking has been enabled, false otherwise.
 -(bool) isExtendedTrackingStarted {
-    return self.trackable->isExtendedTrackingStarted();
+    return YES;
+//    return self.trackable->isExtendedTrackingStarted();
 };
 
 -(Vuforia::ObjectTarget*) getObjectTarget {

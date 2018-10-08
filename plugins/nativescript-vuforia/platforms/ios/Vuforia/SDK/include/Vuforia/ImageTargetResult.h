@@ -19,6 +19,7 @@ countries.
 // Include files
 #include <Vuforia/ObjectTargetResult.h>
 #include <Vuforia/ImageTarget.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -37,15 +38,22 @@ public:
     /// Get the ImageTarget that participated in generating this result.
     virtual const ImageTarget& getTrackable() const = 0;
 
-    /// Get the number of <span>VirtualButton</span>s that the ImageTarget defines.
+    /// Get the number of <span>VirtualButton</span>s that the ImageTarget defines. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getVirtualButtonResults() API instead.
+     */
     virtual int getNumVirtualButtons() const = 0;
 
-    /// Get result data for a VirtualButton.
+    /// Get result data for a VirtualButton. (DEPRECATED)
     /**
      * \param idx The index of the VirtualButton to get result data for, in the
      * range 0..getNumVirtualButtons()-1
      * \return The requested result, or null if idx is out of bounds or if there
      * was no result for this button.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getVirtualButtonResults() API instead.
      */
     virtual const VirtualButtonResult* getVirtualButtonResult(int idx) const = 0;
 
@@ -57,6 +65,8 @@ public:
      */
     virtual const VirtualButtonResult* getVirtualButtonResult(const char* name) const = 0;
 
+    /// Returns a list of VirtualButtonResults for the ImageTarget this result represents.
+    virtual List<const VirtualButtonResult> getVirtualButtonResults() const = 0;
 };
 
 } // namespace Vuforia

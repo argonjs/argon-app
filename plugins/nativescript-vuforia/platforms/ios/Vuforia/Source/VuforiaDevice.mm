@@ -253,7 +253,7 @@
 
 
 @interface VuforiaRenderingPrimitives ()
-@property (nonatomic, assign) Vuforia::RenderingPrimitives *cpp;
+//@property (nonatomic, assign) Vuforia::RenderingPrimitives *cpp;
 @end
 
 @implementation VuforiaRenderingPrimitives
@@ -261,25 +261,29 @@
 /// Returns the set of views available for rendering from these primitives
 -(VuforiaViewList*)getRenderingViews {
     static VuforiaViewList *list = [[VuforiaViewList alloc] init];
-    list.cpp = self.cpp;
+    list.cpp = self.rp;
     return list;
+}
+
+-(Vuforia::RenderingPrimitives*)rp {
+    return (Vuforia::RenderingPrimitives*)self.cpp;
 }
 
 /// Returns a viewport for the given display in the format (x,y, width, height)
 -(VuforiaVec4I)getViewport:(VuforiaView)viewID {
-    Vuforia::Vec4I v = self.cpp->getViewport((Vuforia::VIEW)viewID);;
+    Vuforia::Vec4I v = self.rp->getViewport((Vuforia::VIEW)viewID);;
     return (VuforiaVec4I&)v;
 }
 
 /// Returns a viewport for the given display in the format (x, y, width, height) normalized between 0 and 1
 -(VuforiaVec4F)getNormalizedViewport:(VuforiaView)viewID {
-    Vuforia::Vec4F v = self.cpp->getNormalizedViewport((Vuforia::VIEW)viewID);
+    Vuforia::Vec4F v = self.rp->getNormalizedViewport((Vuforia::VIEW)viewID);
     return (VuforiaVec4F&)v;
 }
 
 /// Returns the projection matrix to use for the given view
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID {
-    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, true);
+    Vuforia::Matrix34F m = self.rp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, true);
     return (VuforiaMatrix34&)m;
 }
 
@@ -287,7 +291,7 @@
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID
                     cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
      adjustForViewportCentreToEyeAxis:(BOOL)adjust{
-    Vuforia::Matrix34F m = self.cpp->getProjectionMatrix((Vuforia::VIEW)viewID,
+    Vuforia::Matrix34F m = self.rp->getProjectionMatrix((Vuforia::VIEW)viewID,
                                                          (const Vuforia::CameraCalibration*)cameraCalibration.cpp,
                                                          adjust);
     return (VuforiaMatrix34&)m;
@@ -302,13 +306,13 @@
 -(VuforiaMatrix34)getEyeDisplayAdjustmentMatrix:(VuforiaView)viewID {
 //    Vuforia::Matrix44F m = Vuforia::Tool::convertPose2GLMatrix(self.cpp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID));
 //    return (VuforiaMatrix44&)m;
-    Vuforia::Matrix34F m = self.cpp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID);
+    Vuforia::Matrix34F m = self.rp->getEyeDisplayAdjustmentMatrix((Vuforia::VIEW)viewID);
     return (VuforiaMatrix34&)m;
 }
 
 /// Returns the projection matrix to use when projecting the video background
 -(VuforiaMatrix34)getVideoBackgroundProjectionMatrix:(VuforiaView)viewID coordinateSystem:(VuforiaCoordinateSystemType)csType {
-    Vuforia::Matrix34F m = self.cpp->getVideoBackgroundProjectionMatrix((Vuforia::VIEW)viewID,(Vuforia::COORDINATE_SYSTEM_TYPE)csType);
+    Vuforia::Matrix34F m = self.rp->getVideoBackgroundProjectionMatrix((Vuforia::VIEW)viewID);
 //    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, 0.01, 10000000);
 //    return (VuforiaMatrix44&)m44;
     return (VuforiaMatrix34&)m;
@@ -316,7 +320,7 @@
 
 /// Returns a simple mesh suitable for rendering a video background texture
 -(VuforiaMesh*)getVideoBackgroundMesh:(VuforiaView)viewID {
-    const Vuforia::Mesh& m = self.cpp->getVideoBackgroundMesh((Vuforia::VIEW)viewID);
+    const Vuforia::Mesh& m = self.rp->getVideoBackgroundMesh((Vuforia::VIEW)viewID);
     VuforiaMesh* mesh = [[VuforiaMesh alloc]init];
     mesh.cpp = &m;
     return mesh;
@@ -324,32 +328,33 @@
 
 /// Returns the recommended size to use when creating a texture to apply to the distortion mesh
 -(VuforiaVec2I)getDistortionTextureSize:(VuforiaView)viewID {
-    Vuforia::Vec2I v = self.cpp->getDistortionTextureSize((Vuforia::VIEW)viewID);
+    Vuforia::Vec2I v = self.rp->getDistortionTextureSize((Vuforia::VIEW)viewID);
     return (VuforiaVec2I&)v;
 }
 
 /// Returns a viewport for the given input to the distortion mesh in the format (x,y, width, height)
 -(VuforiaVec4I)getDistortionTextureViewport:(VuforiaView)viewID {
-    Vuforia::Vec4I v = self.cpp->getDistortionTextureViewport((Vuforia::VIEW)viewID);
+    Vuforia::Vec4I v = self.rp->getDistortionTextureViewport((Vuforia::VIEW)viewID);
     return (VuforiaVec4I&)v;
 }
 
 /// Returns a barrel distortion mesh for the given view
 -(VuforiaMesh*)getDistortionTextureMesh:(VuforiaView)viewID {
-    const Vuforia::Mesh& m = self.cpp->getDistortionTextureMesh((Vuforia::VIEW)viewID);
+    const Vuforia::Mesh& m = self.rp->getDistortionTextureMesh((Vuforia::VIEW)viewID);
     VuforiaMesh* mesh = [[VuforiaMesh alloc]init];
     mesh.cpp = &m;
     return mesh;
 }
 
 - (void)dealloc {
-    delete self.cpp;
+    delete self.rp;
     self.cpp = nil;
 }
 
 @end
 
 @interface VuforiaDevice ()
+@property (nonatomic, readwrite) VuforiaRenderingPrimitives *currentRenderingPrimitives;
 @end
 
 @implementation VuforiaDevice : NSObject
@@ -419,6 +424,10 @@
     Vuforia::Device::getInstance().setConfigurationChanged();
 }
 
+-(void)invalidateRenderingPrimitives {
+    self.currentRenderingPrimitives = nil;
+}
+
 /// Returns a copy of the RenderingPrimitives for the current configuration
 /**
  * Each RenderingPrimitives object is immutable, and is tailored to the environment it is created in.
@@ -436,10 +445,13 @@
  * Note: For AR MODE the RenderingPrimitives will not be valid until a CameraDevice has been initialised.
  */
 -(VuforiaRenderingPrimitives*)getRenderingPrimitives {
-    VuforiaRenderingPrimitives *renderingPrimitives = [[VuforiaRenderingPrimitives alloc] init];
-    Vuforia::RenderingPrimitives *rp = new Vuforia::RenderingPrimitives(Vuforia::Device::getInstance().getRenderingPrimitives());
-    renderingPrimitives.cpp = rp;
-    return renderingPrimitives;
+    if (self.currentRenderingPrimitives == nil) {
+        Vuforia::RenderingPrimitives *cppRP = new Vuforia::RenderingPrimitives(Vuforia::Device::getInstance().getRenderingPrimitives());
+        VuforiaRenderingPrimitives *renderingPrimitives = [[VuforiaRenderingPrimitives alloc] init];
+        renderingPrimitives.cpp = cppRP;
+        self.currentRenderingPrimitives = renderingPrimitives;
+    }
+    return self.currentRenderingPrimitives;
 }
 @end
 

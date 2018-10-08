@@ -20,9 +20,6 @@ typedef NS_ENUM (NSInteger, VuforiaVideoBackgroundReflection) {
 
 /// Video background configuration
 typedef struct _VuforiaVideoBackgroundConfig {
-    /// Enables/disables rendering of the video background.
-    bool enabled;
-    
     /// Relative position of the video background in the render target in
     /// pixels.
     /**
@@ -43,9 +40,6 @@ typedef struct _VuforiaVideoBackgroundConfig {
      */
     int sizeX;
     int sizeY;
-    
-    /// Reflection parameter to control how the video background is rendered
-    VuforiaVideoBackgroundReflection reflection;
 } VuforiaVideoBackgroundConfig;
 
 typedef NS_OPTIONS (NSInteger, VuforiaFPSHint)

@@ -83,6 +83,37 @@
 
 @class VuforiaTrackable;
 @class VuforiaTrackableResult;
+@class VuforiaDeviceTrackableResult;
+@class VuforiaCameraCalibration;
+
+
+@interface VuforiaIllumination : NSObject
+
+@property (nonatomic, assign) const void *cpp;
+
+/// Returned by getAmbientIntensity() when data is not available.
++(float)AMBIENT_INTENSITY_UNAVAILABLE;
+
+/// Returned by getAmbientColorTemperature() when data is not available.
++(float)AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE;
+
+/// Get the scene's ambient intensity.
+/**
+ * \returns The current ambient intensity of the scene, in Lumens, or
+ * AMBIENT_INTENSITY_UNAVAILABLE if the value is not available on the current
+ * platform.
+ */
+-(float)getAmbientIntensity;
+
+/// Get the scene's ambient color temperature.
+/**
+ * \returns The current color temperature of the scene, in Kelvin, or
+ * AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE if the value is not available on
+ * the current platform.
+ */
+-(float)getAmbientColorTemperature;
+
+@end
 
 @interface VuforiaState : NSObject
 - (id) initWithCpp:(const void*)cpp;
@@ -97,6 +128,42 @@
 - (int) getNumTrackableResults;
 /// Provides access to a specific TrackableResult object.
 - (VuforiaTrackableResult*) getTrackableResult:(int)idx;
+
+
+/// Get the camera calibration for this State, if available.
+/**
+ * \returns Camara calibration information for this State, or NULL if no
+ * camera calibration was available when this State was captured.
+ *
+ * The returned object is only valid as long as the State
+ * object is valid. Do not keep a copy of the pointer!
+ */
+- (VuforiaCameraCalibration*) getCameraCalibration;
+
+/// Get illumination information for this State (if available).
+/**
+ * \returns An Illumination instance containing illumination information for
+ * this State, or NULL if no illumination information is available.
+ *
+ * The returned object is only valid as long as the State
+ * object is valid. Do not keep a copy of the pointer!
+ */
+-(VuforiaIllumination*)getIllumination;
+
+/// Get the DeviceTrackableResult, if it exists.
+/**
+ * This is a convenience method that provides easy access to the
+ * DeviceTrackableResult, if a DeviceTracker has been started.
+ *
+ * \note The DeviceTrackableResult is also available via getTrackableResult().
+ *
+ * \note The returned object is only valid as long as the State
+ * object is valid. Do not keep a copy of the pointer!
+ *
+ * \returns the DeviceTrackableResult, or NULL if no DeviceTracker
+ * is running.
+ */
+-(VuforiaDeviceTrackableResult*)getDeviceTrackableResult;
 @end
 
 #endif

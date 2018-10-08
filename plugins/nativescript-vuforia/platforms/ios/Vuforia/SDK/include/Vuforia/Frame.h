@@ -18,6 +18,7 @@ countries.
 
 // Include files
 #include <Vuforia/Vuforia.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -74,11 +75,22 @@ public:
     /// Get the index of this frame.
     int getIndex() const;
 
-    /// Get the number of images referenced by this frame.
+    /// Get the number of images referenced by this frame. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getImages() API instead.
+     */
     unsigned int getNumImages() const;
 
-    /// Get one of the images referenced by this frame.
+    /// Get one of the images referenced by this frame. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getImages() API instead.
+     */
     const Image* getImage(int idx) const;
+
+    /// Read-only access to the list of images in this frame.
+    List<const Image> getImages() const;
 
 protected:
 

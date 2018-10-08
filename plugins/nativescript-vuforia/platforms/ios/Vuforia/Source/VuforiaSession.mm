@@ -10,12 +10,14 @@
 
 #import "VuforiaSession.h"
 #import "VuforiaState.h"
+#import "VuforiaDevice.h"
 #import "VideoView/VuforiaVideoView.h"
 #import <Vuforia/Vuforia.h>
 #import <Vuforia/Vuforia_iOS.h>
 #import <Vuforia/UpdateCallback.h>
 #import <Vuforia/State.h>
 #import <Vuforia/StateUpdater.h>
+#import <Vuforia/RenderingPrimitives.h>
 #import <Vuforia/TrackerManager.h>
 
 
@@ -56,6 +58,8 @@ namespace  {
     return Vuforia::setInitParameters(Vuforia::GL_20, [licenseKey cStringUsingEncoding:[NSString defaultCStringEncoding]]);
 }
 
+static bool isInit = false;
+
 /// Initializes Vuforia
 /**
  <b>iOS:</b> Called to initialize Vuforia.  Initialization is asynchronous. The done callback
@@ -71,6 +75,7 @@ namespace  {
         
         dispatch_async(dispatch_get_main_queue(), ^{
             done((VuforiaInitResult)initResult);
+            isInit = initResult == 100;
         });
     });
     
@@ -88,10 +93,9 @@ namespace  {
 
 /// Deinitializes Vuforia
 + (void) deinit {
-    Vuforia::onPause();
-    dispatch_async(frameRenderingQueue, ^{
-        Vuforia::deinit();
-    });
+    isInit = false;
+    [VuforiaSession onPause];
+    Vuforia::deinit();
     mUpdateCallback = nil;
     mRenderCallback = nil;
     [_displayLink invalidate];
@@ -166,12 +170,18 @@ namespace  {
 /// Executes AR-specific tasks upon the onResume activity event
 + (void) onResume {
     Vuforia::onResume();
+    @synchronized (self) {
+        [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
+    }
 }
 
 
 /// Executes AR-specific tasks upon the onResume activity event
 + (void) onPause {
     Vuforia::onPause();
+    @synchronized (self) {
+        [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
+    }
 }
 
 
@@ -184,6 +194,9 @@ namespace  {
 /// Executes AR-specific tasks upon the onSurfaceChanged render surface event
 + (void) onSurfaceChangedWidth:(int)w height:(int)h {
     Vuforia::onSurfaceChanged(w, h);
+    @synchronized (self) {
+        [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
+    }
 }
 
 
@@ -234,13 +247,22 @@ static bool isRendering = false;
                 return;
             }
             
+            if (!isInit) {
+                return;
+            }
+            
             isRendering = true;
             
             Vuforia::TrackerManager &trackerManager = Vuforia::TrackerManager::getInstance();
             Vuforia::StateUpdater &stateUpdater = trackerManager.getStateUpdater();
             Vuforia::State state = stateUpdater.updateState();
-            [videoView renderFrame:state];
+            VuforiaRenderingPrimitives *renderingPrimitives = [[VuforiaDevice getInstance] getRenderingPrimitives];
+            
+            @synchronized (self) {
+                [videoView renderFrame:state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives.cpp];
+            }
             dispatch_async(dispatch_get_main_queue(), ^{
+                if (!isInit) return;
                 if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
                 isRendering = false;
             });

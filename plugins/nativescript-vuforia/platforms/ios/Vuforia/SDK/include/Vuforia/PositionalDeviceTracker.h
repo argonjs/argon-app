@@ -17,6 +17,7 @@ Header file for PositionalDeviceTracker class.
 #define _VUFORIA_POSITIONAL_DEVICE_TRACKER_H_
 
 #include <Vuforia/DeviceTracker.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -164,15 +165,26 @@ public:
     virtual bool destroyAnchor(Anchor* anchor) = 0;
 
     /// Get the number of Anchors currently managed by the PositionalDeviceTracker.
+    /// (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getAnchors() API instead.
+     */
     virtual int getNumAnchors() const = 0;
 
-    /// Get the Anchor at the specified index.
+    /// Get the Anchor at the specified index. (DEPRECATED)
     /**
      * \param idx The index, in the range 0..getNumAnchors() - 1.
      * \returns the requested Anchor instance, or NULL if the index is out of
      * bounds.
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getAnchors() API instead.
      */
     virtual Anchor* getAnchor(int idx) = 0;
+
+    /// Get the list of anchors.
+    virtual List<Anchor> getAnchors() const = 0;
 
     /// Reset the tracker.
     /**

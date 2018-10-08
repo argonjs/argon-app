@@ -48,7 +48,8 @@ enum INIT_ERRORCODE {
     INIT_LICENSE_ERROR_NO_NETWORK_TRANSIENT = -7,   ///< Unable to verify license key due to network (Transient error)
     INIT_LICENSE_ERROR_CANCELED_KEY = -8,           ///< Provided key is no longer valid
     INIT_LICENSE_ERROR_PRODUCT_TYPE_MISMATCH = -9,  ///< Provided key is not valid for this product
-    INIT_EXTERNAL_DEVICE_NOT_DETECTED = -10         ///< Dependent external device not detected/plugged in
+    INIT_EXTERNAL_DEVICE_NOT_DETECTED = -10,        ///< Dependent external device not detected/plugged in
+    INIT_VUFORIA_DRIVER_FAILED = -11                ///< Vuforia Driver library failed to open
 };
 
 /// Pixel encoding types.
@@ -131,13 +132,6 @@ enum STORAGE_TYPE {
     STORAGE_ABSOLUTE        ///< Indicates an absolute path.
 };
 
-/// Types of coordinate system that can be used for poses.
-enum COORDINATE_SYSTEM_TYPE {
-    COORDINATE_SYSTEM_UNKNOWN = 0, ///< Unknown coordinate system
-    COORDINATE_SYSTEM_CAMERA = 1,  ///< Pose will be relative to the camera frame of reference
-    COORDINATE_SYSTEM_WORLD = 2,   ///< Pose will be relative to the world frame of reference
-};
-    
 /// The kinds of Fusion provider available for %Vuforia to use.
 /**
  * See setAllowedFusionProviders() for more information about %Vuforia Fusion.
@@ -485,6 +479,40 @@ void VUFORIA_API onSurfaceChanged(int width, int height);
 
 /// Get the version of the %Vuforia SDK as a C-style string.
 VUFORIA_API const char* getLibraryVersion();
+
+/// Set parameters to enable or disable the use of a Vuforia Driver library
+/**
+ * Sets up the name of the library that %Vuforia loads dynamically and uses
+ * as an external source of camera or other input data.
+ * The library must support the %Vuforia Driver API and it must be placed
+ * inside the app package to be loaded properly.
+ * The exact path depends on the platform:
+ * - Android: [apk-root-dir]/lib/[architecture]/library.so
+ * - UWP: [appx-root-dir]/library.dll
+ *
+ * This function MUST be called before Vuforia::init() to have any effect. Once the
+ * library name has been set and Vuforia::init() is called, %Vuforia will try to
+ * initialize and use the functionality provided by the Driver.
+ *
+ * To disable the Vuforia Driver functionality the following must be done:
+ * - Call Vuforia::deinit()
+ * - Call Vuforia::setDriverLibrary() with nullptr or empty string
+ * as the libraryName.
+ * - Call Vuforia::init()
+ *
+ * \note This functionality is currently only supported on Android and UWP platforms.
+ *
+ * \param libraryName Full file name of the Vuforia Driver library. This must be a null 
+ * terminated string with a maximum length of 255 characters. Setting
+ * it to nullptr or empty string, will disable the use of the Vuforia Driver
+ * functionalty during subsequent calls to Vuforia::init().
+ * \param userData Arbitrary user defined data to be passed into the library,
+ * when it gets loaded. %Vuforia only forwards the data and doesn't process it
+ * in any way.
+ * \returns true if %Vuforia was in uninitialized state and the parameter was therefore
+ * set successfully.
+ */
+bool VUFORIA_API setDriverLibrary(const char* libraryName, void* userData);
 
 } // namespace Vuforia
 

@@ -166,6 +166,8 @@ typedef NS_ENUM (NSInteger, VuforiaView)
 
 @interface VuforiaRenderingPrimitives : NSObject
 
+@property (nonatomic, assign) void* cpp;
+
 /// Returns the set of views available for rendering from these primitives
 -(VuforiaViewList*)getRenderingViews;
 
@@ -249,6 +251,8 @@ typedef NS_ENUM (NSInteger, VuforiaDeviceMode) {
 
 /// Set a flag to indicate that the device configuration has changed, and thus RenderingPrimitives need to be regenerated
 -(void)setConfigurationChanged;
+
+-(void)invalidateRenderingPrimitives;
 
 /// Returns a copy of the RenderingPrimitives for the current configuration
 /**

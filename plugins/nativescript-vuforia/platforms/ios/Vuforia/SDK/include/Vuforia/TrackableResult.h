@@ -112,16 +112,13 @@ public:
      * TrackableResult was observed (or predicted).
      *
      * The pose represents a transform from a target coordinate system (i.e.
-     * the coordinate system of the Trackable) to the base coordinate system as
-     * returned by getCoordinateSystem() (i.e. either camera-space or world-space,
-     * depending on how %Vuforia has been configured).
+     * the coordinate system of the Trackable) to the world coordinate system.
      *
-     * In other words, if this TrackableResult comes from an ObjectTracker, and
+     * In other words, if this TrackableResult comes from an ObjectTracker and
      * you render 3D geometry using
      *
      * - the pose matrix as the geometry's model-view matrix, and
-     * - a projection matrix obtained from a RenderingPrimitives instance using
-     *   the coordinate system returned by getCoordinateSystem(),
+     * - a projection matrix obtained from a RenderingPrimitives instance
      *
      * then
      *
@@ -145,24 +142,7 @@ public:
      */
     virtual const Matrix34F& getPose() const = 0;
 
-    /// Get the base coordinate system for the pose matrix. (DEPRECATED)
-    /**
-     * \returns The base coordinate system for the pose matrix, or
-     * COORDINATE_SYSTEM_UNKNOWN if the Trackable's STATUS is NO_POSE.
-     *
-     * The pose matrix returned by getPose() is defined as a transform from
-     * the Trackable's coordinate system to another ('base') coordinate system.
-     * This function tells you what that 'base' coordinate system is.
-     *
-     * \note When the Trackable's STATUS (as returned by getStatus()) is NO_POSE,
-     * this method will return COORDINATE_SYSTEM_UNKNOWN.
-     * 
-     * \deprecated This method has been deprecated. It will be removed in an
-     * upcoming Vuforia release.
-     */
-    virtual COORDINATE_SYSTEM_TYPE getCoordinateSystem() const = 0;
-
-    virtual ~TrackableResult()  {}
+    virtual ~TrackableResult() {}
 };
 
 } // namespace Vuforia

@@ -105,8 +105,8 @@ declare module "nativescript-vuforia" {
     }
     
     export enum TrackableResultStatus {
-        Unknown = 0,
-        Undefined = 1,
+        NoPose = 0, Unknown = 0,
+        Limited = 1, Undefined = 1,
         Detected = 2,
         Tracked = 3,
         ExtendedTracked = 4
@@ -273,6 +273,16 @@ declare module "nativescript-vuforia" {
         getNumTrackables(): number;
         getTrackable(idx: number): Trackable|undefined;
         getTrackableResult(idx: number): TrackableResult|undefined;
+        getCameraCalibration(): CameraCalibration;
+        getIllumination(): Illumination;
+        getDeviceTrackableResult(): DeviceTrackableResult|undefined;
+    }
+
+    export class Illumination {
+        static AMBIENT_INTENSITY_UNAVAILABLE:number;
+        static AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE:number;
+        getAmbientIntensity():number;
+        getAmbientColorTemperature():number;
     }
     
     export interface VideoMode {
@@ -379,7 +389,7 @@ declare module "nativescript-vuforia" {
         getDistortionTextureViewport(viewID: View): Vec4;
         getEyeDisplayAdjustmentMatrix(viewID: View): Matrix44;
         getNormalizedViewport(viewID: View): Vec4;
-        getProjectionMatrix(viewID: View): Matrix44;
+        getProjectionMatrix(viewID: View, cameraCalibration?:CameraCalibration): Matrix44;
         getRenderingViews(): ViewList;
         getVideoBackgroundMesh(viewID: View): Mesh;
         getVideoBackgroundProjectionMatrix(viewID: View): Matrix44;

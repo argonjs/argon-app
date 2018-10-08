@@ -384,6 +384,14 @@ export class TrackableResult {
     }
 }
 
+export class DeviceTrackable extends Trackable {    
+    constructor(public android:vuforia.DeviceTrackable) {super(android)}
+}
+
+export class DeviceTrackableResult extends TrackableResult {    
+    constructor(public android:vuforia.DeviceTrackableResult) {super(android)}
+}
+
 export class Marker extends Trackable {
     constructor(public android:vuforia.Marker) {super(android)}
 }
@@ -416,11 +424,11 @@ export class ObjectTargetResult extends TrackableResult {
     constructor(public android:vuforia.ObjectTargetResult) {super(android)}
 }
 
-class ImageTarget extends ObjectTarget {    
+export class ImageTarget extends ObjectTarget {    
     constructor(public android:vuforia.ImageTarget) {super(android)}
 }
 
-class ImageTargetResult extends ObjectTargetResult {    
+export class ImageTargetResult extends ObjectTargetResult {    
     constructor(public android:vuforia.ImageTargetResult) {super(android)}
 }
 
@@ -432,11 +440,11 @@ export class MultiTargetResult extends ObjectTargetResult {
     constructor(public android:vuforia.ObjectTargetResult) {super(android)}
 }
 
-class CylinderTarget extends ObjectTarget {    
+export class CylinderTarget extends ObjectTarget {    
     constructor(public android:vuforia.CylinderTarget) {super(android)}
 }
 
-class CylinderTargetResult extends ObjectTargetResult {    
+export class CylinderTargetResult extends ObjectTargetResult {    
     constructor(public android:vuforia.CylinderTargetResult) {super(android)}
 }
 
@@ -518,7 +526,17 @@ export class State {
         }
         return undefined;
     }
+    getCameraCalibration() {
+        return new CameraCalibration(this.android.getCameraCalibration());
+    }
+    getIllumination() {
+        return this.android.getIllumination()
+    }
+    getDeviceTrackableResult() {
+        return new DeviceTrackableResult(this.android.getDeviceTrackableResult())
+    }
 }
+
 
 export class CameraCalibration {
     constructor(public android:vuforia.CameraCalibration) {}
@@ -818,9 +836,10 @@ export class RenderingPrimitives {
         return createVec4(this.android.getNormalizedViewport(<number>viewID));
     }
     
-    getProjectionMatrix(viewID: def.View): def.Matrix44 {
-        var mat34 = this.android.getProjectionMatrix(<number>viewID);
-        return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000);
+    getProjectionMatrix(viewID: def.View, cameraCalibration: def.CameraCalibration): def.Matrix44 {
+        const androidCameraCalibration = cameraCalibration['android'] as vuforia.CameraCalibration
+        var mat34 = this.android.getProjectionMatrix(<number>viewID, androidCameraCalibration, true);
+        return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000)
     }
     
     getRenderingViews(): ViewList {

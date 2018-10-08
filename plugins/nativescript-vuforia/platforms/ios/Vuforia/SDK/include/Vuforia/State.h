@@ -100,7 +100,7 @@ public:
      * Trackable instances used to generate the TrackableResults accessible via
      * getTrackableResult().
      *
-     * Note that for non-camera-based TrackableResult instances, the timestamp
+     * \note For non-camera-based TrackableResult instances, the timestamp
      * of this Frame may not match the timestamp of the TrackableResult. See
      * StateUpdater for more details.
      */
@@ -141,31 +141,16 @@ public:
      */
     const DeviceTrackableResult* getDeviceTrackableResult() const;
 
-    /// Get the number of TrackableResult objects for this State.
-    int getNumTrackableResults() const;
-
-    /// Get a single TrackableResult object.
+    /// Get the number of Trackable objects that were involved in generating 
+    /// TrackableResult objects for this State. (DEPRECATED)
     /**
-     * \param idx The index of the TrackableResult, in the range 0..getNumTrackableResults()-1
-     * \returns A pointer to the requested TrackableResult, specific to this
-     * State instance.
-     *
-     * A TrackableResult returned from this function represents information about
-     * a Trackable object that is being actively tracked in this State.
-     *
-     * The TrackableResult should be considered specific to this State, i.e., it
-     * represents a snapshot of the tracked object at the point in time associated
-     * with this State.
-     *
-     * The returned object is only valid as long as the State object is valid.
-     * Do not keep a copy of the pointer!
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getTrackableResults() API instead to get
+     * the list of TrackableResults from the State and check the list size.
      */
-    const TrackableResult* getTrackableResult(int idx) const;
-    
-    /// Get the number of Trackable objects that were involved in generating TrackableResult objects for this State.
     int getNumTrackables() const;
 
-    /// Get an immutable Trackable specific to this State.
+    /// Get an immutable Trackable specific to this State. (DEPRECATED)
     /**
      * \param idx The index of the Trackable, in the range 0..getNumTrackables()-1
      * \returns An immutable, non-comparable pointer to the requested Trackable.
@@ -194,8 +179,51 @@ public:
      *
      * The returned object is only valid as long as the State object is valid.
      * Do not keep a copy of the pointer!
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getTrackableResults() API instead to
+     * get the list of TrackableResults from the State, then call 
+     * getTrackable() on the TrackableResult list element with the given index.
      */
     const Trackable* getTrackable(int idx) const;
+
+    /// Get the number of TrackableResult objects for this State. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getTrackableResults() API instead to get
+     * the list of TrackableResults from the State and check the list size.
+     */
+    int getNumTrackableResults() const;
+
+    /// Get a single TrackableResult object. (DEPRECATED)
+    /**
+     * \param idx The index of the TrackableResult, in the range 0..getNumTrackableResults()-1
+     * \returns A pointer to the requested TrackableResult, specific to this
+     * State instance.
+     *
+     * A TrackableResult returned from this function represents information about
+     * a Trackable object that is being actively tracked in this State.
+     *
+     * The TrackableResult should be considered specific to this State, i.e., it
+     * represents a snapshot of the tracked object at the point in time associated
+     * with this State.
+     *
+     * The returned object is only valid as long as the State object is valid.
+     * Do not keep a copy of the pointer!
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getTrackableResults() API instead.
+     */
+    const TrackableResult* getTrackableResult(int idx) const;
+
+    /// Provides access to the list of TrackableResults in the State referring
+    /// to Trackable objects currently being tracked.
+    /**
+     * The returned list is only valid as long as the State
+     * object is valid. Do not keep a copy of the list or the 
+     * TrackableResults list elements point to!
+     */
+    List<const TrackableResult> getTrackableResults() const;
 
 protected:
 

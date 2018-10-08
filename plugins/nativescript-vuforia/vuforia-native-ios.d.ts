@@ -1,4 +1,3 @@
-
 interface UIGLViewProtocol {
 
 	renderFrameVuforia(): void;
@@ -512,6 +511,8 @@ declare class VuforiaRenderingPrimitives extends NSObject {
 	getNormalizedViewport(viewID: VuforiaView): VuforiaVec4F;
 
 	getProjectionMatrix(viewID: VuforiaView): VuforiaMatrix34;
+	
+	getProjectionMatrixCameraCalibrationAdjustForViewportCentreToEyeAxis(viewID: VuforiaView, cameraCalibration: CameraCalibration, adjust:boolean): VuforiaMatrix34;
 
 	getRenderingViews(): VuforiaViewList;
 
@@ -622,7 +623,20 @@ declare class VuforiaState extends NSObject {
 
 	getTrackableResult(idx: number): VuforiaTrackableResult;
 
+	getCameraCalibration() : VuforiaCameraCalibration;
+
+	getIllumination() : VuforiaIllumination;
+
+	getDeviceTrackableResult() : VuforiaDeviceTrackableResult;
+
 	self(): VuforiaState; // inherited from NSObjectProtocol
+}
+
+declare class VuforiaIllumination {
+	static AMBIENT_INTENSITY_UNAVAILABLE:number;
+	static AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE:number;
+	getAmbientIntensity():number;
+	getAmbientColorTemperature():number;
 }
 
 declare const enum VuforiaStorageType {

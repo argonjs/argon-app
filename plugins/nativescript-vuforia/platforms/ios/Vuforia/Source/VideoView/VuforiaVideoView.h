@@ -22,6 +22,7 @@
 
 #import <UIKit/UIKit.h>
 #import <Vuforia/State.h>
+#import <Vuforia/RenderingPrimitives.h>
 #import "VuforiaGLResourceHandler.h"
 
 @interface VuforiaVideoView : UIView <VuforiaGLResourceHandler> {
@@ -43,7 +44,7 @@
     GLuint depthRenderbuffer;
 }
 
-- (void) renderFrame:(Vuforia::State&)state;
+- (void) renderFrame:(Vuforia::State&)state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives;
 
 @property (nonatomic, weak) id delegate;
 

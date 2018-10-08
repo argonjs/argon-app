@@ -1,6 +1,6 @@
 {
   "nativescript": {
-    "id": "edu.gatech.ael.argonxr",
+    "id": "edu.gatech.ael.argon-xr",
     "tns-android": {
       "version": "4.0.1"
     },

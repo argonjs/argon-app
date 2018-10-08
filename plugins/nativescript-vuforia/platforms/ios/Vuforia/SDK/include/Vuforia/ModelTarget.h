@@ -18,6 +18,7 @@ Header file for the ModelTarget Trackable type.
 #include <Vuforia/ObjectTarget.h>
 #include <Vuforia/Vectors.h>
 #include <Vuforia/Obb3D.h>
+#include <Vuforia/List.h>
 
 namespace Vuforia
 {
@@ -97,10 +98,14 @@ public:
      */
     virtual const Obb3D& getBoundingBox() const = 0;
 
-    /// Get the number of <span>GuideView</span>s for this target.
+    /// Get the number of <span>GuideView</span>s for this target. (DEPRECATED)
+    /**
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getGuideViews() API instead.
+     */
     virtual int getNumGuideViews() const = 0;
 
-    /// Get one of this target's <span>GuideView</span>s.
+    /// Get one of this target's <span>GuideView</span>s. (DEPRECATED)
     /**
      * A GuideView provides a visual guide that your application can show to aid
      * users in initializing the tracking of a ModelTarget.
@@ -108,9 +113,33 @@ public:
      * \param idx The GuideView to return, in the range 0..getNumGuideViews()-1
      * \returns The requested GuideView. This ImageTarget instance retains
      * ownership of the returned object.
-    */
-    virtual GuideView * getGuideView(int idx) = 0;
+     *
+     * \deprecated This API has been deprecated. It will be removed in an
+     * upcoming Vuforia release. Use the getGuideViews() API instead.
+     */
+    virtual GuideView* getGuideView(int idx) = 0;
     
+    /// Returns a list of guide views (write access).
+    /**
+     * A GuideView provides a visual guide that your application can show to aid
+     * users in initializing the tracking of a ModelTarget.
+     *
+     * The application can use the information stored in a guide view to provide visual
+     * feedback to the user about how to position the camera in order to snap to a
+     * specific object.
+     */
+    virtual List<GuideView> getGuideViews() = 0;
+
+    /// Returns a list of guide views (read-only access).
+    /**
+    * A GuideView provides a visual guide that your application can show to aid
+    * users in initializing the tracking of a ModelTarget.
+    *
+    * The application can use the information stored in a guide view to provide visual
+    * feedback to the user about how to position the camera in order to snap to a
+    * specific object.
+    */
+    virtual List<const GuideView> getGuideViews() const = 0;
 };
 
 } // namespace Vuforia

@@ -34,7 +34,7 @@ public:
     /// Get the system-wide unique id of the target.
     virtual const char* getUniqueTargetId() const = 0;
 
-    /// Get the width of the target (in meters).
+    /// Returns the width of the target (in 3D scene units)
     virtual const float getTargetSize() const = 0;
 
     /// Get the meta data string associated with this target.

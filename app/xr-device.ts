@@ -205,7 +205,8 @@ export interface XRTrackableResults {
     [id: string]: {
         id:string,
         name:string,
-        pose:vuforia.Matrix44
+        pose:vuforia.Matrix44|null,
+        status:vuforia.TrackableResultStatus
     }
 }
 
@@ -218,6 +219,16 @@ export interface XRDataSetTrackables {
             z: number
         }
     }
+}
+
+function _distance(a,b) {
+    const aX = a[12], aY = a[13], aZ = a[14]
+    const bX = b[12], bY = b[13], bZ = b[14]
+    const xDelta = bX-aX
+    const yDelta = bY-aY
+    const zDelta = bZ-aZ
+    const distSquared = xDelta*xDelta + yDelta*yDelta + zDelta*zDelta
+    return Math.sqrt(distSquared)
 }
 
 // export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
@@ -252,8 +263,6 @@ export class XRVuforiaDevice extends XRDevice {
         })
 
         this._defaultState = new XRVuforiaState(Promise.resolve(defaultKey))
-        
-
 
         this.on('propertyChange', (evt:PropertyChangeData)=>{
             if (evt.propertyName === 'browserView') {
@@ -297,48 +306,69 @@ export class XRVuforiaDevice extends XRDevice {
             needsViewConfiguration = true
         })
 
-        vuforia.api.renderCallback = (state) => {
+        vuforia.api.renderCallback = (state:vuforia.State) => {
 
             this.startFrameTimer()
-
-            const views = this._renderingViews
-            if (!views) return
 
             if (needsViewConfiguration) {
                 this.configureView()
                 needsViewConfiguration = false
             }
 
+            const views:Array<XRView> = this.getViews(state)
+
             const frame = state.getFrame()
             const index = frame.getIndex()
             const time = frame.getTimeStamp()
             const trackableResults:XRTrackableResults = {}
+
+            const deviceTrackableResult = state.getDeviceTrackableResult()
+            const deviceID = 'xr.device'
+            const deviceName = 'Device'
+            const devicePose = (deviceTrackableResult && deviceTrackableResult.getPose()) || null
+            const deviceStatus = (deviceTrackableResult && deviceTrackableResult.getStatus()) || vuforia.TrackableResultStatus.NoPose
+
+            trackableResults[deviceID] = {
+                id: deviceID,
+                name: deviceName,
+                pose: devicePose,
+                status: deviceStatus
+            }
                         
             // update trackable results in context entity collection
             const numTrackableResults = state.getNumTrackableResults()
             for (let i=0; i < numTrackableResults; i++) {
                 const trackableResult = <vuforia.TrackableResult>state.getTrackableResult(i)
                 const trackable = trackableResult.getTrackable()
+                const id = 'vuforia.trackable_' + trackable.getId()
+                const name = trackable.getName()
                 const pose = trackableResult.getPose()
-                let id = 'vuforia.trackable_' + trackable.getId()
-                let name = trackable.getName()
+                const status = trackableResult.getStatus()
 
                 if (trackable instanceof vuforia.DeviceTrackable) {
-                    id = 'xr.device',
-                    name = 'Device'
+                    continue;
+                } else {
+                    // workaround for tracking bug 
+                    // not sure why, but trackable poses drift downwards (gravity-wise) as distance increases
+                    // this is not a FOV error, as it is only affects position on +Y global axis, and is not affected
+                    // by the camera orientation, only the distance between trackable and device
+                    const distance = devicePose ? _distance(devicePose, pose) : 0
+                    pose[13] += 0.01 * distance * 2  // not sure why, but device pose seeems to be vertically offset by this ammount
                 }
                 
                 trackableResults[id] = {
                     id,
                     name,
-                    pose
+                    pose,
+                    status
                 }
             }
 
             trackableResults['xr.eye-level'] = {
                 id: 'xr.eye-level',
                 name: 'Eye Level',
-                pose: this._eyeLevelPose
+                pose: this._eyeLevelPose,
+                status: vuforia.TrackableResultStatus.Tracked
             }
 
             const hitTestResults = {}
@@ -351,7 +381,8 @@ export class XRVuforiaDevice extends XRDevice {
                 trackableResults[id] = {
                     id,
                     name: 'Center Hit',
-                    pose: result.getPose()
+                    pose: result.getPose(),
+                    status: vuforia.TrackableResultStatus.Detected
                 }
             }
 
@@ -520,7 +551,6 @@ export class XRVuforiaDevice extends XRDevice {
 
     private _vuforiaIsInitialized = false
     private _cameraEnabled = false
-    private _renderingViews?:Array<XRView>
 
     private _updateCameraEnabled() {
         const shouldEnableCamera = 
@@ -1014,11 +1044,11 @@ export class XRVuforiaDevice extends XRDevice {
 
     private _config = <vuforia.VideoBackgroundConfig>{};
 
-    public configureView(viewport?:{top:number,left:number,width:number,height:number}) {
+    public configureView() {
     
         const videoView = vuforia.videoView
-        const viewWidth = viewport ? viewport.width : videoView.getActualSize().width
-        const viewHeight = viewport ? viewport.height : videoView.getActualSize().height
+        const viewWidth = videoView.getActualSize().width
+        const viewHeight = videoView.getActualSize().height
         
         const cameraDevice = vuforia.api.getCameraDevice()
         cameraDevice.setFocusMode(vuforia.CameraDeviceFocusMode.ContinuousAuto)
@@ -1064,20 +1094,29 @@ export class XRVuforiaDevice extends XRDevice {
         // videoView.width = viewWidth;
         // videoView.height = viewHeight;
 
-        const zoomFactor = this._effectiveZoomFactor
-        vuforia.api && vuforia.api.setScaleFactor(zoomFactor)
-
+        vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor)
         const renderer = vuforia.api.getRenderer();
         renderer.setVideoBackgroundConfig(config);
+    }
+
+
+    getViews(state:vuforia.State) : Array<XRView> {
+
+        const views:Array<XRView> = []
+        
         const renderingPrimitives = vuforia.api.getDevice().getRenderingPrimitives()
         const renderingViews = renderingPrimitives.getRenderingViews()
         const numViews = renderingViews.getNumViews()
 
-        const renderingViewsJSON:Array<XRView> = this._renderingViews = []
-
+        const contentScaleFactor = screen.mainScreen.scale
+        const videoView = vuforia.videoView
+        const viewWidth = videoView.getActualSize().width
+        const viewHeight = videoView.getActualSize().height
+        const zoomFactor = this._effectiveZoomFactor
+        
         for (let i = 0; i < numViews; i++) {
             const view = renderingViews.getView(i)
-            const viewJSON = renderingViewsJSON[i] = {} as XRView
+            const viewJSON = views[i] = {} as XRView
             
             switch (view) {
                 case vuforia.View.LeftEye:
@@ -1090,7 +1129,7 @@ export class XRVuforiaDevice extends XRDevice {
                     viewJSON.type = 'postprocess'; break;
             }
 
-            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view)
+            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view, state.getCameraCalibration())
             glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,-1])
 
             const viewport = renderingPrimitives.getViewport(view)
@@ -1114,6 +1153,8 @@ export class XRVuforiaDevice extends XRDevice {
             const eyeDisplayAdjustmentMatrix = renderingPrimitives.getEyeDisplayAdjustmentMatrix(view)
             viewJSON.eyeDisplayAdjustmentMatrix = isFinite(eyeDisplayAdjustmentMatrix[0]) ? eyeDisplayAdjustmentMatrix : undefined
         }
+
+        return views
     }
 
 }

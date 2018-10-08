@@ -542,7 +542,8 @@ static VuforiaObjectTracker *objectTracker = nil;
  *  and false otherwise.
  */
 -(BOOL)persistExtendedTracking:(BOOL)on {
-    return self.tracker->persistExtendedTracking(on);
+    return YES;
+//    return self.tracker->persistExtendedTracking(on);
 }
 
 /// Resets environment map for Extended Tracking
@@ -553,7 +554,8 @@ static VuforiaObjectTracker *objectTracker = nil;
  *  successfully and false otherwise.
  */
 -(BOOL)resetExtendedTracking{
-    return self.tracker->resetExtendedTracking();
+    return YES;
+//    return self.tracker->resetExtendedTracking();
 }
 
 @end

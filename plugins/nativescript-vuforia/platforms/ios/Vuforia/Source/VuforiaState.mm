@@ -10,9 +10,11 @@
 
 #import "VuforiaState.h"
 #import "VuforiaTrackable.h"
+#import "VuforiaCameraDevice.h"
 #import <Vuforia/Image.h>
 #import <Vuforia/Frame.h>
 #import <Vuforia/State.h>
+#import <Vuforia/Illumination.h>
 
 
 @interface VuforiaImage ()
@@ -135,6 +137,35 @@
 @end
 
 
+@implementation VuforiaIllumination : NSObject
+
+-(const Vuforia::Illumination*)ill {
+    return (const Vuforia::Illumination*)self.cpp;
+}
+
++(float)AMBIENT_INTENSITY_UNAVAILABLE {
+    return Vuforia::Illumination::AMBIENT_INTENSITY_UNAVAILABLE;
+}
+
++(float)AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE {
+    return Vuforia::Illumination::AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE;
+}
+
+-(float)getAmbientIntensity {
+    return self.ill->getAmbientIntensity();
+}
+
+-(float)getAmbientColorTemperature {
+    return self.ill->getAmbientColorTemperature();
+}
+
+- (void)dealloc {
+    self.cpp = nil;
+}
+
+@end
+
+
 @interface VuforiaState ()
 @property (nonatomic, assign) const Vuforia::State *cpp;
 @end
@@ -173,6 +204,29 @@
 
 - (VuforiaTrackableResult *)getTrackableResult:(int)idx {
     return [VuforiaTrackableResult trackableResultFromCpp:(void*)self.state->getTrackableResult(idx) asConst:YES];
+}
+
+
+- (VuforiaCameraCalibration*) getCameraCalibration {
+    VuforiaCameraCalibration *cc = [[VuforiaCameraCalibration alloc] init];
+    cc.cpp = self.state->getCameraCalibration();
+    return cc;
+}
+
+
+-(VuforiaIllumination*)getIllumination {
+    VuforiaIllumination *i = [[VuforiaIllumination alloc] init];
+    i.cpp = self.state->getIllumination();
+    return i;
+}
+
+-(VuforiaDeviceTrackableResult*)getDeviceTrackableResult {
+    const Vuforia::DeviceTrackableResult *r = self.state->getDeviceTrackableResult();
+    if (r != nil) {
+        VuforiaDeviceTrackableResult *result = (VuforiaDeviceTrackableResult*)[VuforiaTrackableResult trackableResultFromCpp:(Vuforia::TrackableResult*)r asConst:true];
+        return result;
+    }
+    return nil;
 }
 
 - (void)dealloc {

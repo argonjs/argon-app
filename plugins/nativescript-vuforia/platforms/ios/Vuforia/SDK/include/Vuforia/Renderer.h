@@ -88,30 +88,6 @@ public:
     /// Returns the Renderer singleton instance.
     static Renderer& getInstance();
 
-    /// Mark the start of rendering for the current frame, and get the State. (DEPRECATED)
-    /**
-     * \param renderData a pointer to 3D graphics rendering API-specific data,
-     * which may not be required for the current API (such as OpenGL ES). The
-     * renderData object must remain valid until all drawing commands are
-     * completed.
-     *
-     * \returns the latest available State object. This state object may hold
-     * predicted Trackable poses if predicted tracking is turned on and
-     * available on the device. Please see EyewearDevice::setPredictiveTracking()
-     * for more details.
-     *
-     * \note May only be called from the render thread.
-     *
-     * \note You may pass a different renderData object to end(); details are
-     * platform specific.
-     *
-     * \deprecated This method has been deprecated. It will be removed in an
-     * upcoming Vuforia release. Use begin(State, const RenderData*)
-     * instead, in combination with StateUpdater::updateState() and/or 
-     * StateUpdater::getLatestState().
-     */
-    virtual State begin(const RenderData* renderData = 0) = 0;
-
     /// Tell the Renderer that rendering of the current frame is about to begin using a specific State.
     /**
      * Use this method if you want to draw a specific camera frame, rather than

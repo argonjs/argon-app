@@ -1,9 +1,13 @@
-import * as utils from 'utils/utils';
+import * as utils from 'utils/utils'
+import * as common from './vuforia-common'
+import * as def from 'nativescript-vuforia'
+import * as application from 'application'
+import * as placeholder from 'ui/placeholder'
 
-import common = require('./vuforia-common');
-import def = require('nativescript-vuforia');
-import application = require('application');
-import placeholder = require('ui/placeholder');
+
+export const CameraCalibration = VuforiaCameraCalibration
+export const Illumination = VuforiaIllumination
+
 
 global.moduleMerge(common, exports);
 
@@ -466,29 +470,16 @@ export class State {
         }
         return undefined;
     }
-}
-
-export class CameraCalibration {
-    constructor(public ios:VuforiaCameraCalibration) {}
-    
-    getDistortionParameters(): def.Vec4 {
-        return this.ios.getDistortionParameters();
+    getCameraCalibration() {
+        return this.ios.getCameraCalibration()
     }
-    
-    getFieldOfViewRads(): def.Vec2 {
-        return this.ios.getFieldOfViewRads();
+    getIllumination() {
+        return this.ios.getIllumination()
     }
-    
-    getFocalLength(): def.Vec2 {
-        return this.ios.getFocalLength();
-    }
-    
-    getPrincipalPoint(): def.Vec2 {
-        return this.ios.getPrincipalPoint();
-    }
-    
-    getSize(): def.Vec2 {
-        return this.ios.getSize();
+    getDeviceTrackableResult() {
+        const result = this.ios.getDeviceTrackableResult()
+        if (result) return new DeviceTrackableResult(result)
+        return undefined
     }
 }
 
@@ -501,9 +492,8 @@ export class CameraDevice {
         return VuforiaCameraDevice.getInstance().deinitCamera();
     }
     
-    getCameraCalibration(): CameraCalibration {
-        const calibration = VuforiaCameraDevice.getInstance().getCameraCalibration();
-        return new CameraCalibration(calibration);
+    getCameraCalibration(): def.CameraCalibration {
+        return VuforiaCameraDevice.getInstance().getCameraCalibration();
     }
     
     getCameraDirection(): def.CameraDeviceDirection {
@@ -732,8 +722,13 @@ export class RenderingPrimitives {
         return this.ios.getNormalizedViewport(<number>viewID);
     }
     
-    getProjectionMatrix(viewID: def.View): def.Matrix44 {
-        return convertPerspectiveProjection2GLMatrix(this.ios.getProjectionMatrix(<number>viewID), 0.01, 100000);
+    getProjectionMatrix(viewID: def.View, cameraCalibration?:def.CameraCalibration): def.Matrix44 {
+        const projectionMatrix = this.ios.getProjectionMatrixCameraCalibrationAdjustForViewportCentreToEyeAxis(
+            <number>viewID, 
+            cameraCalibration,
+            true
+        )
+        return convertPerspectiveProjection2GLMatrix(projectionMatrix, 0.01, 100000);
     }
     
     getRenderingViews(): ViewList {

@@ -422,7 +422,7 @@ declare module com {
 
 			getNormalizedViewport(viewID: View): Vec4F;
 
-			getProjectionMatrix(viewID: View): Matrix34F;
+			getProjectionMatrix(viewID: View, cameraCalibration: CameraCalibration, adjust:boolean): Matrix34F;
 
 			getRenderingViews(): ViewList;
 
@@ -478,6 +478,19 @@ declare module com {
 			getTrackable(idx: number): Trackable;
 
 			getTrackableResult(idx: number): TrackableResult;
+
+			getCameraCalibration() : CameraCalibration;
+
+			getIllumination() : Illumination; 
+
+			getDeviceTrackableResult() : DeviceTrackableResult;
+		}
+		
+		export class Illumination {
+			static AMBIENT_INTENSITY_UNAVAILABLE:number;
+			static AMBIENT_COLOR_TEMPERATURE_UNAVAILABLE:number;
+			getAmbientIntensity():number;
+			getAmbientColorTemperature():number;
 		}
 
 		export const enum StorageType {
@@ -558,6 +571,14 @@ declare module com {
 			start(): boolean;
 
 			stop(): void;
+		}
+
+		export class DeviceTrackable extends Trackable {
+
+		}
+
+		export class DeviceTrackableResult extends TrackableResult {
+			
 		}
 
 		export class TrackerManager {

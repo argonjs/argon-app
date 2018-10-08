@@ -1,5 +1,5 @@
 /*===============================================================================
-Copyright (c) 2015-2016,2018 PTC Inc. All Rights Reserved.
+Copyright (c) 2015-2018 PTC Inc. All Rights Reserved.
 
 Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc. All Rights Reserved.
 
@@ -41,22 +41,12 @@ struct VideoBackgroundConfig
     /// Constructor to provide basic initalization. 
     VideoBackgroundConfig()
     {
-        mEnabled = true;
         mPosition.data[0] = 0;
         mPosition.data[1] = 0;
         mSize.data[0] = 0;
         mSize.data[1] = 0;
         mReflection = VIDEO_BACKGROUND_REFLECTION_DEFAULT;
     }
-
-    /// Enables/disables rendering of the video background (DEPRECATED).
-    /**
-     * \deprecated This class member has been deprecated. It will be removed in an
-     * upcoming %Vuforia release. Enabling / disabling video background rendering using
-     * this setting is no longer necessary and will have no impact on video background
-     * rendering.
-     */
-    bool mEnabled;
 
     /// Relative position of the video background in the render target, in pixels.
     /**
