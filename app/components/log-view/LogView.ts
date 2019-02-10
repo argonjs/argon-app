@@ -1,7 +1,7 @@
 import {ObservableArray} from 'data/observable-array';
 import {Label} from 'ui/label';
 import {Color} from 'color';
-import {Layout} from 'ui/layouts/layout'
+import {LayoutBase} from 'ui/layouts/layout-base'
 
 import {LogItem} from 'argon-web-view';
 
@@ -9,7 +9,7 @@ let label:Label;
 let shadow:Label;
 
 export function onLayoutLoaded(args) {
-    const layout:Layout = args.object;
+    const layout:LayoutBase = args.object;
     layout.backgroundColor = new Color('transparent');
     layout.bindingContext = {getLogText}
 }

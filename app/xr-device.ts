@@ -221,15 +221,15 @@ export interface XRDataSetTrackables {
     }
 }
 
-function _distance(a,b) {
-    const aX = a[12], aY = a[13], aZ = a[14]
-    const bX = b[12], bY = b[13], bZ = b[14]
-    const xDelta = bX-aX
-    const yDelta = bY-aY
-    const zDelta = bZ-aZ
-    const distSquared = xDelta*xDelta + yDelta*yDelta + zDelta*zDelta
-    return Math.sqrt(distSquared)
-}
+// function _distance(a,b) {
+//     const aX = a[12], aY = a[13], aZ = a[14]
+//     const bX = b[12], bY = b[13], bZ = b[14]
+//     const xDelta = bX-aX
+//     const yDelta = bY-aY
+//     const zDelta = bZ-aZ
+//     const distSquared = xDelta*xDelta + yDelta*yDelta + zDelta*zDelta
+//     return Math.sqrt(distSquared)
+// }
 
 // export const vuforiaCameraDeviceMode:vuforia.CameraDeviceMode = vuforia.CameraDeviceMode.Default;
 //  platform.isAndroid ? vuforia.CameraDeviceMode.OptimizeSpeed : vuforia.CameraDeviceMode.OptimizeQuality;
@@ -352,8 +352,8 @@ export class XRVuforiaDevice extends XRDevice {
                     // not sure why, but trackable poses drift downwards (gravity-wise) as distance increases
                     // this is not a FOV error, as it is only affects position on +Y global axis, and is not affected
                     // by the camera orientation, only the distance between trackable and device
-                    const distance = devicePose ? _distance(devicePose, pose) : 0
-                    pose[13] += 0.01 * distance * 2  // not sure why, but device pose seeems to be vertically offset by this ammount
+                    // const distance = devicePose ? _distance(devicePose, pose) : 0
+                    // pose[13] += 0.01 * distance * 2  // not sure why, but device pose seeems to be vertically offset by this ammount
                 }
                 
                 trackableResults[id] = {

@@ -1,4 +1,4 @@
-import { View } from 'ui/core/view'
+// import { PercentLength } from 'ui/core/view'
 import { ScrollView } from 'ui/scroll-view'
 import { Color } from 'color'
 import { GridLayout } from 'ui/layouts/grid-layout'
@@ -6,11 +6,15 @@ import { ObservableArray, ChangeType, ChangedData } from 'data/observable-array'
 import { AnimationCurve } from 'ui/enums'
 import { PropertyChangeData, EventData } from 'data/observable'
 import * as application from 'application'
+// import { GestureTypes, PanGestureEventData, GestureStateTypes } from 'ui/gestures'
+// import { layout } from 'utils/utils'
+// import { screen } from 'platform/platform'
 
 import { appModel, XRLayerDetails } from '../app-model'
 import { bind } from '../decorators'
 import { bringToFront } from '../utils'
 
+// import {FullscreenLayout} from './fullscreen-layout'
 import {LayerView, TITLE_BAR_HEIGHT} from './layer-view'
 
 export {LayerView}
@@ -40,26 +44,23 @@ export class BrowserView extends GridLayout {
 
     constructor() {
         super()
-
-        this.clipToBounds = false
-        this.layerContainer.clipToBounds = false
-        this.layerContainer.horizontalAlignment = 'stretch'
-        this.layerContainer.verticalAlignment = 'top'
-        if (this.layerContainer.ios) {
-            this.layerContainer.ios.layer.masksToBounds = false;
-        }
-
-        this.scrollView.horizontalAlignment = 'stretch';
-        this.scrollView.verticalAlignment = 'stretch';
+        
+        // this.scrollView.visibility = 'collapse'
         this.scrollView.content = this.layerContainer;
-        if (this.scrollView.ios) {
-            (this.scrollView.ios as UIScrollView).contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentBehavior.Never;
-            this.scrollView.ios.layer.masksToBounds = false;
-            this.scrollView.ios.scrollEnabled = false;
-            this.layerContainer.height = 50000;
-        }
+        this.scrollView.on('loaded', () => {
+            this.scrollView.scrollToVerticalOffset(appModel.safeAreaInsets.top, false)
+            if (this.scrollView.ios) {
+                this.scrollView.ios.scrollEnabled = false;
+            }
+        })
         this.addChild(this.scrollView);
         // this.scrollView.on(ScrollView.scrollEvent, this._animate.bind(this));
+
+        // this.addChild(this.layerContainer)
+        // this.layerContainer.on(GestureTypes.pan, (event:PanGestureEventData) => {
+        //     const state = (event.state as GestureStateTypes)
+        //     state;
+        // })
 
         if (application.android) {
             var activity = application.android.foregroundActivity;
@@ -74,6 +75,7 @@ export class BrowserView extends GridLayout {
         appModel.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'layerPresentation':
+                    this._sortLayers()
                     if (appModel.layerPresentation === 'overview') this._onShowOverview()
                     else this._onHideOverview()
                     break;
@@ -84,18 +86,18 @@ export class BrowserView extends GridLayout {
                     appModel.layers.forEach(layer => this._onAddLayer(layer))
                     break;
                 case 'realityLayer':
-                case 'focussedLayer': {
+                case 'focussedLayer':
+                case 'screenSize': 
                     this._sortLayers()
                     break;
-                }
             }
         })
 
         appModel.layers.on('change', this._onLayerDetailsArrayChange)
         appModel.layers.forEach((layer) => this._onAddLayer(layer))
-        this._sortLayers()
-
-        this.on
+        this.on('loaded', () => {
+            this._sortLayers()
+        })
     }
 
     @bind
@@ -135,6 +137,8 @@ export class BrowserView extends GridLayout {
         this.layerContainer.addChild(layer)
         this.layerMap.set(details, layer)
         this.layers.push(layer)
+        // layer.originY = 0
+        layer.verticalAlignment = 'top'
 
         layer.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
@@ -215,397 +219,35 @@ export class BrowserView extends GridLayout {
             return 0
         })
 
+        // this.layerContainer.minWidth = appModel.screenSize.width
+        this.layerContainer.width = {value:1, unit:'%'}
+        if (appModel.layerPresentation === 'stack') {
+            // this.layerContainer.minHeight = appModel.screenSize.height
+            // this.layerContainer.height = {value:1, unit:'%'}
+            this.scrollView.scrollToVerticalOffset(0, true)
+        }
+        
         this.layers.forEach((layer) => {
             bringToFront(layer)
             if (appModel.layerPresentation === 'stack') {
                 this._showLayerInStack(layer)
             }
+            layer.requestLayout()
         })
 
         console.log('SORTED LAYERS')
     }
 
-    // private _createRealityLayer() {
-    //     let layer:Layer = this._createLayer();
-    //     layer.titleBar.backgroundColor = new Color(0xFF222222);
-    //     layer.titleLabel.color = new Color('white');
-    //     layer.closeButton.visibility = 'collapse';
-
-    //     if (this.videoView) {
-    //         // this.videoView.horizontalAlignment = 'stretch';
-    //         // this.videoView.verticalAlignment = 'stretch';
-    //         // if (this.videoView.parent) this.videoView.parent._removeView(this.videoView);
-    //         // layer.contentView.addChild(this.videoView);
-    //         if (this.videoView.parent) this.videoView.parent._removeView(this.videoView)
-    //         const videoViewLayout = new AbsoluteLayout();
-    //         layer.contentView.addChild(videoViewLayout);
-    //         videoViewLayout.addChild(this.videoView);
-    //         // videoViewLayout.visibility = 'collapse';
-    //     }
-
-    //     // appViewModel.ready.then(()=>{
-    //     //     const manager = appViewModel.argon;
-
-    //     //     appViewModel.argon.provider.reality.installedEvent.addEventListener(({viewer})=>{
-    //     //         if (viewer instanceof NativescriptHostedRealityViewer) {
-    //     //             const webView = viewer.webView;
-    //     //             webView.horizontalAlignment = 'stretch';
-    //     //             webView.verticalAlignment = 'stretch';
-    //     //             webView.visibility = 'collapse';
-    //     //             layer.contentView.addChild(webView);
-    //     //             this.realityWebviews.set(viewer.uri, webView);
-    //     //             analytics.updateInstalledRealityCount(this.realityWebviews.size);
-    //     //         }
-    //     //     });
-
-    //     //     appViewModel.argon.provider.reality.uninstalledEvent.addEventListener(({viewer})=>{
-    //     //         if (viewer instanceof NativescriptHostedRealityViewer) {
-    //     //             layer.contentView.removeChild(viewer.webView);
-    //     //             this.realityWebviews.delete(viewer.uri);
-    //     //         }
-    //     //         manager.reality.request(Argon.RealityViewer.LIVE);
-    //     //     });
-
-    //     //     // TODO: add and use manager.provider.reality.presentingRealityViewerChangeEvent instead
-    //     //     manager.reality.changeEvent.addEventListener(({current})=>{
-    //     //         const viewer = manager.provider.reality.getViewerByURI(current!)!;
-    //     //         const details = layer.details;
-    //     //         const uri = viewer.uri;
-    //     //         details.set('uri', uri);
-    //     //         details.set('title', 'Reality: ' + (viewer.session && viewer.session.info.title) || getHost(uri));
-    //     //         layer.webView = this.realityWebviews.get(uri);
-    //     //         layer.details.set('log', layer.webView && layer.webView.log);
-    //     //         analytics.updateCurrentRealityUri(uri);
-
-    //     //         var sessionPromise = new Promise<Argon.SessionPort>((resolve, reject) => {
-    //     //             if (viewer.session && !viewer.session.isClosed) {
-    //     //                 resolve(viewer.session);
-    //     //             } else {
-    //     //                 let remove = viewer.connectEvent.addEventListener((session)=>{
-    //     //                     resolve(session);
-    //     //                     remove();
-    //     //                 })
-    //     //             }
-    //     //         });
-
-    //     //         sessionPromise.then((session:Argon.SessionPort)=>{
-    //     //             if (current === manager.reality.current) {
-    //     //                 if (session.info.title) details.set('title', 'Reality: ' + session.info.title);
-    //     //                 layer.session = session;
-    //     //             }
-    //     //         });
-    //     //     });
-    //     // });
-
-    //     this.realityLayer = layer;
-    // }
-
-    // addLayer() : Layer {
-    //     const layer:Layer = this._createLayer();
-    //     const webView = layer.webView;
-
-    //     if (webView) {
-
-    //         webView.opacity = 0;
-
-    //         webView.on('urlChange', () => {
-    //             webView.opacity = 1;
-    //             layer.details.item = appModel.getOrCreateBookmarkItem(webView.url);
-    //         })
-
-    //         webView.on('titleChange', () => {
-    //             const title = webView.title || getHost(webView.url) || '';
-    //             const bookmarkItem = appModel.getOrCreateBookmarkItem(webView.url);
-    //             bookmarkItem.title = title
-    //         })
-
-    //         // webView.on('isArgonPageChange', () => {
-    //         //     const isArgonPage = webView.isArgonPage || !webView.isLoaded;
-    //         //     if (isArgonPage || layer === this.focussedLayer || this._overviewEnabled) {
-    //         //         layer.animate({
-    //         //             opacity: 1,
-    //         //             duration: OVERVIEW_ANIMATION_DURATION
-    //         //         });
-    //         //     } else {
-    //         //         layer.opacity = 1;
-    //         //     }
-    //         //     analytics.updateArgonAppCount(this._countArgonApps());
-    //         // })
-
-    //         webView.on('progressChange', () => {
-    //             layer.progressBar.value = webView.progress * 100;
-    //         })
-
-    //         webView.on(WebView.loadStartedEvent, (eventData: LoadEventData) => {
-    //             layer.progressBar.value = 0;
-    //             layer.progressBar.visibility = 'visible';
-    //         });
-
-    //         webView.on(WebView.loadFinishedEvent, (eventData: LoadEventData) => {
-    //             this._checkWebViewVersion(webView);
-    //             // if (!eventData.error && webView !== this.realityLayer.webView) {
-    //             //     bookmarks.pushToHistory(eventData.url, webView.title);
-    //             // }
-    //             layer.progressBar.value = 100;
-
-    //             // wait a moment before hiding the progress bar
-    //             setTimeout(function() {
-    //                 layer.progressBar.visibility = 'collapse';
-    //             }, 30);
-
-    //             // workaround to fix layout issues that appeared in ios 11 beta 
-    //             webView.requestLayout();
-    //         });
-
-    //         // webView.on('sessionChange', ()=>{
-    //         //     const session = webView.session;
-    //         //     layer.session = session;
-
-    //         //     if (!session) return;
-
-    //         //     session.connectEvent.addEventListener(()=>{
-    //         //         if (this.focussedLayer && webView === this.focussedLayer.webView) {
-    //         //             appViewModel.argon.provider.focus.session = session;
-    //         //             appViewModel.argon.provider.visibility.set(session, true);
-    //         //         }
-    //         //         if (layer === this.realityLayer) {
-    //         //             if (session.info.role !== Argon.Role.REALITY_VIEW) {
-    //         //                 session.close();
-    //         //                 alert("Only a reality can be loaded in the reality layer");
-    //         //             }
-    //         //         } else {
-    //         //             if (session.info.role == Argon.Role.REALITY_VIEW) {
-    //         //                 session.close();
-    //         //                 alert("A reality can only be loaded in the reality layer");
-    //         //             }
-    //         //         }
-    //         //     })
-    //         //     session.closeEvent.addEventListener(()=>{
-    //         //         if (layer.session) appViewModel.argon.provider.reality.removeInstaller(layer.session);
-    //         //         layer.session = undefined;
-    //         //     })
-    //         // });
-
-    //         layer.details.log = webView.log
-
-    //     }
-
-    //     // if (this.isLoaded)
-    //     //     this._setFocussedLayer(layer);
-
-    //     if (this._overviewEnabled) this._showLayerInCarousel(layer);
-
-    //     return layer;
-    // }
-
-    // private _createLayer() {
-    //     const contentView = new GridLayout();
-    //     contentView.horizontalAlignment = 'stretch';
-    //     contentView.verticalAlignment = 'stretch';
-    //     contentView.clipToBounds = false;
-
-    //     const containerView = new GridLayout();
-    //     containerView.horizontalAlignment = 'left';
-    //     containerView.verticalAlignment = 'top';
-    //     containerView.clipToBounds = false;
-
-    //     // Cover the webview to detect gestures and disable interaction
-    //     const touchOverlay = new gradient['Gradient']();
-    //     (touchOverlay as View).on('loaded', ()=> {
-    //         touchOverlay.updateDirection('to bottom');
-    //         touchOverlay.updateColors([new Color(0x00000000), new Color(0x33000000)]);
-    //     });
-    //     touchOverlay.isUserInteractionEnabled = false;
-    //     touchOverlay.opacity = 0;
-    //     // touchOverlay.style.visibility = 'collapse';
-    //     touchOverlay.horizontalAlignment = 'stretch';
-    //     touchOverlay.verticalAlignment = 'stretch';
-    //     touchOverlay.on(GestureTypes.tap, (event) => {
-    //         this._setFocussedLayer(layer);
-    //         appModel.layerPresentation = 'stack'
-    //     });
-
-    //     const titleBar = new GridLayout();
-    //     titleBar.addRow(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
-    //     titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
-    //     titleBar.addColumn(new ItemSpec(1, 'star'));
-    //     titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
-    //     titleBar.verticalAlignment = 'top';
-    //     titleBar.horizontalAlignment = 'stretch';
-    //     titleBar.backgroundColor = new Color(200, 255, 255, 255);
-    //     titleBar.visibility = 'collapse';
-    //     titleBar.opacity = 1;
-
-    //     const closeButton = new Button();
-    //     closeButton.horizontalAlignment = 'stretch';
-    //     closeButton.verticalAlignment = 'stretch';
-    //     closeButton.text = 'close';
-    //     closeButton.className = 'material-icon action-btn';
-    //     closeButton.style.fontSize = application.android ? 16 : 22;
-    //     closeButton.color = new Color('black');
-    //     GridLayout.setRow(closeButton, 0);
-    //     GridLayout.setColumn(closeButton, 0);
-
-    //     closeButton.on('tap', ()=>{
-    //         this.removeLayer(layer);
-    //     });
-
-    //     const titleLabel = new Label();
-    //     titleLabel.horizontalAlignment = 'stretch';
-    //     titleLabel.verticalAlignment = application.android ? 'middle' : 'stretch';
-    //     titleLabel.textAlignment = 'center';
-    //     titleLabel.color = new Color('black');
-    //     titleLabel.fontSize = 14;
-    //     GridLayout.setRow(titleLabel, 0);
-    //     GridLayout.setColumn(titleLabel, 1);
-
-    //     titleBar.addChild(closeButton);
-    //     titleBar.addChild(titleLabel);
-
-    //     containerView.addChild(contentView);
-    //     containerView.addChild(touchOverlay);
-    //     containerView.addChild(titleBar);
-    //     this.layerContainer.addChild(containerView);
-
-    //     let webView = undefined;
-    //     // const webView = new ArgonWebView;
-    //     // webView.horizontalAlignment = 'stretch';
-    //     // webView.verticalAlignment = 'stretch';
-    //     // contentView.addChild(webView);
-
-    //     // application.on('iosPageViewDidTransitionToSize', () => {
-    //     //     const wkWebView:WKWebView = webView.ios;
-    //     //     // sometimes webview zoomScale is strange after screen rotation
-    //     //     wkWebView.scrollView.setZoomScaleAnimated(1, true);
-    //     // })
-
-
-    //     var progress = new Progress();
-    //     progress.className = 'progress';
-    //     progress.verticalAlignment = 'top';
-    //     progress.maxValue = 100;
-    //     progress.height = 5;
-    //     progress.visibility = 'collapse';
-    //     contentView.addChild(progress);
-
-    //     var layer = {
-    //         containerView,
-    //         webView,
-    //         contentView,
-    //         touchOverlay,
-    //         titleBar,
-    //         closeButton,
-    //         titleLabel,
-    //         visualIndex: this.layers.length,
-    //         details: new LayerDetails(),
-    //         progressBar: progress
-    //     };
-
-    //     this.layers.push(layer);
-
-    //     layer.titleLabel.bind({
-    //         sourceProperty: 'title',
-    //         targetProperty: 'text'
-    //     }, layer.details);
-
-    //     return layer;
-    // }
-
-    // removeLayerAtIndex(index:number) {
-    //     const layer = this.layers[index];
-    //     if (typeof layer === 'undefined') 
-    //         throw new Error('Expected layer at index ' + index);
-    //     layer.webView && layer.webView.session && layer.webView.session.close();
-    //     this.layers.splice(index, 1);
-    //     this.layerContainer.removeChild(layer); // for now
-    // }
-
-    // removeLayer(layer:Layer) {
-    //     const index = this.layers.indexOf(layer);
-    //     this.removeLayerAtIndex(index);
-    // }
-
-    // onLoaded() {
-    //     super.onLoaded();
-    //     // if (this.android) {
-    //     //     this.android.addOnLayoutChangeListener(new android.view.View.OnLayoutChangeListener({
-    //     //         onLayoutChange(v: android.view.View, left: number, top: number, right: number, bottom: number, oldLeft: number, oldTop: number, oldRight: number, oldBottom: number): void {
-    //     //             var eventData: observableModule.EventData = {
-    //     //                 eventName: "customLayoutChange",
-    //     //                 object: androidLayoutObservable
-    //     //             }
-    //     //             androidLayoutObservable.notify(eventData);
-    //     //         }
-    //     //     }));
-    //     //     androidLayoutObservable.on("customLayoutChange", ()=>{
-    //     //         this.androidOnLayout();
-    //     //     })
-    //     // }
-    // }
-
-    // onMeasure(widthMeasureSpec, heightMeasureSpec) {
-
-    //     const width = utils.layout.getMeasureSpecSize(widthMeasureSpec);
-    //     const height = utils.layout.getMeasureSpecSize(heightMeasureSpec);
-    //     const dipWidth = utils.layout.toDeviceIndependentPixels(width);
-    //     const dipHeight = utils.layout.toDeviceIndependentPixels(height);
-
-    //     if (!this._overviewEnabled) {
-    //         this.layerContainer.width = dipWidth;
-    //         this.layerContainer.height = dipHeight;
-    //     }
-
-
-
-    //     this.layers.forEach((layer)=>{
-    //         layer.width = dipWidth;
-    //         layer.height = dipHeight;
-
-    //         // workaround for layout issue that appeared in ios 11 beta
-    //         if (layer.webView && layer.webView.ios) {
-    //             const wkwebView:WKWebView = layer.webView.ios;
-    //             wkwebView.setNeedsLayout();
-    //         }
-    //     });
-
-    //     // super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-    // }
-
-    // androidOnLayout() {
-    //     const width = this.getActualSize().width;
-    //     const height = this.getActualSize().height;
-
-    //     if (!this._overviewEnabled) {
-    //         this.layerContainer.width = width;
-    //         this.layerContainer.height = height;
-    //     }
-
-    //     this.layers.forEach((layer)=>{
-    //         layer.width = width;
-    //         layer.height = height;
-    //     });
-    // }
-
-    onMeasure(widthMeasureSpec: number, heightMeasureSpec: number) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        // make sure that each layer does not inherit the size of the layer container (which expands for the overview mode),
-        // and instead set the size of each layer to be the same as this browser view
-        this.layerContainer.eachLayoutChild((child) => {
-            const layer = child as LayerView
-            View.measureChild(this, layer, widthMeasureSpec, heightMeasureSpec);
-            // workaround for layout issue that appeared in ios 11 beta
-            if (layer.webView && layer.webView.ios) {
-                const wkwebView: WKWebView = layer.webView.ios;
-                wkwebView.setNeedsLayout();
-            }
-        });
-    }
-
     // onLayout(left: number, top: number, right: number, bottom: number) {
-    //     super.onLayout(left, top, right, bottom);
-    //     this.eachLayoutChild((child)=>{
-    //         View.layoutChild(this, child, left, top, right, bottom);
-    //     });
+    //     super.onLayout(left, top, right, bottom)
+    //     const screenWidth = screen.mainScreen.widthPixels
+    //     const screenHeight = screen.mainScreen.heightPixels
+    //     const safeArea = this.getSafeAreaInsets()
+    //     this.scrollView.layout(-safeArea.left, -safeArea.top, screenWidth, screenHeight)
+    //     this.layerContainer.layout(-safeArea.left, -safeArea.top, screenWidth, screenHeight)
+    //     this.layers.forEach((layer) => {
+    //         View.layoutChild(this.layerContainer, layer, -safeArea.left, -safeArea.top, screenWidth, screenHeight)
+    //     })
     // }
 
     private _calculateTargetTransform(index: number) {
@@ -616,7 +258,7 @@ export class BrowserView extends GridLayout {
         return {
             translate: {
                 x: 0,
-                y: index * OVERVIEW_VERTICAL_PADDING + OVERVIEW_VERTICAL_PADDING / 4 + appModel.safeAreaInsets.top
+                y: index * OVERVIEW_VERTICAL_PADDING + appModel.safeAreaInsets.top - OVERVIEW_VERTICAL_PADDING / 4
             },
             scale: {
                 x: OVERVIEW_SCALE_FACTOR,
@@ -636,18 +278,10 @@ export class BrowserView extends GridLayout {
 
         const layerHeight = this.getActualSize().height
 
-        // const containerHeight = 
-        //     height * OVERVIEW_SCALE_FACTOR + 
-        //     OVERVIEW_VERTICAL_PADDING * this.layers.length - 
-        //     OVERVIEW_VERTICAL_PADDING / 2
-            
-        // this.layerContainer.height = containerHeight
-
         let maxTranslateY = 0
         this.layers.forEach((layer, index) => {
             layer.visualIndex = this._lerp(layer.visualIndex, index, deltaT * 4)
             const transform = this._calculateTargetTransform(layer.visualIndex)
-            layer.originY = 0
             layer.scaleX = transform.scale.x
             layer.scaleY = transform.scale.y
             layer.translateX = transform.translate.x
@@ -655,8 +289,10 @@ export class BrowserView extends GridLayout {
             maxTranslateY = Math.max(maxTranslateY, transform.translate.y)
         });
             
+        // this.layerContainer.minWidth = appModel.screenSize.width
+        this.layerContainer.width = {value:1, unit:'%'}
         this.layerContainer.height = 
-            maxTranslateY + layerHeight * OVERVIEW_SCALE_FACTOR + OVERVIEW_VERTICAL_PADDING / 4 
+            maxTranslateY + layerHeight * OVERVIEW_SCALE_FACTOR + OVERVIEW_VERTICAL_PADDING
 
     }
 
@@ -665,73 +301,25 @@ export class BrowserView extends GridLayout {
     }
 
     private _showLayerInCarousel(layer: LayerView) {
-        const idx = this.layers.indexOf(layer);
-
-        layer.borderRadius = 10;
-        if (layer.ios) {
-            layer.ios.layer.masksToBounds = true;
-        }
-
-
-        if (layer.contentView.ios) {
-            layer.contentView.ios.layer.masksToBounds = true;
-        }
-        // if (layer.ios) {
-        //     layer.ios.layer.masksToBounds = true;
-        // } else if (layer.android) {
-        //     layer.android.setClipChildren(true);
-        // }
-
-
-
-        // layer.clipToBounds = true;
-
-        // if (layer.contentView.ios) {
-        //     layer.contentView.ios.layer.masksToBounds = true;
-        // } else if (layer.contentView.android) {
-        //     layer.contentView.android.setClipChildren(true);
-        // }
-
-        // if (layer.webView && layer.webView.ios) {
-        //     layer.webView.ios.layer.masksToBounds = true;
-        // } else if (layer.webView && layer.webView.android) {
-        //     layer.webView.android.setClipChildren(true);
-        // }
-
-        // layer.touchOverlay.style.visibility = 'visible';
-        layer.touchOverlay.isUserInteractionEnabled = true;
-        layer.touchOverlay.animate({
-            opacity: 1,
+        layer.borderRadius = 10
+        layer.touchOverlay.isUserInteractionEnabled = true
+        layer.touchOverlay.opacity = 1
+        
+        layer.contentView.animate({
+            translate: {x:0,y:TITLE_BAR_HEIGHT},
+            duration: OVERVIEW_ANIMATION_DURATION
+        })
+        layer.titleBar.opacity = 1
+        layer.titleBar.animate({
+            translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
         })
 
-        // if (layer.session) {
-        //     appViewModel.argon.provider.visibility.set(layer.session, true);
-        // }
-
-        // For transparent webviews, add a little bit of opacity
-        layer.isUserInteractionEnabled = true;
+        const idx = this.layers.indexOf(layer);
+        const { translate, scale } = this._calculateTargetTransform(idx);
         layer.animate({
             opacity: 1,
             backgroundColor: TRANSLUCENT_BACKGROUND_COLOR,
-            duration: OVERVIEW_ANIMATION_DURATION,
-        });
-        layer.contentView.animate({
-            translate: { x: 0, y: TITLE_BAR_HEIGHT - 1 },
-            duration: OVERVIEW_ANIMATION_DURATION
-        })
-
-        // Show titlebars
-        layer.titleBar.visibility = 'visible';
-        layer.titleBar.animate({
-            translate: { x: 0, y: 0 },
-            // opacity: 1,
-            duration: OVERVIEW_ANIMATION_DURATION
-        })
-
-        // Update for the first time & animate.
-        const { translate, scale } = this._calculateTargetTransform(idx);
-        layer.animate({
             translate,
             scale,
             duration: OVERVIEW_ANIMATION_DURATION,
@@ -739,76 +327,41 @@ export class BrowserView extends GridLayout {
         });
     }
 
-    // private _layerBackgroundColor = new Color(0, 255, 255, 255);
-
     private _showLayerInStack(layer: LayerView) {
-        const idx = this.layers.indexOf(layer);
 
-        // layer.touchOverlay.style.visibility = 'collapse';
-        layer.touchOverlay.animate({
-            opacity: 0,
-            duration: OVERVIEW_ANIMATION_DURATION
-        }).then(() => {
-            layer.touchOverlay.isUserInteractionEnabled = false;
-        });
-
-        if (application.ios) {
-            // todo: this is causing issues on android, investigate further
-            layer.isUserInteractionEnabled = this.focussedLayer === layer;
-        }
-
-        let visible = false
-        if (this.focussedLayer === layer) visible = true
+        let hasFocus = this.focussedLayer === layer
+        let visible = hasFocus
         if (this.focussedLayer && this.focussedLayer.details.xrImmersiveMode !== 'none') {
             if (layer.details.xrImmersiveMode === 'augmentation') visible = true
             if (layer === this.realityLayer) visible = true
         }
 
-        layer.animate({
-            opacity: visible ? 1 : 0,
-            backgroundColor: TRANSPARENT_BACKGROUND_COLOR,
-            duration: OVERVIEW_ANIMATION_DURATION,
-        }).then(() => {
-            layer.opacity = visible ? 1 : 0
-        })
-
-
-        layer.contentView && layer.contentView.animate({
-            translate: { x: 0, y: 0 },
-            duration: OVERVIEW_ANIMATION_DURATION
-        }).then(() => {
-            // layer.clipToBounds = false;
-            if (layer.ios) layer.ios.layer.masksToBounds = false;
-            // if (layer.ios) {
-            //     layer.ios.layer.masksToBounds = false;
-            // } else if (layer.android) {
-            //     layer.android.setClipChildren(false);
-            // }
-            // if (layer.contentView.ios) {
-            //     layer.contentView.ios.layer.masksToBounds = false;
-            // } else if (layer.contentView.android) {
-            //     layer.contentView.android.setClipChildren(false);
-            // }
-        });
-
         setTimeout(() => {
             layer.borderRadius = 0;
         }, OVERVIEW_ANIMATION_DURATION * 0.5)
+        layer.touchOverlay.isUserInteractionEnabled = !hasFocus;
+        layer.touchOverlay.opacity = hasFocus ? 0 : 1;
 
-        // Hide titlebars
-        layer.titleBar.animate({
-            translate: { x: 0, y: -TITLE_BAR_HEIGHT },
-            // opacity: 0,
+        layer.contentView.animate({
+            translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION
-        }).then(() => {
-            layer.titleBar.visibility = 'collapse';
         })
-
-        // Update for the first time & animate.
-        layer.visualIndex = idx;
+        layer.titleBar.animate({
+            translate: {x:0,y:-TITLE_BAR_HEIGHT},
+            duration: OVERVIEW_ANIMATION_DURATION
+        }).then(()=>{
+            layer.titleBar.animate({
+                opacity: 0,
+                duration: OVERVIEW_ANIMATION_DURATION/2
+            })
+        })
+        
+        layer.visualIndex = this.layers.indexOf(layer);
         return layer.animate({
+            opacity: visible ? 1 : 0,
             translate: { x: 0, y: 0 },
             scale: { x: 1, y: 1 },
+            backgroundColor: TRANSPARENT_BACKGROUND_COLOR,
             duration: OVERVIEW_ANIMATION_DURATION,
             curve: OVERVIEW_ANIMATION_CURVE
         })
@@ -820,9 +373,8 @@ export class BrowserView extends GridLayout {
             this._showLayerInCarousel(layer);
         });
 
-        this.scrollView.scrollToVerticalOffset(0, true);
+        // this.scrollView.scrollToVerticalOffset(0, true);
         if (this.scrollView.ios) {
-            // this.scrollView.ios.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentBehavior.Always;
             (this.scrollView.ios as UIScrollView).scrollEnabled = true;
         }
 
@@ -834,7 +386,6 @@ export class BrowserView extends GridLayout {
 
         this.scrollView.scrollToVerticalOffset(0, true);
         if (this.scrollView.ios) {
-            // this.scrollView.ios.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentBehavior.Never;
             (this.scrollView.ios as UIScrollView).scrollEnabled = false;
         }
 
@@ -842,8 +393,7 @@ export class BrowserView extends GridLayout {
             return this._showLayerInStack(layer)
         })).then(() => {
             this.scrollView.scrollToVerticalOffset(0, true);
-            // this.layerContainer.width = 'auto';
-            // this.layerContainer.height = 'auto';
+            setTimeout(() => this.scrollView.scrollToVerticalOffset(0, false), 1000)
         });
 
         // stop animating the views

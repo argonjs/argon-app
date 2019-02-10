@@ -5,7 +5,12 @@
     xmlns:logView="components/log-view"
     xmlns:IC="nativescript-web-image-cache"
     backgroundColor="gray"
-    touch="onRootViewTouch">
+    touch="onRootViewTouch"
+    marginTop="{{safeAreaInsets, -safeAreaInsets.top}}"
+    marginBottom="{{safeAreaInsets, -safeAreaInsets.bottom}}"
+    marginLeft="{{safeAreaInsets, -safeAreaInsets.left}}"
+    marginRight="{{safeAreaInsets, -safeAreaInsets.right}}"
+    >
         
 <!-- 
         <GridLayout columns="auto, auto, auto, *, auto, auto, auto, auto" rows="auto" horizontalAlignment="stretch" loaded="headerLoaded">
@@ -58,7 +63,7 @@
     </GridLayout>
 
 
-    <StackLayout id="menu" paddingLeft="16" marginBottom="8" marginRight="{{ safeAreaInsets, safeAreaInsets.right + 8 }}" style.borderRadius="10" horizontalAlignment="right" verticalAlignment="bottom" orientation="vertical" >
+    <StackLayout iosOverlaySafeArea="false" iosOverlaySafeAreaEnabled="false" id="menu" paddingLeft="16" marginBottom="8" marginRight="{{ safeAreaInsets, safeAreaInsets.right + 8 }}" style.borderRadius="10" horizontalAlignment="right" verticalAlignment="bottom" orientation="vertical" >
         <StackLayout tap="onDebugToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
             <Label text="Log" paddingRight="8"/>
             <Label textAlignment="right" width="30" class="material-icon" text="bug_report"/>
@@ -78,15 +83,15 @@
     </StackLayout>
     
 
-    <GridLayout id="overlay" layoutChanged="onOverlayLayoutChanged">
+    <GridLayout id="overlay" layoutChanged="onOverlayLayoutChanged" iosOverlaySafeAreaEnabled="false">
 
         <GridLayout id="overlay-inner" opacity="0">
                         
-            <GridLayout id="drag-icon" padding="7" width="46" height="18" verticalAlignment="top" horizontalAlignment="center">
-                <GridLayout backgroundColor="rgba(255,255,255,0.5)" style.borderRadius="5" />
+            <GridLayout id="drag-icon" width="46" height="18" verticalAlignment="top" horizontalAlignment="center">
+                <GridLayout left="0" top="10" width="100%" height="20%" backgroundColor="rgba(255,255,255,0.5)" style.borderRadius="5" verticalAlignment="stretch" />
             </GridLayout>
 
-            <FlexboxLayout verticalAlignment="top" flexDirection="column" >
+            <FlexboxLayout verticalAlignment="top" flexDirection="column">
 
                 <GridLayout id="search-bar-container" height="76" flexShrink="0">
                     <GridLayout padding="18 8">
@@ -114,7 +119,7 @@
                             <Button id="favorite" tap="{{ onToggleFavorite }}" marginBottom="16" width="100" height="60" flexShrink="0" flexGrow="1"
                                 class="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'material-icon toggle-btn-on overlay-button' : 'material-icon toggle-btn-off overlay-button' }}" 
                                 text="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'star' : 'star_border' }}" />
-                            <GridLayout width="100%" height="{{safeAreaInsets, safeAreaInsets.bottom}}" />
+                            <GridLayout width="100%" height="{{safeAreaInsets, safeAreaInsets.bottom * 0.5 }}" />
                         </FlexboxLayout>
 
                         <GridLayout height="1px" opacity="{{ focussedLayer.content && uiMode == 'full' ? '1' : '0' }}" backgroundColor="#BBBBBB" flexShrink="0" />
@@ -167,5 +172,3 @@
     <!-- <GridLayout id="bottom-edge" touch="onEdgeTouch" height="25" verticalAlignment="bottom" /> -->
 
 </GridLayout>
-
-<!-- </Page> -->

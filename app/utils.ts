@@ -264,3 +264,43 @@ export function createGuid() {
         lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
         lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
 }
+
+
+export function useTransformsWithoutChangingSafeArea(view:View) {
+
+    // if (true === true) return
+    if (!application.ios) return
+
+    // modify this method to apply transforms on the underlying CALayer, 
+    // so that safeareainsets are not affected by transforms
+    view['updateNativeTransform'] = function updateNativeTransform() {
+        const scaleX = this.scaleX || 1e-6;
+        const scaleY = this.scaleY || 1e-6;
+        const rotate = this.rotate || 0;
+        let newTransform = CGAffineTransformIdentity;
+        newTransform = CGAffineTransformTranslate(newTransform, this.translateX, this.translateY);
+        newTransform = CGAffineTransformRotate(newTransform, rotate * Math.PI / 180);
+        newTransform = CGAffineTransformScale(newTransform, scaleX, scaleY);
+        if (!CGAffineTransformEqualToTransform(this.nativeViewProtected.transform, newTransform)) {
+            const updateSuspended = this._isPresentationLayerUpdateSuspeneded();
+            if (!updateSuspended) {
+                CATransaction.begin();
+            }
+            (this.nativeViewProtected as UIView).layer.transform = CATransform3DMakeAffineTransform(newTransform);
+            this._hasTransfrom = this.nativeViewProtected && !CGAffineTransformEqualToTransform(this.nativeViewProtected.transform, CGAffineTransformIdentity);
+            if (!updateSuspended) {
+                CATransaction.commit();
+            }
+        }
+    }
+
+    const originalGetSafeAreaInsets = view.getSafeAreaInsets
+    view.getSafeAreaInsets = function getSafeAreaInsets() {
+        if (!this._hasTransform) return originalGetSafeAreaInsets.call(this)
+        const savedTransform = this.nativeViewProtected.transform
+        this.nativeViewProtected.transform = CGAffineTransformIdentity
+        const insets = originalGetSafeAreaInsets.call(this)
+        this.nativeViewProtected.transform = savedTransform
+        return insets
+    }
+}

@@ -73,7 +73,7 @@ export class ArgonWebView extends common.ArgonWebView {
                     this._handleLogMessage(data);
                     return false;
                 },
-                onGeolocationPermissionsShowPrompt: (origin: string, callback: android.webkit.GeolocationPermissions.ICallback): void => {
+                onGeolocationPermissionsShowPrompt: (origin: string, callback: android.webkit.GeolocationPermissions.Callback): void => {
                     dialogs.confirm({
                         message: origin + " wants to use your device's location.",
                         okButtonText: "OK",

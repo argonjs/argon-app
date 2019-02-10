@@ -170,18 +170,18 @@ static bool isInit = false;
 /// Executes AR-specific tasks upon the onResume activity event
 + (void) onResume {
     Vuforia::onResume();
-    @synchronized (self) {
+    dispatch_async(frameRenderingQueue, ^{
         [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
-    }
+    });
 }
 
 
 /// Executes AR-specific tasks upon the onResume activity event
 + (void) onPause {
     Vuforia::onPause();
-    @synchronized (self) {
+    dispatch_async(frameRenderingQueue, ^{
         [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
-    }
+    });
 }
 
 
@@ -194,9 +194,9 @@ static bool isInit = false;
 /// Executes AR-specific tasks upon the onSurfaceChanged render surface event
 + (void) onSurfaceChangedWidth:(int)w height:(int)h {
     Vuforia::onSurfaceChanged(w, h);
-    @synchronized (self) {
+    dispatch_async(frameRenderingQueue, ^{
         [[VuforiaDevice getInstance] invalidateRenderingPrimitives];
-    }
+    });
 }
 
 
@@ -258,9 +258,8 @@ static bool isRendering = false;
             Vuforia::State state = stateUpdater.updateState();
             VuforiaRenderingPrimitives *renderingPrimitives = [[VuforiaDevice getInstance] getRenderingPrimitives];
             
-            @synchronized (self) {
-                [videoView renderFrame:state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives.cpp];
-            }
+            [videoView renderFrame:state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives.cpp];
+        
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (!isInit) return;
                 if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);

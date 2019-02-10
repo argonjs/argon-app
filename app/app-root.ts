@@ -18,7 +18,7 @@ import { screen } from 'platform'
 
 import * as vuforia from 'nativescript-vuforia'
 import { BrowserView } from './components/browser-view'
-import { screenOrientation, getInternalVuforiaKey } from './utils'
+import { screenOrientation, getInternalVuforiaKey, useTransformsWithoutChangingSafeArea } from './utils'
 import { appModel, BookmarkItem } from './app-model'
 import { blur } from './blur'
 import config from './config'
@@ -51,7 +51,22 @@ export let detailsView: View
 export let menuView: View
 export let permissionMenuView: View
 
-const OVERLAY_ANIMATION_CURVE = AnimationCurve.cubicBezier(.33, 1.17, .55, .99)
+// disable Nativescript's safe area support, since safe area
+// isn't stable when translating/scaling UIView heirarchies
+const ZERO_INSET = Object.seal({left:0,top:0,right:0,bottom:0})
+View.prototype['applySafeAreaInsets'] = function() {}
+View.prototype['getSafeAreaInsets'] = function() { return ZERO_INSET }
+
+// const originalOnLoaded = View.prototype.onLoaded
+// View.prototype.onLoaded = function() {
+//     originalOnLoaded.call(this)
+//     if (this.ios) {
+//         const view = this.ios as UIView
+//         view.safeAreaInsets
+//     }
+// }
+
+const OVERLAY_ANIMATION_CURVE = AnimationCurve.cubicBezier(0.33,1,0.55,1) // AnimationCurve.cubicBezier(.33, 1.17, .55, .99)
 const OVERLAY_ANIMATION_DURATION = 500
 
 let didFirstLayout = false
@@ -61,26 +76,9 @@ let isEditingURL = false
 
 export const updateUI = () => {
     if (!rootView) return
-    if (!didFirstLayout) return
 
-    // console.log('updatingUI')
-    // console.log(JSON.stringify(model.safeAreaInsets))
-    // console.log(JSON.stringify(rootView.getActualSize()))
-
-    // fix layout when extended status bar shown on ios
-    if (rootView.ios) {
-        const statusBarHeight = (application.ios.nativeApp as UIApplication).statusBarFrame.size.height
-        if (statusBarHeight === 40) {
-            rootView.translateY = -20
-        } else {
-            rootView.translateY = 0
-        }
-    }
-
-    if (rootView.getViewById<Label>('current-title').ios) {
-        const uiLabel = rootView.getViewById<Label>('current-title').ios as UILabel
-        uiLabel.sizeToFit()
-    }
+    updateScreenSize()
+    updateSafeAreaInsets()
 
     const layerImmersiveMode = model.getLayerImmersiveMode()
 
@@ -102,6 +100,8 @@ export const updateUI = () => {
     if (model.uiMode === 'full') transitionToFullUI()
     if (model.uiMode === 'expanded') transitionToExpandedUI()
     if (model.uiMode === 'hidden') transitionToHiddenUI()
+
+    overlayView.requestLayout()
 }
 
 const getOverlayFullModeTop = () => {
@@ -205,15 +205,17 @@ export function onRootViewLoaded(args) {
 
     rootView = args.object
     rootView.bindingContext = model
-    rootView.onLayout = function (...args) {
-        GridLayout.prototype.onLayout.apply(this, args)
+    rootView.on('layoutChanged', () => {
         setTimeout(() => updateUI())
-    }
+    })
 
     mainView = rootView.getViewById<View>('main')
-    mainView.originY = 0.35
+    mainView.originY = 0
+    useTransformsWithoutChangingSafeArea(mainView)
 
     browserView = rootView.getViewById<BrowserView>('browser')
+    useTransformsWithoutChangingSafeArea(browserView)
+
 
     // bookmarksView = rootView.getViewById<View>('bookmarks')
     // realityChooserView = rootView.getViewById<View>('reality-chooser');
@@ -247,7 +249,7 @@ export function onRootViewLoaded(args) {
 
     // Set icon for location permission
     // const locationPermission = rootView.getViewById<Button> ("locationPermission");
-    //locationPermission.text = String.fromCharCode(0xe0c8);
+    // locationPermission.text = String.fromCharCode(0xe0c8);
     // console.log(String.fromCharCode(0xe0c8));
     // Set icon for camera permission
     // const cameraPermission = rootView.getViewById<Button>("cameraPermission");
@@ -255,23 +257,25 @@ export function onRootViewLoaded(args) {
 
     if (rootView.ios) {
 
-        const rootViewController = rootView.viewController// = RootViewController.new()
+        const rootViewController = rootView.viewController as UIViewController // = RootViewController.new()
         rootViewController.wantsFullScreenLayout = true
 
         // update safeAreaInsets
         rootViewController.view.addObserverForKeyPathOptionsContext(new class SafeAreaObserver extends NSObject {
             observeValueForKeyPathOfObjectChangeContext(keyPath, object, change) {
                 updateSafeAreaInsets()
+                setTimeout(() => updateUI())
             }
         }, 'safeAreaInsets', NSKeyValueObservingOptions.Initial, <any>null)
         model.safeAreaInsets = rootViewController.view.safeAreaInsets
 
         // hack to allow fullscreen layout
         // see https://github.com/NativeScript/NativeScript/blob/2fc1d8a8d4cf64e98eb98296e21564ac9b508f95/tns-core-modules/ui/core/view/view.ios.ts#L636
-        rootViewController.addChildViewController(UIViewController.alloc().init());
+        // rootViewController.addChildViewController(UIViewController.alloc().init());
     }
 
     if (application.ios) {
+        // application.ios.window.layer.speed = 0.5
         // blur views on ios
         blur(topView, 3, 'dark')
         blur(menuView, 3, 'dark')
@@ -331,6 +335,8 @@ export function onRootViewLoaded(args) {
     let androidVelocityTracker: android.view.VelocityTracker;
 
     const handlePanGesture = (evt: PanGestureEventData) => {
+        
+        updateSafeAreaInsets()
 
         let scrollY = getScrollY()
 
@@ -346,6 +352,7 @@ export function onRootViewLoaded(args) {
 
             startedPanAboveScrollView = startPanPositionY < overlayScrollView.getLocationRelativeTo(overlayView).y
             panEventCount = 0
+            overlayView.requestLayout()
         }
 
         panEventCount++
@@ -374,11 +381,12 @@ export function onRootViewLoaded(args) {
             velocityY = androidVelocityTracker.getYVelocity()
         }
 
-        overlayView.translateY = startViewTranslateY + evt.deltaY
-        if (overlayView.translateY < model.overlayTop) {
-            overlayView.translateY = model.overlayTop - Math.pow(Math.abs(overlayView.translateY - model.overlayTop), 0.5)
-            if (overlayView.translateY < 0) overlayView.translateY = 0
+        let translateY = startViewTranslateY + evt.deltaY
+        if (translateY < model.overlayTop) {
+            translateY = model.overlayTop - Math.pow(Math.abs(translateY - model.overlayTop), 0.5)
+            if (translateY < 0) translateY = 0
         }
+        overlayView.translateY = translateY
 
         if (model.uiMode === 'hidden') {
             const hiddenTop = getOverlayHiddenModeTop()                
@@ -482,6 +490,16 @@ export function onRootViewLoaded(args) {
     rootView.on('layoutChanged', onFirstLayout)
 }
 
+export function updateScreenSize() {
+    if (model.screenSize.width !== screen.mainScreen.widthDIPs ||
+        model.screenSize.height !== screen.mainScreen.heightDIPs) {
+            model.screenSize = {
+                width: screen.mainScreen.widthDIPs,
+                height: screen.mainScreen.heightDIPs
+            }
+        }
+}
+
 export function updateSafeAreaInsets() {
     if (rootView.ios) {
         const safeAreaInsets = (rootView.viewController as UIViewController).view.safeAreaInsets
@@ -491,7 +509,6 @@ export function updateSafeAreaInsets() {
             model.safeAreaInsets.right !== safeAreaInsets.right) {
             // console.log(JSON.stringify(safeAreaInsets))
             model.safeAreaInsets = safeAreaInsets
-            updateUI()
         }
     }
 }
@@ -544,26 +561,26 @@ export function showSystemUI() {
 
     if (model.getLayerImmersiveMode() === 'none' && model.uiMode === 'full') {
         topView.animate({
-            scale: {x:1,y:0},
-            curve: AnimationCurve.easeInOut,
-            duration: OVERLAY_ANIMATION_DURATION / 2
+            scale: { x:1, y: 0 },
+            duration: 300,
+            curve: AnimationCurve.easeInOut
         })
-        browserView.animate({
-            translate:{x:0,y:-model.safeAreaInsets.top},
-            curve: AnimationCurve.easeInOut,
-            duration: OVERLAY_ANIMATION_DURATION / 2
-        })
+        // browserView.animate({
+        //     translate:{x:0,y:-model.safeAreaInsets.top},
+        //     curve: AnimationCurve.easeInOut,
+        //     duration: OVERLAY_ANIMATION_DURATION / 2
+        // })
     } else {
         topView.animate({
-            scale: {x:1,y:1},
-            curve: AnimationCurve.easeInOut,
-            duration: OVERLAY_ANIMATION_DURATION / 2
+            scale: { x:1, y: 1 },
+            duration: 300,
+            curve: AnimationCurve.easeInOut
         })
-        browserView.animate({
-            translate:{x:0,y:0},
-            curve: AnimationCurve.easeInOut,
-            duration: OVERLAY_ANIMATION_DURATION / 2
-        })
+        // browserView.animate({
+        //     translate:{x:0,y:0},
+        //     curve: AnimationCurve.easeInOut,
+        //     duration: OVERLAY_ANIMATION_DURATION
+        // })
     }
 }
 
@@ -586,16 +603,16 @@ export function hideSystemUI() {
     }
 
     topView.animate({
-        scale: {x:1,y:0},
-        curve: AnimationCurve.easeInOut,
-        duration: OVERLAY_ANIMATION_DURATION / 2
+        scale: { x:1, y: 0 },
+        duration: 300,
+        curve: AnimationCurve.easeInOut
     })
 
-    browserView.animate({
-        translate:{x:0,y:0},
-        curve: AnimationCurve.easeInOut,
-        duration: OVERLAY_ANIMATION_DURATION / 2
-    })
+    // browserView.animate({
+    //     translate:{x:0,y:0},
+    //     curve: AnimationCurve.easeInOut,
+    //     duration: OVERLAY_ANIMATION_DURATION / 2
+    // })
 }
 
 
@@ -626,6 +643,7 @@ function transitionToFullUI() {
 
     mainView.animate({
         scale: { x: 0.9, y: 0.9 },
+        translate: { x:0, y: appModel.safeAreaInsets.top },
         opacity: 0.5,
         duration: OVERLAY_ANIMATION_DURATION,
         curve: OVERLAY_ANIMATION_CURVE
@@ -668,6 +686,7 @@ function transitionToExpandedUI() {
     })
 
     mainView.animate({
+        translate: { x:0, y: 0 },
         scale: { x: 1, y: 1 },
         opacity: 1,
         duration: OVERLAY_ANIMATION_DURATION,
@@ -676,7 +695,7 @@ function transitionToExpandedUI() {
 
     menuView.animate({
         opacity: 1,
-        translate: {x:0, y: -(rootView.getActualSize().height - overlayTop)},
+        translate: {x:0, y: -(rootView.getActualSize().height - overlayTop )},
         duration: OVERLAY_ANIMATION_DURATION,
         curve: OVERLAY_ANIMATION_CURVE
     })

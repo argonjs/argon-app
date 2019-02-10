@@ -31,7 +31,7 @@ function initVideoView() {
         androidVideoView.init(vuforia.Vuforia.requiresAlpha(), 16, 0);
 
         vuforiaRenderer = new plugin.VuforiaRenderer();
-        androidVideoView.setRenderer(vuforiaRenderer);
+        androidVideoView.setRenderer(<any>vuforiaRenderer);
         vuforiaRenderer.mIsActive = true
     })
 

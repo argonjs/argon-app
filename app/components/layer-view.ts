@@ -7,12 +7,15 @@ import { Button } from 'ui/button';
 import { Progress } from 'ui/progress';
 import { ArgonWebView } from 'argon-web-view';
 import { PropertyChangeData, WrappedValue, EventData } from 'data/observable';
+// import { layout } from 'utils/utils'
 import * as gradient from 'nativescript-gradient'
 import { appModel, XRLayerDetails, BookmarkItem, XRImmersiveMode } from '../app-model'
+import { useTransformsWithoutChangingSafeArea } from '../utils'
 import { observable } from '../decorators'
 import * as application from 'application'
 import * as fileSystem from 'file-system'
 import * as vuforia from 'nativescript-vuforia'
+// import { FullscreenLayout } from './fullscreen-layout'
 
 
 export const TITLE_BAR_HEIGHT = 30;
@@ -59,7 +62,7 @@ export class LayerView extends GridLayout {
     
     webView: ArgonWebView
     contentView: GridLayout
-    touchOverlay: GridLayout
+    touchOverlay: View
     titleBar: GridLayout
     closeButton: Button
     titleLabel: Label
@@ -73,14 +76,11 @@ export class LayerView extends GridLayout {
     constructor(details: XRLayerDetails) {
         super()
 
-        this.horizontalAlignment = 'left'
-        this.verticalAlignment = 'top'
-        this.clipToBounds = false
+        useTransformsWithoutChangingSafeArea(this)
+        this.clipToBounds = true
         this.opacity = 0
 
         const webView = new ArgonWebView() 
-        webView.horizontalAlignment = 'stretch'
-        webView.verticalAlignment = 'stretch'
 
         if (WEBXR_FILE.lastModified.getTime() > WEBXR_LAST_MODIFIED.getTime()) {
             WEBXR_LAST_MODIFIED = WEBXR_FILE.lastModified
@@ -158,24 +158,38 @@ export class LayerView extends GridLayout {
             else return Promise.reject()
         }
 
+
+        if (webView.ios) {
+            // animate any changes to webview content due to safe area changes
+            webView.ios.addObserverForKeyPathOptionsContext(new class SafeAreaObserver extends NSObject {
+                observeValueForKeyPathOfObjectChangeContext(keyPath, object, change) {
+                    UIView.animateWithDurationAnimations(0.3, ()=>{
+                        webView.ios.layoutIfNeeded()
+                    })
+                }
+            }, 'safeAreaInsets', NSKeyValueObservingOptions.Initial, <any>null)
+        }
+
         const contentView = new GridLayout();
-        contentView.horizontalAlignment = 'stretch';
-        contentView.verticalAlignment = 'stretch';
-        contentView.clipToBounds = false;
+        contentView.backgroundColor = 'blue'
+        // contentView.width = PercentLength.parse('100%')
+        // contentView.height = PercentLength.parse('100%')
+        // contentView.clipToBounds = true;
 
         // Cover the webview to detect gestures and disable interaction
-        const touchOverlay = new gradient['Gradient']();
-        (touchOverlay as View).on('loaded', () => {
-            touchOverlay.updateDirection('to bottom');
-            touchOverlay.updateColors([new Color(0x00000000), new Color(0x33000000)]);
-        });
+        const touchOverlay = new gradient['Gradient']() as View;
+        touchOverlay.on('loaded', () => {
+            (touchOverlay as any).updateDirection('to bottom');
+            (touchOverlay as any).updateColors([new Color(0x00000000), new Color(0x33000000)]);
+        })
         touchOverlay.isUserInteractionEnabled = false;
-        touchOverlay.opacity = 0;
+        touchOverlay.opacity = 1;
         // touchOverlay.style.visibility = 'collapse';
         touchOverlay.horizontalAlignment = 'stretch';
         touchOverlay.verticalAlignment = 'stretch';
 
         const titleBar = new GridLayout();
+        titleBar.iosOverflowSafeAreaEnabled = true
         titleBar.addRow(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
         titleBar.addColumn(new ItemSpec(TITLE_BAR_HEIGHT, 'pixel'));
         titleBar.addColumn(new ItemSpec(1, 'star'));
@@ -183,8 +197,7 @@ export class LayerView extends GridLayout {
         titleBar.verticalAlignment = 'top';
         titleBar.horizontalAlignment = 'stretch';
         titleBar.backgroundColor = new Color(200, 255, 255, 255);
-        titleBar.visibility = 'collapse';
-        titleBar.opacity = 1;
+        titleBar.opacity = 0;
 
         const closeButton = new Button();
         closeButton.horizontalAlignment = 'stretch';
@@ -197,10 +210,11 @@ export class LayerView extends GridLayout {
         GridLayout.setColumn(closeButton, 0);
 
         const titleLabel = new Label();
+        titleLabel.iosOverflowSafeAreaEnabled = true
         titleLabel.horizontalAlignment = 'stretch';
         titleLabel.verticalAlignment = application.android ? 'middle' : 'stretch';
         titleLabel.textAlignment = 'center';
-        titleLabel.color = new Color('black');
+        titleLabel.color = new Color('transparent');
         titleLabel.fontSize = 14;
         GridLayout.setRow(titleLabel, 0);
         GridLayout.setColumn(titleLabel, 1);
@@ -234,6 +248,7 @@ export class LayerView extends GridLayout {
         appModel.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'safeAreaInsets':
+                case 'screenSize':
                     this._updateUI() 
                     break
             }
@@ -266,33 +281,55 @@ export class LayerView extends GridLayout {
         this._updateUI()
     }
 
+    // public onMeasure(width,height) {
+    //     // update top margin
+    //     if (this.details.xrImmersiveMode === 'none') {
+    //         const safeAreaInsets = (this.parent as View).getSafeAreaInsets()
+    //         const top = layout.toDeviceIndependentPixels(safeAreaInsets.top)
+    //         const bottom = layout.toDeviceIndependentPixels(safeAreaInsets.bottom)
+    //         this.webView.marginTop = top
+    //         this.webView.marginBottom = bottom
+    //     } else {
+    //         this.webView.marginTop = 0
+    //         this.webView.marginBottom = 0
+    //     }
+    //     super.onMeasure(width,height)
+    // }
+
+    // public onLayout(left,top,right,bottom) {
+    //     super.onLayout(left, top, right, bottom)
+    //     const videoView = this.getViewById('xr-video')
+    //     if (videoView) {
+    //         // videoView.layout()
+    //     }
+    // }
+
     private _updateUI() {
 
         if (!this.isLoaded) return
 
-        // update title bar
+        const size = appModel.screenSize
+        this.width = size.width
+        this.height = size.height
 
+        // update title bar
         const title = this.details.content ? this.details.content.title : ''
 
         if (this.details.xrImmersiveMode === 'reality') {
             this.titleBar.backgroundColor = new Color(0xFF222222);
             this.titleLabel.color = new Color('white');        
             this.titleLabel.text = title ? 'Reality: ' + title : 'Reality'
+            this.closeButton.color = new Color('white')
         } else {
             this.titleBar.backgroundColor = new Color('white');
             this.titleLabel.color = new Color('black');
             this.titleLabel.text = title
+            this.closeButton.color = new Color('black')
         }
 
-        // update top margin
+        // this.titleBar.translateY = -appModel.safeAreaInsets.top
 
-        if (this.details.xrImmersiveMode === 'none') {
-            this.marginTop = appModel.safeAreaInsets.top
-        } else {
-            this.marginTop = 0
-        }
-
-        // update webview transparency
+        // update webview 
 
         const transparent = this.details.xrEnabled && this.details.xrImmersiveMode !== 'none'
 

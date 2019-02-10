@@ -1,6 +1,7 @@
 import { Observable, PropertyChangeData } from 'data/observable'
 import { ObservableArray } from 'data/observable-array'
 import { serializable, observable } from './decorators'
+import * as platform from 'platform/platform'
 import * as application from 'application'
 import * as applicationSettings from 'application-settings'
 import * as environment from './environment'
@@ -118,7 +119,7 @@ export class BookmarkItem extends Observable {
             })
 
         }).catch((e) => {
-            console.log(e)
+            console.warn(`Unable to request metadata for ${uri}`)
         })
     }
 }
@@ -208,6 +209,12 @@ export class AppModel extends Observable {
     @observable()
     safeAreaInsets: { top: number, left: number, bottom: number, right: number } =
         { top: 0, left: 0, bottom: 0, right: 0 }
+
+    @observable()
+    screenSize: { width:number, height:number } = {
+        width: platform.screen.mainScreen.widthDIPs,
+        height: platform.screen.mainScreen.heightDIPs
+    }
 
     @observable()
     overlayTop = 46
@@ -428,7 +435,7 @@ export class AppModel extends Observable {
 
     ensureLayersExists() {
 
-        const ensureFocussedAndRealityLayerExist = (layers) => {
+        const ensureFocussedAndRealityLayerSelected = (layers:XRLayerDetails[]) => {
             const focussedIdx = layers.indexOf(<any>this.focussedLayer)    
             const realityIdx = layers.indexOf(<any>this.realityLayer)
             
@@ -446,20 +453,24 @@ export class AppModel extends Observable {
                 newLayers.push(new XRLayerDetails({content:bookmarkItem}))
             }
 
-            ensureFocussedAndRealityLayerExist(newLayers)
+            ensureFocussedAndRealityLayerSelected(newLayers)
 
             // push all new layers at once so the BrowserView only sorts them once
             this.layers.push(newLayers)
 
         } else {
 
+            const realityLayer = this.layers.slice().find(layer => layer.xrImmersiveMode === 'reality')
+            if (!realityLayer) {
+                this.layers.push(new XRLayerDetails({ content: BookmarkItem.REALITY_LIVE }))
+            }
+
             const nonRealityLayer = this.layers.slice().find(layer => layer.xrImmersiveMode !== 'reality')
-            
             if (!nonRealityLayer) {
                 this.layers.push(new XRLayerDetails())
             }
 
-            ensureFocussedAndRealityLayerExist(this.layers.slice())
+            ensureFocussedAndRealityLayerSelected(this.layers.slice())
 
         }
     }

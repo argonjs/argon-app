@@ -325,6 +325,8 @@ namespace{
     
     Vuforia::Matrix34F vbProjectionMatrix34 = renderingPrimitives->getVideoBackgroundProjectionMatrix(viewId,true);
     Vuforia::Matrix44F vbProjectionMatrix = Vuforia::Tool::convert2GLMatrix(vbProjectionMatrix34);
+    
+//    Vuforia::Tool::convert2GLMatrix(vbProjection)
 
 //    Vuforia::Matrix44F vbProjectionMatrix =
 //        Vuforia::Tool::convertPerspectiveProjection2GLMatrix(

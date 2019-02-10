@@ -1,4 +1,4 @@
-pod "Vuforia", :path => "../../node_modules/nativescript-vuforia/platforms/ios/Vuforia"
+pod "VuforiaWrapper", :path => "../../node_modules/nativescript-vuforia/platforms/ios/Vuforia"
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
