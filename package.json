@@ -20,6 +20,7 @@
     "nativescript-permissions": "^1.2.3",
     "nativescript-screen-orientation": "github:argonjs/nativescript-screen-orientation",
     "nativescript-status-bar": "^1.1.1",
+    "nativescript-taptic-engine": "^2.1.0",
     "nativescript-vuforia": "file:plugins/nativescript-vuforia",
     "nativescript-web-image-cache": "^4.2.6",
     "page-metadata-parser": "^1.1.2",

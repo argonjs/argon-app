@@ -282,9 +282,13 @@
 }
 
 /// Returns the projection matrix to use for the given view
--(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID {
-    Vuforia::Matrix34F m = self.rp->getProjectionMatrix((Vuforia::VIEW)viewID, NULL, true);
-    return (VuforiaMatrix34&)m;
+-(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID
+                    cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
+                                 near:(float)near
+                                  far:(float)far {
+    Vuforia::Matrix34F m = self.rp->getProjectionMatrix((Vuforia::VIEW)viewID, (const Vuforia::CameraCalibration*)cameraCalibration.cpp, true);
+    Vuforia::Matrix44F m44 = Vuforia::Tool::convertPerspectiveProjection2GLMatrix(m, near, far);
+    return (VuforiaMatrix44&)m44;
 }
 
 /// Returns the projection matrix to use for the given view

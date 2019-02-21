@@ -316,25 +316,25 @@ interface VuforiaMatrix34 {
 }
 declare var VuforiaMatrix34: interop.StructType<VuforiaMatrix34>;
 
-// interface VuforiaMatrix44 {
-// 	_0: number;
-// 	_1: number;
-// 	_2: number;
-// 	_3: number;
-// 	_4: number;
-// 	_5: number;
-// 	_6: number;
-// 	_7: number;
-// 	_8: number;
-// 	_9: number;
-// 	_10: number;
-// 	_11: number;
-// 	_12: number;
-// 	_13: number;
-// 	_14: number;
-// 	_15: number;
-// }
-// declare var VuforiaMatrix44: interop.StructType<VuforiaMatrix44>;
+interface VuforiaMatrix44 {
+	_0: number;
+	_1: number;
+	_2: number;
+	_3: number;
+	_4: number;
+	_5: number;
+	_6: number;
+	_7: number;
+	_8: number;
+	_9: number;
+	_10: number;
+	_11: number;
+	_12: number;
+	_13: number;
+	_14: number;
+	_15: number;
+}
+declare var VuforiaMatrix44: interop.StructType<VuforiaMatrix44>;
 
 declare class VuforiaMesh extends NSObject {
 
@@ -510,7 +510,7 @@ declare class VuforiaRenderingPrimitives extends NSObject {
 
 	getNormalizedViewport(viewID: VuforiaView): VuforiaVec4F;
 
-	getProjectionMatrix(viewID: VuforiaView): VuforiaMatrix34;
+	getProjectionMatrixCameraCalibrationNearFar(viewID: VuforiaView, cameraCalibration: CameraCalibration, near: number, far:number): VuforiaMatrix44;
 	
 	getProjectionMatrixCameraCalibrationAdjustForViewportCentreToEyeAxis(viewID: VuforiaView, cameraCalibration: CameraCalibration, adjust:boolean): VuforiaMatrix34;
 

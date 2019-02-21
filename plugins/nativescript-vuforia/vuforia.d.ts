@@ -389,7 +389,7 @@ declare module "nativescript-vuforia" {
         getDistortionTextureViewport(viewID: View): Vec4;
         getEyeDisplayAdjustmentMatrix(viewID: View): Matrix44;
         getNormalizedViewport(viewID: View): Vec4;
-        getProjectionMatrix(viewID: View, cameraCalibration?:CameraCalibration): Matrix44;
+        getProjectionMatrix(viewID: View, cameraCalibration:CameraCalibration, near:number, far:number): Matrix44;
         getRenderingViews(): ViewList;
         getVideoBackgroundMesh(viewID: View): Mesh;
         getVideoBackgroundProjectionMatrix(viewID: View): Matrix44;

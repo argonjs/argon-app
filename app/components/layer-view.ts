@@ -171,22 +171,17 @@ export class LayerView extends GridLayout {
         }
 
         const contentView = new GridLayout();
-        contentView.backgroundColor = 'blue'
-        // contentView.width = PercentLength.parse('100%')
-        // contentView.height = PercentLength.parse('100%')
-        // contentView.clipToBounds = true;
 
         // Cover the webview to detect gestures and disable interaction
-        const touchOverlay = new gradient['Gradient']() as View;
+        const touchOverlay = new gradient['Gradient']();
         touchOverlay.on('loaded', () => {
             (touchOverlay as any).updateDirection('to bottom');
-            (touchOverlay as any).updateColors([new Color(0x00000000), new Color(0x33000000)]);
+            (touchOverlay as any).updateColors([new Color('transparent'), new Color('rgba(0,0,0,0.6)')]);
+            // insert layer manually until this package works with Nativescript 3.0
+            (touchOverlay.ios.layer as CALayer).insertSublayerAtIndex(touchOverlay._gradientLayer, 0); 
         })
         touchOverlay.isUserInteractionEnabled = false;
-        touchOverlay.opacity = 1;
-        // touchOverlay.style.visibility = 'collapse';
-        touchOverlay.horizontalAlignment = 'stretch';
-        touchOverlay.verticalAlignment = 'stretch';
+        touchOverlay.opacity = 0;
 
         const titleBar = new GridLayout();
         titleBar.iosOverflowSafeAreaEnabled = true
@@ -230,10 +225,10 @@ export class LayerView extends GridLayout {
         progressBar.visibility = 'collapse';
 
         this.addChild(contentView);
-        this.addChild(touchOverlay);
         this.addChild(titleBar);
         contentView.addChild(progressBar);
         contentView.addChild(webView);
+        contentView.addChild(touchOverlay)
         
         Object.assign(this, {
             webView,
@@ -257,7 +252,7 @@ export class LayerView extends GridLayout {
         this.on('propertyChange', (evt: PropertyChangeData) => {
             switch (evt.propertyName) {
                 case 'details.src': {
-                    const src = this.details.src
+                    const src = this.details.src || 'about:blank'
                     if (src !== BookmarkItem.REALITY_LIVE.uri) {
                         webView.src = src !== webView.src ? src : <any>new WrappedValue(src)
                     }
@@ -281,29 +276,6 @@ export class LayerView extends GridLayout {
         this._updateUI()
     }
 
-    // public onMeasure(width,height) {
-    //     // update top margin
-    //     if (this.details.xrImmersiveMode === 'none') {
-    //         const safeAreaInsets = (this.parent as View).getSafeAreaInsets()
-    //         const top = layout.toDeviceIndependentPixels(safeAreaInsets.top)
-    //         const bottom = layout.toDeviceIndependentPixels(safeAreaInsets.bottom)
-    //         this.webView.marginTop = top
-    //         this.webView.marginBottom = bottom
-    //     } else {
-    //         this.webView.marginTop = 0
-    //         this.webView.marginBottom = 0
-    //     }
-    //     super.onMeasure(width,height)
-    // }
-
-    // public onLayout(left,top,right,bottom) {
-    //     super.onLayout(left, top, right, bottom)
-    //     const videoView = this.getViewById('xr-video')
-    //     if (videoView) {
-    //         // videoView.layout()
-    //     }
-    // }
-
     private _updateUI() {
 
         if (!this.isLoaded) return
@@ -326,9 +298,7 @@ export class LayerView extends GridLayout {
             this.titleLabel.text = title
             this.closeButton.color = new Color('black')
         }
-
-        // this.titleBar.translateY = -appModel.safeAreaInsets.top
-
+        
         // update webview 
 
         const transparent = this.details.xrEnabled && this.details.xrImmersiveMode !== 'none'

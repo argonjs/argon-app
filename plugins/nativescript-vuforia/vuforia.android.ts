@@ -836,10 +836,10 @@ export class RenderingPrimitives {
         return createVec4(this.android.getNormalizedViewport(<number>viewID));
     }
     
-    getProjectionMatrix(viewID: def.View, cameraCalibration: def.CameraCalibration): def.Matrix44 {
+    getProjectionMatrix(viewID: def.View, cameraCalibration: def.CameraCalibration, near:number, far:number): def.Matrix44 {
         const androidCameraCalibration = cameraCalibration['android'] as vuforia.CameraCalibration
-        var mat34 = this.android.getProjectionMatrix(<number>viewID, androidCameraCalibration, true);
-        return convertPerspectiveProjection2GLMatrix(mat34, 0.01, 100000)
+        var mat34 = this.android.getProjectionMatrix(<number>viewID, androidCameraCalibration);
+        return convertPerspectiveProjection2GLMatrix(mat34, near, far)
     }
     
     getRenderingViews(): ViewList {

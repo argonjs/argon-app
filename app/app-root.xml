@@ -64,15 +64,15 @@
 
 
     <StackLayout iosOverlaySafeArea="false" iosOverlaySafeAreaEnabled="false" id="menu" paddingLeft="16" marginBottom="8" marginRight="{{ safeAreaInsets, safeAreaInsets.right + 8 }}" style.borderRadius="10" horizontalAlignment="right" verticalAlignment="bottom" orientation="vertical" >
-        <StackLayout tap="onDebugToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+        <StackLayout tap="onToggleDebug" padding="8" orientation="horizontal" horizontalAlignment="right">
             <Label text="Log" paddingRight="8"/>
             <Label textAlignment="right" width="30" class="material-icon" text="bug_report"/>
         </StackLayout>
-        <StackLayout tap="onViewerToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+        <StackLayout tap="onToggleViewer" padding="8" orientation="horizontal" horizontalAlignment="right">
             <Label text="Viewer" paddingRight="8"/>
             <Image width="30" class="menu-item" tintColor="white" src="~/icons/icons8-virtual-reality-filled-100.png"/>
         </StackLayout>
-        <StackLayout tap="onFlashToggle" padding="8" orientation="horizontal" horizontalAlignment="right">
+        <StackLayout tap="onToggleFlash" padding="8" orientation="horizontal" horizontalAlignment="right">
             <Label text="Flashlight"  paddingRight="8"/>
             <Label textAlignment="right" width="30" class="{{ flashEnabled ? 'material-icon toggle-btn-on' : 'material-icon toggle-btn-off' }}" text="highlight"/>
         </StackLayout>
@@ -116,7 +116,7 @@
                             </StackLayout>
                             <Button id="reload" class="material-icon action-btn overlay-button" marginBottom="16" text="refresh" tap="onReload" width="100" height="60" flexShrink="0" flexGrow="1"/>
                             <GridLayout width="16" height="0"/>
-                            <Button id="favorite" tap="{{ onToggleFavorite }}" marginBottom="16" width="100" height="60" flexShrink="0" flexGrow="1"
+                            <Button id="favorite" tap="onToggleFavorite" marginBottom="16" width="100" height="60" flexShrink="0" flexGrow="1"
                                 class="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'material-icon toggle-btn-on overlay-button' : 'material-icon toggle-btn-off overlay-button' }}" 
                                 text="{{ focussedLayer.content.isFavorite, focussedLayer.content.isFavorite ? 'star' : 'star_border' }}" />
                             <GridLayout width="100%" height="{{safeAreaInsets, safeAreaInsets.bottom * 0.5 }}" />

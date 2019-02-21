@@ -25,6 +25,9 @@ import config from './config'
 
 import { XRDevice, XRVuforiaDevice } from './xr-device'
 
+import {TapticEngine} from "nativescript-taptic-engine";
+let tapticEngine = new TapticEngine();
+
 //import * as orientationModule from 'nativescript-screen-orientation';
 // var orientationModule = require("nativescript-screen-orientation");
 
@@ -799,10 +802,6 @@ export function onSearchBarClear(args) {
     }
 }
 
-export function onFlashToggle(args) {
-    model.flashEnabled = !model.flashEnabled
-}
-
 if (application.ios) {
     const textFieldEditHandler = (notification: NSNotification) => {
         const iosSearchBar = (searchBar.ios as UISearchBar);
@@ -819,20 +818,34 @@ export function onAddChannel(args) {
 
 }
 
+export function onToggleFlash(args) {
+    tapticEngine.selection()
+    model.flashEnabled = !model.flashEnabled
+}
+
 export function onReload(args) {
+    tapticEngine.selection()
     model.loadURI(model.getLayerURI())
 }
 
+export function onToggleFavorite(args) {
+    tapticEngine.selection()
+    model.onToggleFavorite(args)
+}
+
 export function onOverview(args) {
+    tapticEngine.selection()
     model.layerPresentation = 'overview'
     model.uiMode = 'hidden'
     updateUI()
 }
 
-export function onViewerToggle(args) {
+export function onToggleViewer(args) {
+    tapticEngine.selection()
     model.immersiveStereoEnabled = !model.immersiveStereoEnabled
 }
 
-export function onDebugToggle(args) {
+export function onToggleDebug(args) {
+    tapticEngine.selection()
     model.debugEnabled = !model.debugEnabled
 }

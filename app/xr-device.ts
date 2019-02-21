@@ -321,12 +321,16 @@ export class XRVuforiaDevice extends XRDevice {
             const index = frame.getIndex()
             const time = frame.getTimeStamp()
             const trackableResults:XRTrackableResults = {}
-
             const deviceTrackableResult = state.getDeviceTrackableResult()
             const deviceID = 'xr.device'
             const deviceName = 'Device'
             const devicePose = (deviceTrackableResult && deviceTrackableResult.getPose()) || null
             const deviceStatus = (deviceTrackableResult && deviceTrackableResult.getStatus()) || vuforia.TrackableResultStatus.NoPose
+
+            if (devicePose) {
+                const screenRotation = this.getScreenRotationMatrix()
+                glMatrix.mat4.multiply(<any>devicePose, <any>devicePose, <any>screenRotation)
+            }
 
             trackableResults[deviceID] = {
                 id: deviceID,
@@ -1099,6 +1103,14 @@ export class XRVuforiaDevice extends XRDevice {
         renderer.setVideoBackgroundConfig(config);
     }
 
+    private _getScreenRotationMatrixZ = [0,0,1]
+    private _getScreenRotationMatrixArray:number[] = []
+    getScreenRotationMatrix() {
+        return glMatrix.mat4.fromRotation(
+            <any>this._getScreenRotationMatrixArray, 
+            utils.screenOrientation * Math.PI / 180 + Math.PI / 2,
+            this._getScreenRotationMatrixZ)
+    }
 
     getViews(state:vuforia.State) : Array<XRView> {
 
@@ -1113,6 +1125,8 @@ export class XRVuforiaDevice extends XRDevice {
         const viewWidth = videoView.getActualSize().width
         const viewHeight = videoView.getActualSize().height
         const zoomFactor = this._effectiveZoomFactor
+
+        const screenRotation = this.getScreenRotationMatrix()
         
         for (let i = 0; i < numViews; i++) {
             const view = renderingViews.getView(i)
@@ -1129,8 +1143,9 @@ export class XRVuforiaDevice extends XRDevice {
                     viewJSON.type = 'postprocess'; break;
             }
 
-            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view, state.getCameraCalibration())
-            glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,-1])
+            const projectionMatrix = renderingPrimitives.getProjectionMatrix(view, state.getCameraCalibration(), 0.01, 10000)
+            glMatrix.mat4.scale(<any>projectionMatrix, <any>projectionMatrix, [zoomFactor,zoomFactor,1])
+            glMatrix.mat4.multiply(<any>projectionMatrix, <any>projectionMatrix, <any>screenRotation)
 
             const viewport = renderingPrimitives.getViewport(view)
 

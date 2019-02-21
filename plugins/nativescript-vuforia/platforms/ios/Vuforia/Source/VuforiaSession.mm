@@ -261,9 +261,9 @@ static bool isRendering = false;
             [videoView renderFrame:state renderingPrimitives:(Vuforia::RenderingPrimitives*)renderingPrimitives.cpp];
         
             dispatch_async(dispatch_get_main_queue(), ^{
+                isRendering = false;
                 if (!isInit) return;
                 if (mRenderCallback) mRenderCallback([[VuforiaState alloc] initWithCpp:&state]);
-                isRendering = false;
             });
             
         }

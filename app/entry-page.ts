@@ -1,6 +1,6 @@
 import permissions = require('nativescript-permissions');
 import * as application from 'application'
-// import {AppRootView} from './app'
+import {AppRootView} from './app'
 
 export function pageLoaded(args) {
     return permissions.requestPermission("android.permission.CAMERA", "Your camera is used to provide an augmented reality experience")
@@ -21,6 +21,6 @@ export function pageLoaded(args) {
 }
 
 function startApp() {
-    // application._resetRootView(AppRootView)
-    application._resetRootView('app-root')
+    application._resetRootView(AppRootView)
+    // application._resetRootView('app-root')
 }

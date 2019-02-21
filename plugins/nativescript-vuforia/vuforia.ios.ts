@@ -199,6 +199,27 @@ export class API extends common.APIBase {
     }
 }
 
+function wrapMatrix44(mat:VuforiaMatrix44) : def.Matrix44 {
+    return  [
+        mat._0,
+        mat._1,
+        mat._2,
+        mat._3,
+        mat._4,
+        mat._5,
+        mat._6,
+        mat._7,
+        mat._8,
+        mat._9,
+        mat._10,
+        mat._11,
+        mat._12,
+        mat._13,
+        mat._14,
+        mat._15,
+    ];
+}
+
 function convert2GLMatrix(mat:VuforiaMatrix34) : def.Matrix44 {
     return  [
                 mat._0,
@@ -722,13 +743,14 @@ export class RenderingPrimitives {
         return this.ios.getNormalizedViewport(<number>viewID);
     }
     
-    getProjectionMatrix(viewID: def.View, cameraCalibration?:def.CameraCalibration): def.Matrix44 {
-        const projectionMatrix = this.ios.getProjectionMatrixCameraCalibrationAdjustForViewportCentreToEyeAxis(
+    getProjectionMatrix(viewID: def.View, cameraCalibration:def.CameraCalibration, near:number, far:number): def.Matrix44 {
+        const projectionMatrix = this.ios.getProjectionMatrixCameraCalibrationNearFar(
             <number>viewID, 
             cameraCalibration,
-            true
+            near, 
+            far
         )
-        return convertPerspectiveProjection2GLMatrix(projectionMatrix, 0.01, 100000);
+        return wrapMatrix44(projectionMatrix)
     }
     
     getRenderingViews(): ViewList {

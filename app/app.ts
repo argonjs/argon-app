@@ -1,6 +1,7 @@
 import * as application from 'application'
-// import * as builder from 'ui/builder'
-// import * as view from 'ui/core/view'
+import * as builder from 'ui/builder'
+import * as view from 'ui/core/view'
+import {PropertyChangeData} from 'data/observable'
 // import {layout} from 'utils/utils'
 
 import * as URI from 'urijs'
@@ -65,80 +66,55 @@ if (application.ios) {
     });
 }
 
-// export namespace AppRootView {
-//     export const create = () => {
-//         const rootView = builder.load(__dirname + '/app-root.xml', app)
+export namespace AppRootView {
+    export const create = () => {
+        const rootView = builder.load(__dirname + '/app-root.xml', app)
         
-//         if (application.ios) {
+        if (application.ios) {
 
-//             const UILayoutViewController = (<any>view.ios.UILayoutViewController) as typeof UIViewController
-//             const RootViewController = <typeof UIViewController>UIViewController['extend']({
-//                 ...UILayoutViewController.prototype,
-//                 owner: new WeakRef(rootView),
-
-//                 preferredScreenEdgesDeferringSystemGestures() {
-//                     return  app.model.uiMode !== 'hidden' || 
-//                             app.model.layerPresentation !== 'stack' ? 
-//                                 UIRectEdge.None : UIRectEdge.Bottom
-//                 },
-//                 viewWillTransitionToSizeWithTransitionCoordinator(this: UIViewController, size:CGSize, coordinator:UIViewControllerTransitionCoordinator) {
-//                     UIViewControllerTransitionCoordinator.prototype.animateAlongsideTransitionCompletion.call(coordinator, ()=> {
-//                         // console.log('viewWillTransition');
-//                         application.notify({eventName:'iosRootViewWillTransitionToSize'});
-//                     }, () => {
-//                     // console.log('viewDidTransition');
-//                         application.notify({eventName:'iosRootViewDidTransitionToSize'});
-//                     });
-//                     UILayoutViewController.prototype.viewWillTransitionToSizeWithTransitionCoordinator.call(this, size, coordinator);
-//                 },
-//                 // full-screen layout
-//                 viewDidLayoutSubviews() {
-//                     // console.log('viewDidLayout');
-//                     UIViewController.prototype.viewDidLayoutSubviews.call(this);
-                                
-//                     const owner = this.owner.get()
-//                     if (!owner) return;
-
-//                     const frame = this.view.frame;
-//                     const fullscreenOrigin = frame.origin;  
-//                     const fullscreenSize = frame.size;
+            const UILayoutViewController = (<any>view.ios.UILayoutViewController) as typeof UIViewController
+            const RootViewController = <typeof UIViewController>UIViewController['extend']({
+                ...UILayoutViewController.prototype,
+                owner: new WeakRef(rootView),
+                preferredScreenEdgesDeferringSystemGestures() {
+                    return  app.model.uiMode !== 'hidden' || 
+                            app.model.layerPresentation !== 'stack' ? 
+                                UIRectEdge.None : UIRectEdge.Bottom
+                },
+                viewWillTransitionToSizeWithTransitionCoordinator(this: UIViewController, size:CGSize, coordinator:UIViewControllerTransitionCoordinator) {
+                    UIViewControllerTransitionCoordinator.prototype.animateAlongsideTransitionCompletion.call(coordinator, ()=> {
+                        application.notify({eventName:'iosRootViewWillTransitionToSize'});
+                    }, () => {
+                        application.notify({eventName:'iosRootViewDidTransitionToSize'});
+                    });
+                    UILayoutViewController.prototype.viewWillTransitionToSizeWithTransitionCoordinator.call(this, size, coordinator);
+                }
+            }, {
+                exposedMethods: {
+                    preferredScreenEdgesDeferringSystemGestures: {returns: interop.types.uint32}
+                }
+            })
             
-//                     const left = layout.toDevicePixels(fullscreenOrigin.x);
-//                     const top = layout.toDevicePixels(fullscreenOrigin.y);
-//                     const width = layout.toDevicePixels(fullscreenSize.width);
-//                     const height = layout.toDevicePixels(fullscreenSize.height);
-            
-//                     const widthSpec = layout.makeMeasureSpec(width, layout.EXACTLY);
-//                     const heightSpec = layout.makeMeasureSpec(height, layout.EXACTLY);
-            
-//                     view.View.measureChild(<any>null, owner, widthSpec, heightSpec);
-//                     view.View.layoutChild(<any>null, owner, left, top, width + left, height + top);
-//                 }
-//             }, {
-//                 exposedMethods: {
-//                     preferredScreenEdgesDeferringSystemGestures: {returns: interop.types.uint32}
-//                 }
-//             })
+            const rootViewController = rootView.viewController = RootViewController.new()
 
-//             rootView.on('loaded', () => {
-//                 const rootViewController = rootView.viewController = RootViewController.new()
-//                 const iosRootView = rootView.ios as UIView
-//                 iosRootView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight
-//                 rootViewController.view.addSubview(rootView.ios)
+            rootView.on('loaded', () => {
+                const iosRootView = rootView.ios as UIView
+                iosRootView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight
+                rootViewController.view.addSubview(rootView.ios)
 
-//                 app.model.on('propertyChange', (evt:PropertyChangeData) => {
-//                     switch (evt.propertyName) {
-//                         case 'uiMode':
-//                         case 'layerPresentation':
-//                             rootViewController.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
-//                             break
-//                     }
-//                 })
-//             })
-//         }
-//         return rootView
-//     }
-// }
+                app.model.on('propertyChange', (evt:PropertyChangeData) => {
+                    switch (evt.propertyName) {
+                        case 'uiMode':
+                        case 'layerPresentation':
+                            rootViewController.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+                            break
+                    }
+                })
+            })
+        }
+        return rootView
+    }
+}
 
 var imageCache = require("nativescript-web-image-cache");
 application.on('launch', ()=>{
@@ -149,6 +125,6 @@ application.on('launch', ()=>{
 })
 
 application.setCssFileName('./app.css');
-// application.run(application.android ? 'entry-page' : AppRootView);
-application.run(application.android ? 'entry-page' : 'app-root');
+application.run(application.android ? 'entry-page' : AppRootView);
+// application.run(application.android ? 'entry-page' : 'app-root');
 // application.run('app-root')

@@ -178,7 +178,10 @@ typedef NS_ENUM (NSInteger, VuforiaView)
 -(VuforiaVec4F)getNormalizedViewport:(VuforiaView)viewID;
 
 /// Returns the projection matrix to use for the given view
--(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID;
+-(VuforiaMatrix44)getProjectionMatrix:(VuforiaView)viewID
+                    cameraCalibration:(VuforiaCameraCalibration*)cameraCalibration
+                                 near:(float)near
+                                  far:(float)far;
 
 /// Returns the projection matrix to use for the given view
 -(VuforiaMatrix34)getProjectionMatrix:(VuforiaView)viewID

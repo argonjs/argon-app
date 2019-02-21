@@ -258,7 +258,7 @@ export class BrowserView extends GridLayout {
         return {
             translate: {
                 x: 0,
-                y: index * OVERVIEW_VERTICAL_PADDING + appModel.safeAreaInsets.top - OVERVIEW_VERTICAL_PADDING / 4
+                y: index * OVERVIEW_VERTICAL_PADDING + appModel.safeAreaInsets.top
             },
             scale: {
                 x: OVERVIEW_SCALE_FACTOR,
@@ -303,8 +303,11 @@ export class BrowserView extends GridLayout {
     private _showLayerInCarousel(layer: LayerView) {
         layer.borderRadius = 10
         layer.touchOverlay.isUserInteractionEnabled = true
-        layer.touchOverlay.opacity = 1
         
+        layer.touchOverlay.animate({
+            opacity: 1,
+            duration: OVERVIEW_ANIMATION_DURATION
+        })
         layer.contentView.animate({
             translate: {x:0,y:TITLE_BAR_HEIGHT},
             duration: OVERVIEW_ANIMATION_DURATION
@@ -340,8 +343,11 @@ export class BrowserView extends GridLayout {
             layer.borderRadius = 0;
         }, OVERVIEW_ANIMATION_DURATION * 0.5)
         layer.touchOverlay.isUserInteractionEnabled = !hasFocus;
-        layer.touchOverlay.opacity = hasFocus ? 0 : 1;
 
+        layer.touchOverlay.animate({
+            opacity: 0,
+            duration: OVERVIEW_ANIMATION_DURATION
+        })
         layer.contentView.animate({
             translate: {x:0,y:0},
             duration: OVERVIEW_ANIMATION_DURATION

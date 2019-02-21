@@ -422,7 +422,7 @@ declare module com {
 
 			getNormalizedViewport(viewID: View): Vec4F;
 
-			getProjectionMatrix(viewID: View, cameraCalibration: CameraCalibration, adjust:boolean): Matrix34F;
+			getProjectionMatrix(viewID: View, cameraCalibration?: CameraCalibration, adjust?:boolean): Matrix34F;
 
 			getRenderingViews(): ViewList;
 
