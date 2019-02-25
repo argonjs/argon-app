@@ -506,6 +506,7 @@ export function updateScreenSize() {
 export function updateSafeAreaInsets() {
     if (rootView.ios) {
         const safeAreaInsets = (rootView.viewController as UIViewController).view.safeAreaInsets
+        if (!safeAreaInsets) return
         if (model.safeAreaInsets.top !== safeAreaInsets.top ||
             model.safeAreaInsets.bottom !== safeAreaInsets.bottom ||
             model.safeAreaInsets.left !== safeAreaInsets.left ||

@@ -298,24 +298,20 @@ export class XRVuforiaDevice extends XRDevice {
             }
         })
 
-        let needsViewConfiguration = true
         vuforia.videoView.on('layoutChanged', () => {
-            if (vuforia.videoView.ios) {
-                (<UIView>vuforia.videoView.ios).contentScaleFactor = Math.max(3, screen.mainScreen.scale);
-            }
-            needsViewConfiguration = true
+            this.configureView()
         })
+
+        let views:Array<XRView>;
 
         vuforia.api.renderCallback = (state:vuforia.State) => {
 
             this.startFrameTimer()
 
-            if (needsViewConfiguration) {
-                this.configureView()
-                needsViewConfiguration = false
+            if (this._needsViewsUpdate) {
+                views = this.getViews(state)
+                this._needsViewsUpdate = false
             }
-
-            const views:Array<XRView> = this.getViews(state)
 
             const frame = state.getFrame()
             const index = frame.getIndex()
@@ -1048,6 +1044,8 @@ export class XRVuforiaDevice extends XRDevice {
 
     private _config = <vuforia.VideoBackgroundConfig>{};
 
+    private _needsViewsUpdate = true
+
     public configureView() {
     
         const videoView = vuforia.videoView
@@ -1065,6 +1063,12 @@ export class XRVuforiaDevice extends XRDevice {
             videoWidth = videoMode.height;
             videoHeight = videoMode.width;
         }
+
+        let contentScaleFactor = screen.mainScreen.scale
+        if (vuforia.videoView.ios) {
+            contentScaleFactor = (<UIView>vuforia.videoView.ios).contentScaleFactor = 
+                Math.min( Math.ceil(videoHeight / viewHeight) , screen.mainScreen.scale);
+        }
         
         const widthRatio = viewWidth / videoWidth;
         const heightRatio = viewHeight / videoHeight;
@@ -1073,7 +1077,6 @@ export class XRVuforiaDevice extends XRDevice {
         // aspect fit
         // const scale = Math.min(widthRatio, heightRatio);
         
-        const contentScaleFactor = screen.mainScreen.scale
         const sizeX = videoWidth * scale * contentScaleFactor
         const sizeY = videoHeight * scale * contentScaleFactor
 
@@ -1101,6 +1104,8 @@ export class XRVuforiaDevice extends XRDevice {
         vuforia.api && vuforia.api.setScaleFactor(this._effectiveZoomFactor)
         const renderer = vuforia.api.getRenderer();
         renderer.setVideoBackgroundConfig(config);
+
+        this._needsViewsUpdate = true
     }
 
     private _getScreenRotationMatrixZ = [0,0,1]

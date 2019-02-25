@@ -46,6 +46,13 @@ export abstract class ArgonWebView extends WebView implements def.ArgonWebView {
         // this._outputPort = undefined;
     }
 
+    _loadData(src) {
+        if (src === '' || src === 'about:blank') {
+            return this['_loadUrl'](src)
+        }
+        return super['_loadData'](src)
+    }
+
     // public _handleArgonMessage(message:string) {
 
     //     // if (this.session && !this.session.isConnected) return;

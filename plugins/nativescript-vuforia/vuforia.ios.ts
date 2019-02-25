@@ -665,6 +665,7 @@ export class Renderer {
     }
     setVideoBackgroundConfig(cfg: def.VideoBackgroundConfig): void {
         VuforiaRenderer.setVideoBackgroundConfig(<VuforiaVideoBackgroundConfig>cfg);
+        configureVuforiaSurface()
     }
 }
 
@@ -846,9 +847,16 @@ export class PositionalDeviceTracker extends Tracker implements def.PositionalDe
 
 export class SmartTerrain extends Tracker implements def.SmartTerrain {
     nativeClass = VuforiaSmartTerrain;
+
+    private _smartTerrain:VuforiaSmartTerrain
+
+    get _terrain() {
+        if (!this._smartTerrain) this._smartTerrain = VuforiaSmartTerrain.getInstance()
+        return this._smartTerrain
+    }
    
     hitTest(state:State, point:def.Vec2, defaultDeviceHeight:number,hint:def.HitTestHint) : void {
-        VuforiaSmartTerrain.getInstance().hitTestWithStatePointDeviceHeightHint(
+        this._terrain.hitTestWithStatePointDeviceHeightHint(
             state.ios,
             point,
             defaultDeviceHeight,
@@ -857,11 +865,11 @@ export class SmartTerrain extends Tracker implements def.SmartTerrain {
     }
 
     getHitTestResultCount() {
-        return VuforiaSmartTerrain.getInstance().hitTestResultCount();
+        return this._terrain.hitTestResultCount();
     }
 
     getHitTestResult(idx:number) {
-        const r = VuforiaSmartTerrain.getInstance().getHitTestResultAtIndex(idx);
+        const r = this._terrain.getHitTestResultAtIndex(idx);
         return new HitTestResult(r);
     }
 }
